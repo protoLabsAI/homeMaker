@@ -2,6 +2,69 @@
 
 Comprehensive guide to using the Claude Code plugin and MCP server for programmatic control of Automaker.
 
+## Quick Start
+
+### Option 1: Install from GitHub (Recommended)
+
+Install directly from the GitHub repository:
+
+```bash
+# 1. Add the Automaker plugin marketplace from GitHub
+claude plugin marketplace add https://github.com/proto-labs-ai/automaker/tree/main/packages/mcp-server/plugins
+
+# 2. Install the plugin
+claude plugin install automaker
+
+# 3. Start Automaker server (in a separate terminal)
+git clone https://github.com/proto-labs-ai/automaker.git
+cd automaker
+npm install
+npm run dev:web
+
+# 4. Verify it works
+claude
+> /board
+```
+
+### Option 2: Install from Local Clone (Development)
+
+For developers working on Automaker:
+
+```bash
+# 1. Clone and install Automaker
+git clone https://github.com/proto-labs-ai/automaker.git
+cd automaker
+npm install
+
+# 2. Build the MCP server
+npm run build:packages
+
+# 3. Start Automaker server
+npm run dev:web
+
+# 4. In a new terminal, add the plugin marketplace and install
+claude plugin marketplace add $(pwd)/packages/mcp-server/plugins
+claude plugin install automaker
+
+# 5. Verify it works
+claude
+> /board
+```
+
+That's it! You now have access to 32 MCP tools and slash commands for managing your Kanban board directly from Claude Code.
+
+### What You Can Do
+
+| Command            | Description                         |
+| ------------------ | ----------------------------------- |
+| `/board`           | View and manage your Kanban board   |
+| `/auto-mode start` | Start autonomous feature processing |
+| `/orchestrate`     | Manage feature dependencies         |
+| `/context`         | Manage AI agent context files       |
+| `/create-project`  | Full project orchestration pipeline |
+
+---
+
 ## Table of Contents
 
 - [Overview](#overview)
@@ -841,19 +904,14 @@ Epics provide visual grouping on the Kanban board and help track milestone progr
 
 ## Known Issues & Improvements
 
-### Current Issues
+### Recently Fixed
 
-1. **`list_running_agents` endpoint mismatch**
-   - MCP tool calls `/running-agents/list` but server routing may differ
-   - Ticket: `feature-1770231844451-cj4ovhl44`
+1. **`start_agent` now uses worktrees by default** (Fixed)
+   - Agents now work in isolated git worktrees instead of directly on main
+   - Added `useWorktrees` parameter to `start_agent` tool (defaults to `true`)
 
-2. **`start_agent` sessionId parameter**
-   - Tool calls `/auto-mode/run-feature` without required sessionId
-   - Ticket: `feature-1770231974074-du2xki49d`
-
-3. **No auto-generated branchName**
-   - Features created via MCP don't get isolated worktrees
-   - Critical for avoiding conflicts on main branch
+2. **`list_running_agents` endpoint** (Fixed)
+   - MCP tool now correctly calls `/running-agents` endpoint
 
 ### Planned Improvements
 

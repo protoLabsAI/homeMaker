@@ -468,34 +468,47 @@ Once authenticated, Automaker will automatically detect and use your CLI credent
 
 Automaker includes a Claude Code plugin and MCP server for programmatic control directly from your terminal.
 
-- 🔌 **MCP Server** - 26 tools for managing features, agents, and orchestration
-- ⚡ **Slash Commands** - `/board`, `/auto-mode`, `/orchestrate`, `/context`
-- 🤖 **Specialized Subagents** - Feature planner, code reviewer, codebase analyzer
-- 🔄 **Full API Access** - Create features, start agents, manage dependencies
+- 🔌 **MCP Server** - 32 tools for managing features, agents, and orchestration
+- ⚡ **Slash Commands** - `/board`, `/auto-mode`, `/orchestrate`, `/context`, `/create-project`
+- 🤖 **Specialized Subagents** - Feature planner, code reviewer, codebase analyzer, PRD creator
+- 🔄 **Full API Access** - Create features, start agents, manage dependencies, project orchestration
 
-**Quick Setup:**
+**Quick Setup (2 minutes):**
 
 ```bash
-# 1. Start Automaker with a fixed API key
-AUTOMAKER_API_KEY=your-dev-key npm run dev
-
-# 2. Add the marketplace and install the plugin
-claude plugin marketplace add /path/to/automaker/packages/mcp-server/plugins
+# 1. Install the plugin from GitHub
+claude plugin marketplace add https://github.com/proto-labs-ai/automaker/tree/main/packages/mcp-server/plugins
 claude plugin install automaker
 
+# 2. Start Automaker (in a separate terminal)
+git clone https://github.com/proto-labs-ai/automaker.git && cd automaker
+npm install && npm run dev:web
+
 # 3. Use slash commands in Claude Code
-/board                    # View your Kanban board
-/auto-mode start          # Start autonomous processing
+claude
+> /board                    # View your Kanban board
+> /auto-mode start          # Start autonomous processing
+> /create-project           # Full project orchestration
 ```
 
-**Environment Variables:**
+**Available Commands:**
 
-| Variable            | Description                | Default                 |
-| ------------------- | -------------------------- | ----------------------- |
-| `AUTOMAKER_API_URL` | Automaker API base URL     | `http://localhost:3008` |
-| `AUTOMAKER_API_KEY` | API key for authentication | (required)              |
+| Command           | Description                              |
+| ----------------- | ---------------------------------------- |
+| `/board`          | View and manage your Kanban board        |
+| `/auto-mode`      | Start/stop autonomous feature processing |
+| `/orchestrate`    | Manage feature dependencies              |
+| `/context`        | Manage AI agent context files            |
+| `/create-project` | Full project orchestration pipeline      |
 
-📖 **See [docs/claude-plugin.md](docs/claude-plugin.md) for the complete Claude Code integration guide.**
+**MCP Tools (32 total):**
+
+- **Feature Management:** `list_features`, `create_feature`, `update_feature`, `move_feature`
+- **Agent Control:** `start_agent`, `stop_agent`, `get_agent_output`, `send_message_to_agent`
+- **Orchestration:** `start_auto_mode`, `set_feature_dependencies`, `get_execution_order`
+- **Project Planning:** `create_project`, `create_project_features`, `list_projects`
+
+📖 **See [docs/claude-plugin.md](docs/claude-plugin.md) for the complete guide.**
 
 ## Tech Stack
 
