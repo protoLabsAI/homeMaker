@@ -52,6 +52,11 @@ services:
       # Note: cursor-agent stores its OAuth tokens separately from Cursor IDE
       - CURSOR_AUTH_TOKEN=${CURSOR_AUTH_TOKEN:-}
 
+      # Optional - GitHub CLI token for git operations (clone, push, PR creation)
+      # Create at: https://github.com/settings/tokens (needs repo scope)
+      # Or extract existing: gh auth token
+      - GH_TOKEN=${GH_TOKEN:-}
+
       # Optional - authentication, one will generate if left blank
       - AUTOMAKER_API_KEY=${AUTOMAKER_API_KEY:-}
 
