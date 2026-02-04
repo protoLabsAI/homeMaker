@@ -237,6 +237,12 @@ const tools: Tool[] = [
           type: 'string',
           description: 'The feature ID to work on',
         },
+        useWorktrees: {
+          type: 'boolean',
+          description:
+            'Whether to use isolated git worktrees for the agent (default: true). When true, agent works in a separate worktree based on the feature branch.',
+          default: true,
+        },
       },
       required: ['projectPath', 'featureId'],
     },
@@ -846,6 +852,7 @@ async function handleTool(name: string, args: Record<string, unknown>): Promise<
       return apiCall('/auto-mode/run-feature', {
         projectPath: args.projectPath,
         featureId: args.featureId,
+        useWorktrees: args.useWorktrees ?? true,
       });
 
     case 'stop_agent':
@@ -867,6 +874,7 @@ async function handleTool(name: string, args: Record<string, unknown>): Promise<
         projectPath: args.projectPath,
         featureId: args.featureId,
         prompt: args.message,
+        useWorktrees: true,
       });
 
     // Queue Management
