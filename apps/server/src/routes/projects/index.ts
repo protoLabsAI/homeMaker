@@ -1,11 +1,18 @@
 /**
  * Projects routes - HTTP API for project orchestration
+ *
+ * Provides endpoints for managing project plans:
+ * - List all project plans
+ * - Get a project with milestones and phases
+ * - Create a new project plan
+ * - Update a project plan
+ * - Delete a project plan
+ * - Create features from a project plan
  */
 
 import { Router } from 'express';
-import { ProjectService } from '../../services/project-service.js';
-import type { FeatureLoader } from '../../services/feature-loader.js';
-import { validatePathParams } from '../../middleware/validate-paths.js';
+import { FeatureLoader } from '../../services/feature-loader.js';
+import { validatePathParams, validateSlugs } from '../../middleware/validate-paths.js';
 import { createListHandler } from './routes/list.js';
 import { createGetHandler } from './routes/get.js';
 import { createCreateHandler } from './routes/create.js';
@@ -15,17 +22,40 @@ import { createCreateFeaturesHandler } from './routes/create-features.js';
 
 export function createProjectsRoutes(featureLoader: FeatureLoader): Router {
   const router = Router();
-  const projectService = new ProjectService(featureLoader);
 
-  router.post('/list', validatePathParams('projectPath'), createListHandler(projectService));
-  router.post('/get', validatePathParams('projectPath'), createGetHandler(projectService));
-  router.post('/create', validatePathParams('projectPath'), createCreateHandler(projectService));
-  router.post('/update', validatePathParams('projectPath'), createUpdateHandler(projectService));
-  router.post('/delete', validatePathParams('projectPath'), createDeleteHandler(projectService));
+  // List doesn't need slug validation (no slug param)
+  router.post('/list', validatePathParams('projectPath'), createListHandler());
+
+  // All other routes use projectSlug - validate to prevent path traversal
+  router.post(
+    '/get',
+    validatePathParams('projectPath'),
+    validateSlugs('projectSlug'),
+    createGetHandler()
+  );
+  router.post(
+    '/create',
+    validatePathParams('projectPath'),
+    validateSlugs('slug?'), // slug is optional, derived from title if not provided
+    createCreateHandler()
+  );
+  router.post(
+    '/update',
+    validatePathParams('projectPath'),
+    validateSlugs('projectSlug'),
+    createUpdateHandler()
+  );
+  router.post(
+    '/delete',
+    validatePathParams('projectPath'),
+    validateSlugs('projectSlug'),
+    createDeleteHandler()
+  );
   router.post(
     '/create-features',
     validatePathParams('projectPath'),
-    createCreateFeaturesHandler(projectService)
+    validateSlugs('projectSlug'),
+    createCreateFeaturesHandler(featureLoader)
   );
 
   return router;

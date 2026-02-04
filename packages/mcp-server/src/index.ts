@@ -112,6 +112,25 @@ const tools: Tool[] = [
           default: 'backlog',
           description: "Initial status. Use 'in-progress' to immediately start an agent.",
         },
+        branchName: {
+          type: 'string',
+          description:
+            'Optional git branch name for this feature. If not provided, auto-generated from title.',
+        },
+        dependencies: {
+          type: 'array',
+          items: { type: 'string' },
+          description: 'Array of feature IDs that this feature depends on.',
+        },
+        isEpic: {
+          type: 'boolean',
+          description:
+            'Set to true to mark this feature as an epic (container for child features).',
+        },
+        epicId: {
+          type: 'string',
+          description: 'ID of parent epic if this feature belongs to an epic.',
+        },
       },
       required: ['projectPath', 'title', 'description'],
     },
@@ -259,6 +278,10 @@ const tools: Tool[] = [
     inputSchema: {
       type: 'object',
       properties: {
+        projectPath: {
+          type: 'string',
+          description: 'Absolute path to the project directory',
+        },
         featureId: {
           type: 'string',
           description: 'The feature ID of the running agent',
@@ -268,7 +291,7 @@ const tools: Tool[] = [
           description: 'Message to send to the agent',
         },
       },
-      required: ['featureId', 'message'],
+      required: ['projectPath', 'featureId', 'message'],
     },
   },
 
@@ -421,6 +444,310 @@ const tools: Tool[] = [
     },
   },
 
+  // ========== Orchestration ==========
+  {
+    name: 'set_feature_dependencies',
+    description:
+      'Set dependencies for a feature. The feature will not start until all dependencies are marked Done.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        projectPath: {
+          type: 'string',
+          description: 'Absolute path to the project directory',
+        },
+        featureId: {
+          type: 'string',
+          description: 'The feature ID to set dependencies for',
+        },
+        dependencies: {
+          type: 'array',
+          items: { type: 'string' },
+          description: 'Array of feature IDs that this feature depends on',
+        },
+      },
+      required: ['projectPath', 'featureId', 'dependencies'],
+    },
+  },
+  {
+    name: 'get_dependency_graph',
+    description:
+      'Get the dependency graph for all features in a project. Shows which features block others.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        projectPath: {
+          type: 'string',
+          description: 'Absolute path to the project directory',
+        },
+      },
+      required: ['projectPath'],
+    },
+  },
+  {
+    name: 'start_auto_mode',
+    description:
+      'Start auto-mode for a project. Agents will automatically pick up and process backlog features respecting dependencies.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        projectPath: {
+          type: 'string',
+          description: 'Absolute path to the project directory',
+        },
+        maxConcurrency: {
+          type: 'number',
+          description: 'Maximum number of features to process concurrently (default: 1)',
+          default: 1,
+        },
+        branchName: {
+          type: 'string',
+          description: 'Optional branch/worktree name to run auto-mode on',
+        },
+      },
+      required: ['projectPath'],
+    },
+  },
+  {
+    name: 'stop_auto_mode',
+    description: 'Stop auto-mode for a project.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        projectPath: {
+          type: 'string',
+          description: 'Absolute path to the project directory',
+        },
+        branchName: {
+          type: 'string',
+          description: 'Optional branch/worktree name',
+        },
+      },
+      required: ['projectPath'],
+    },
+  },
+  {
+    name: 'get_auto_mode_status',
+    description: 'Check if auto-mode is running for a project and get its status.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        projectPath: {
+          type: 'string',
+          description: 'Absolute path to the project directory',
+        },
+      },
+      required: ['projectPath'],
+    },
+  },
+  {
+    name: 'get_execution_order',
+    description:
+      'Get the resolved execution order for features based on dependencies. Useful for planning.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        projectPath: {
+          type: 'string',
+          description: 'Absolute path to the project directory',
+        },
+        status: {
+          type: 'string',
+          enum: ['backlog', 'all'],
+          default: 'backlog',
+          description: 'Which features to include in the execution order',
+        },
+      },
+      required: ['projectPath'],
+    },
+  },
+
+  // ========== Project Orchestration ==========
+  {
+    name: 'list_projects',
+    description:
+      'List all project plans in a project. Returns project slugs that can be used with get_project.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        projectPath: {
+          type: 'string',
+          description: 'Absolute path to the project directory',
+        },
+      },
+      required: ['projectPath'],
+    },
+  },
+  {
+    name: 'get_project',
+    description:
+      'Get detailed information about a project plan including milestones, phases, and PRD.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        projectPath: {
+          type: 'string',
+          description: 'Absolute path to the project directory',
+        },
+        projectSlug: {
+          type: 'string',
+          description: 'The project slug (from list_projects)',
+        },
+      },
+      required: ['projectPath', 'projectSlug'],
+    },
+  },
+  {
+    name: 'create_project',
+    description:
+      'Create a new project plan with milestones and phases. This scaffolds the project structure in .automaker/projects/.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        projectPath: {
+          type: 'string',
+          description: 'Absolute path to the project directory',
+        },
+        title: {
+          type: 'string',
+          description: 'Project title',
+        },
+        goal: {
+          type: 'string',
+          description: 'Project goal/objective',
+        },
+        prd: {
+          type: 'object',
+          description: 'SPARC PRD with situation, problem, approach, results, constraints',
+          properties: {
+            situation: { type: 'string' },
+            problem: { type: 'string' },
+            approach: { type: 'string' },
+            results: { type: 'string' },
+            constraints: { type: 'array', items: { type: 'string' } },
+          },
+        },
+        milestones: {
+          type: 'array',
+          description: 'Array of milestones, each with title, description, and phases',
+          items: {
+            type: 'object',
+            properties: {
+              title: { type: 'string' },
+              description: { type: 'string' },
+              phases: {
+                type: 'array',
+                items: {
+                  type: 'object',
+                  properties: {
+                    title: { type: 'string' },
+                    description: { type: 'string' },
+                    filesToModify: { type: 'array', items: { type: 'string' } },
+                    acceptanceCriteria: { type: 'array', items: { type: 'string' } },
+                    complexity: { type: 'string', enum: ['small', 'medium', 'large'] },
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+      required: ['projectPath', 'title', 'goal', 'milestones'],
+    },
+  },
+  {
+    name: 'update_project',
+    description: 'Update a project plan. Can update title, goal, status, or PRD.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        projectPath: {
+          type: 'string',
+          description: 'Absolute path to the project directory',
+        },
+        projectSlug: {
+          type: 'string',
+          description: 'The project slug to update',
+        },
+        title: {
+          type: 'string',
+          description: 'New title (optional)',
+        },
+        goal: {
+          type: 'string',
+          description: 'New goal (optional)',
+        },
+        status: {
+          type: 'string',
+          enum: [
+            'researching',
+            'drafting',
+            'reviewing',
+            'approved',
+            'scaffolded',
+            'active',
+            'completed',
+          ],
+          description: 'New status (optional)',
+        },
+      },
+      required: ['projectPath', 'projectSlug'],
+    },
+  },
+  {
+    name: 'delete_project',
+    description: 'Delete a project plan and all its files.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        projectPath: {
+          type: 'string',
+          description: 'Absolute path to the project directory',
+        },
+        projectSlug: {
+          type: 'string',
+          description: 'The project slug to delete',
+        },
+      },
+      required: ['projectPath', 'projectSlug'],
+    },
+  },
+  {
+    name: 'create_project_features',
+    description:
+      'Create Kanban board features from a project plan. Converts phases to features with optional epic grouping.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        projectPath: {
+          type: 'string',
+          description: 'Absolute path to the project directory',
+        },
+        projectSlug: {
+          type: 'string',
+          description: 'The project slug to create features from',
+        },
+        createEpics: {
+          type: 'boolean',
+          default: true,
+          description: 'Create epic features for each milestone',
+        },
+        setupDependencies: {
+          type: 'boolean',
+          default: true,
+          description: 'Set up dependencies between features based on phase order',
+        },
+        initialStatus: {
+          type: 'string',
+          enum: ['backlog', 'in-progress'],
+          default: 'backlog',
+          description: 'Initial status for created features',
+        },
+      },
+      required: ['projectPath', 'projectSlug'],
+    },
+  },
+
   // ========== Utilities ==========
   {
     name: 'health_check',
@@ -462,15 +789,21 @@ async function handleTool(name: string, args: Record<string, unknown>): Promise<
         featureId: args.featureId,
       });
 
-    case 'create_feature':
+    case 'create_feature': {
+      const featureData: Record<string, unknown> = {
+        title: args.title,
+        description: args.description,
+        status: args.status || 'backlog',
+      };
+      if (args.branchName) featureData.branchName = args.branchName;
+      if (args.dependencies) featureData.dependencies = args.dependencies;
+      if (args.isEpic) featureData.isEpic = args.isEpic;
+      if (args.epicId) featureData.epicId = args.epicId;
       return apiCall('/features/create', {
         projectPath: args.projectPath,
-        feature: {
-          title: args.title,
-          description: args.description,
-          status: args.status || 'backlog',
-        },
+        feature: featureData,
       });
+    }
 
     case 'update_feature': {
       const updates: Record<string, unknown> = {};
@@ -499,13 +832,13 @@ async function handleTool(name: string, args: Record<string, unknown>): Promise<
 
     // Agent Control
     case 'start_agent':
-      return apiCall('/agent/start', {
+      return apiCall('/auto-mode/run-feature', {
         projectPath: args.projectPath,
         featureId: args.featureId,
       });
 
     case 'stop_agent':
-      return apiCall('/agent/stop', {
+      return apiCall('/auto-mode/stop-feature', {
         featureId: args.featureId,
       });
 
@@ -519,9 +852,10 @@ async function handleTool(name: string, args: Record<string, unknown>): Promise<
       });
 
     case 'send_message_to_agent':
-      return apiCall('/agent/send', {
+      return apiCall('/auto-mode/follow-up-feature', {
+        projectPath: args.projectPath,
         featureId: args.featureId,
-        message: args.message,
+        prompt: args.message,
       });
 
     // Queue Management
@@ -572,6 +906,155 @@ async function handleTool(name: string, args: Record<string, unknown>): Promise<
       return apiCall('/app-spec/update', {
         projectPath: args.projectPath,
         content: args.content,
+      });
+
+    // Orchestration
+    case 'set_feature_dependencies':
+      return apiCall('/features/update', {
+        projectPath: args.projectPath,
+        featureId: args.featureId,
+        updates: {
+          dependencies: args.dependencies,
+        },
+      });
+
+    case 'get_dependency_graph': {
+      const result = (await apiCall('/features/list', {
+        projectPath: args.projectPath,
+      })) as {
+        features?: Array<{ id: string; title: string; status: string; dependencies?: string[] }>;
+      };
+      const features = result.features || [];
+      const graph: Record<
+        string,
+        { title: string; status: string; dependsOn: string[]; blocks: string[] }
+      > = {};
+
+      // Build the graph
+      for (const f of features) {
+        graph[f.id] = {
+          title: f.title,
+          status: f.status,
+          dependsOn: f.dependencies || [],
+          blocks: [],
+        };
+      }
+
+      // Calculate reverse dependencies (what each feature blocks)
+      for (const f of features) {
+        for (const depId of f.dependencies || []) {
+          if (graph[depId]) {
+            graph[depId].blocks.push(f.id);
+          }
+        }
+      }
+
+      return graph;
+    }
+
+    case 'start_auto_mode':
+      return apiCall('/auto-mode/start', {
+        projectPath: args.projectPath,
+        maxConcurrency: args.maxConcurrency || 1,
+        branchName: args.branchName || null,
+      });
+
+    case 'stop_auto_mode':
+      return apiCall('/auto-mode/stop', {
+        projectPath: args.projectPath,
+        branchName: args.branchName || null,
+      });
+
+    case 'get_auto_mode_status':
+      return apiCall('/auto-mode/status', {
+        projectPath: args.projectPath,
+      });
+
+    case 'get_execution_order': {
+      const result = (await apiCall('/features/list', {
+        projectPath: args.projectPath,
+      })) as {
+        features?: Array<{ id: string; title: string; status: string; dependencies?: string[] }>;
+      };
+      const features = result.features || [];
+
+      // Filter by status if specified
+      const filtered =
+        args.status === 'all' ? features : features.filter((f) => f.status === 'backlog');
+
+      // Topological sort based on dependencies
+      const visited = new Set<string>();
+      const order: Array<{ id: string; title: string; dependencies: string[] }> = [];
+      const featureMap = new Map(filtered.map((f) => [f.id, f]));
+
+      function visit(id: string) {
+        if (visited.has(id)) return;
+        visited.add(id);
+        const feature = featureMap.get(id);
+        if (!feature) return;
+        for (const depId of feature.dependencies || []) {
+          visit(depId);
+        }
+        order.push({
+          id: feature.id,
+          title: feature.title,
+          dependencies: feature.dependencies || [],
+        });
+      }
+
+      for (const f of filtered) {
+        visit(f.id);
+      }
+
+      return { executionOrder: order, totalFeatures: order.length };
+    }
+
+    // Project Orchestration
+    case 'list_projects':
+      return apiCall('/projects/list', {
+        projectPath: args.projectPath,
+      });
+
+    case 'get_project':
+      return apiCall('/projects/get', {
+        projectPath: args.projectPath,
+        projectSlug: args.projectSlug,
+      });
+
+    case 'create_project':
+      return apiCall('/projects/create', {
+        projectPath: args.projectPath,
+        title: args.title,
+        goal: args.goal,
+        prd: args.prd,
+        milestones: args.milestones,
+      });
+
+    case 'update_project': {
+      const projectUpdates: Record<string, unknown> = {};
+      if (args.title) projectUpdates.title = args.title;
+      if (args.goal) projectUpdates.goal = args.goal;
+      if (args.status) projectUpdates.status = args.status;
+      return apiCall('/projects/update', {
+        projectPath: args.projectPath,
+        projectSlug: args.projectSlug,
+        updates: projectUpdates,
+      });
+    }
+
+    case 'delete_project':
+      return apiCall('/projects/delete', {
+        projectPath: args.projectPath,
+        projectSlug: args.projectSlug,
+      });
+
+    case 'create_project_features':
+      return apiCall('/projects/create-features', {
+        projectPath: args.projectPath,
+        projectSlug: args.projectSlug,
+        createEpics: args.createEpics ?? true,
+        setupDependencies: args.setupDependencies ?? true,
+        initialStatus: args.initialStatus || 'backlog',
       });
 
     // Utilities
