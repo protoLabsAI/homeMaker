@@ -75,6 +75,10 @@ export default defineConfig(({ command }) => {
           ws: true,
         },
       },
+      watch: {
+        // Ignore automaker data directories to prevent hot reload during agent work
+        ignored: ['**/.automaker/**', '**/.worktrees/**'],
+      },
     },
     build: {
       outDir: 'dist',
