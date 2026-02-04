@@ -162,6 +162,18 @@ npm run dev:electron:wsl:gpu
 npm run dev:web
 ```
 
+#### Fixed API Key for Development
+
+By default, the server generates a random API key on each restart. To use a fixed key (useful for MCP integration or scripts):
+
+```bash
+# Start server with a fixed API key
+AUTOMAKER_API_KEY=your-dev-key npm run dev --workspace=apps/server
+
+# In a separate terminal, start the UI
+npm run dev:web
+```
+
 ### Interactive TUI Launcher (Recommended for New Users)
 
 For a user-friendly interactive menu, use the built-in TUI launcher script:
