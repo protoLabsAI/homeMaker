@@ -22,11 +22,17 @@ export function useWorktrees({
   const currentWorktree = useAppStore((s) => s.getCurrentWorktree(projectPath));
   const setCurrentWorktree = useAppStore((s) => s.setCurrentWorktree);
   const setWorktreesInStore = useAppStore((s) => s.setWorktrees);
+  const setWorktreesLoading = useAppStore((s) => s.setWorktreesLoading);
   const useWorktreesEnabled = useAppStore((s) => s.useWorktrees);
 
   // Use the React Query hook
   const { data, isLoading, refetch } = useWorktreesQuery(projectPath);
   const worktrees = (data?.worktrees ?? []) as WorktreeInfo[];
+
+  // Sync loading state to Zustand store
+  useEffect(() => {
+    setWorktreesLoading(projectPath, isLoading);
+  }, [isLoading, projectPath, setWorktreesLoading]);
 
   // Sync worktrees to Zustand store when they change
   useEffect(() => {

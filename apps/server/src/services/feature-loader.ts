@@ -11,6 +11,7 @@ import {
   readJsonWithRecovery,
   logRecoveryWarning,
   DEFAULT_BACKUP_COUNT,
+  slugify,
 } from '@automaker/utils';
 import * as secureFs from '../lib/secure-fs.js';
 import {
@@ -178,6 +179,19 @@ export class FeatureLoader {
    */
   generateFeatureId(): string {
     return `feature-${Date.now()}-${Math.random().toString(36).substring(2, 11)}`;
+  }
+
+  /**
+   * Generate a branch name from a feature title
+   * Returns a feature/ prefixed branch name suitable for git
+   */
+  generateBranchName(title: string | undefined): string {
+    if (!title || !title.trim()) {
+      // Preserve feature/ namespace for untitled features
+      return `feature/untitled-${Date.now()}`;
+    }
+    const slug = slugify(title, 40);
+    return `feature/${slug || `untitled-${Date.now()}`}`;
   }
 
   /**
@@ -356,12 +370,16 @@ export class FeatureLoader {
       });
     }
 
+    // Auto-generate branchName if not provided
+    const branchName = featureData.branchName || this.generateBranchName(featureData.title);
+
     // Ensure feature has required fields
     const feature: Feature = {
       category: featureData.category || 'Uncategorized',
       description: featureData.description || '',
       ...featureData,
       id: featureId,
+      branchName,
       imagePaths: migratedImagePaths,
       descriptionHistory: initialHistory,
     };

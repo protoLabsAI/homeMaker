@@ -78,12 +78,19 @@ export function useBoardColumnFeatures({
         // Show features assigned to primary worktree's branch.
         if (projectPath) {
           const worktrees = useAppStore.getState().worktreesByProject[projectPath] ?? [];
-          if (worktrees.length === 0) {
-            // Worktrees not loaded yet - fallback to showing features on common default branches
-            // This prevents features from disappearing during initial load
-            matchesWorktree =
-              featureBranch === 'main' || featureBranch === 'master' || featureBranch === 'develop';
+          const isWorktreesLoading = useAppStore.getState().getWorktreesLoading(projectPath);
+
+          if (isWorktreesLoading) {
+            // Worktrees are still loading - show ALL features to prevent disappearing
+            matchesWorktree = true;
+          } else if (worktrees.length === 0) {
+            // Worktrees finished loading but list is empty - feature disabled or failed load
+            // Apply strict filtering: only show on primary branch
+            matchesWorktree = useAppStore
+              .getState()
+              .isPrimaryWorktreeBranch(projectPath, featureBranch);
           } else {
+            // Worktrees loaded successfully - apply normal filtering
             matchesWorktree = useAppStore
               .getState()
               .isPrimaryWorktreeBranch(projectPath, featureBranch);

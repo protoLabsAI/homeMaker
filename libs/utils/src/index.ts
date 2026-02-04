@@ -105,3 +105,36 @@ export {
   type LearningEntry,
   type SimpleMemoryFile,
 } from './memory-loader.js';
+
+// String utilities
+export {
+  truncate,
+  toKebabCase,
+  toCamelCase,
+  toPascalCase,
+  capitalize,
+  collapseWhitespace,
+  isBlank,
+  isNotBlank,
+  safeParseInt,
+  slugify,
+  escapeRegex,
+  pluralize,
+  formatCount,
+} from './string-utils.js';
+
+// Project parsing
+export {
+  generateProjectMarkdown,
+  generateMilestoneMarkdown,
+  generatePhaseMarkdown,
+  parseProjectMarkdown,
+  parseMilestoneMarkdown,
+  parsePhaseMarkdown,
+  generateProjectSlug,
+  generateMilestoneSlug,
+  generatePhaseFilename,
+  createProject,
+  phaseToFeatureDescription,
+  phaseToBranchName,
+} from './project-parser.js';

@@ -41,6 +41,17 @@ export {
   getIdeationDraftsDir,
   getIdeationAnalysisPath,
   ensureIdeationDir,
+  // Project orchestration paths
+  getProjectsDir,
+  getProjectDir,
+  getProjectFilePath,
+  getProjectJsonPath,
+  getMilestonesDir,
+  getMilestoneDir,
+  getMilestoneFilePath,
+  ensureProjectsDir,
+  ensureProjectDir,
+  ensureMilestoneDir,
 } from './paths.js';
 
 // Subprocess management

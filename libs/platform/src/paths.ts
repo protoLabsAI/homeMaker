@@ -459,3 +459,157 @@ export async function ensureDataDir(dataDir: string): Promise<string> {
   await secureFs.mkdir(dataDir, { recursive: true });
   return dataDir;
 }
+
+// ============================================================================
+// Project Orchestration Paths
+// ============================================================================
+
+/**
+ * Get the projects directory for a project
+ *
+ * Contains project plans organized by project slug.
+ *
+ * @param projectPath - Absolute path to project directory
+ * @returns Absolute path to {projectPath}/.automaker/projects
+ */
+export function getProjectsDir(projectPath: string): string {
+  return path.join(getAutomakerDir(projectPath), 'projects');
+}
+
+/**
+ * Get the directory for a specific project plan
+ *
+ * Contains project.md, milestones/ directory, and related files.
+ *
+ * @param projectPath - Absolute path to project directory
+ * @param projectSlug - URL-safe project identifier
+ * @returns Absolute path to {projectPath}/.automaker/projects/{projectSlug}
+ */
+export function getProjectDir(projectPath: string, projectSlug: string): string {
+  return path.join(getProjectsDir(projectPath), projectSlug);
+}
+
+/**
+ * Get the project.md file path for a project plan
+ *
+ * Stores the project overview, goals, and metadata.
+ *
+ * @param projectPath - Absolute path to project directory
+ * @param projectSlug - URL-safe project identifier
+ * @returns Absolute path to {projectPath}/.automaker/projects/{projectSlug}/project.md
+ */
+export function getProjectFilePath(projectPath: string, projectSlug: string): string {
+  return path.join(getProjectDir(projectPath, projectSlug), 'project.md');
+}
+
+/**
+ * Get the project.json file path for a project plan
+ *
+ * Stores the full project data including milestones and phases.
+ *
+ * @param projectPath - Absolute path to project directory
+ * @param projectSlug - URL-safe project identifier
+ * @returns Absolute path to {projectPath}/.automaker/projects/{projectSlug}/project.json
+ */
+export function getProjectJsonPath(projectPath: string, projectSlug: string): string {
+  return path.join(getProjectDir(projectPath, projectSlug), 'project.json');
+}
+
+/**
+ * Get the milestones directory for a project plan
+ *
+ * Contains subdirectories for each milestone.
+ *
+ * @param projectPath - Absolute path to project directory
+ * @param projectSlug - URL-safe project identifier
+ * @returns Absolute path to {projectPath}/.automaker/projects/{projectSlug}/milestones
+ */
+export function getMilestonesDir(projectPath: string, projectSlug: string): string {
+  return path.join(getProjectDir(projectPath, projectSlug), 'milestones');
+}
+
+/**
+ * Get the directory for a specific milestone
+ *
+ * Contains milestone.md and phase files.
+ *
+ * @param projectPath - Absolute path to project directory
+ * @param projectSlug - URL-safe project identifier
+ * @param milestoneSlug - URL-safe milestone identifier
+ * @returns Absolute path to {projectPath}/.automaker/projects/{projectSlug}/milestones/{milestoneSlug}
+ */
+export function getMilestoneDir(
+  projectPath: string,
+  projectSlug: string,
+  milestoneSlug: string
+): string {
+  return path.join(getMilestonesDir(projectPath, projectSlug), milestoneSlug);
+}
+
+/**
+ * Get the milestone.md file path for a milestone
+ *
+ * Stores the milestone overview and metadata.
+ *
+ * @param projectPath - Absolute path to project directory
+ * @param projectSlug - URL-safe project identifier
+ * @param milestoneSlug - URL-safe milestone identifier
+ * @returns Absolute path to milestone.md
+ */
+export function getMilestoneFilePath(
+  projectPath: string,
+  projectSlug: string,
+  milestoneSlug: string
+): string {
+  return path.join(getMilestoneDir(projectPath, projectSlug, milestoneSlug), 'milestone.md');
+}
+
+/**
+ * Create the projects directory structure for a project if it doesn't exist
+ *
+ * Creates {projectPath}/.automaker/projects with all subdirectories.
+ * Safe to call multiple times - uses recursive: true.
+ *
+ * @param projectPath - Absolute path to project directory
+ * @returns Promise resolving to the created projects directory path
+ */
+export async function ensureProjectsDir(projectPath: string): Promise<string> {
+  const projectsDir = getProjectsDir(projectPath);
+  await secureFs.mkdir(projectsDir, { recursive: true });
+  return projectsDir;
+}
+
+/**
+ * Create the directory structure for a specific project plan
+ *
+ * Creates {projectPath}/.automaker/projects/{projectSlug} with milestones subdirectory.
+ * Safe to call multiple times - uses recursive: true.
+ *
+ * @param projectPath - Absolute path to project directory
+ * @param projectSlug - URL-safe project identifier
+ * @returns Promise resolving to the created project directory path
+ */
+export async function ensureProjectDir(projectPath: string, projectSlug: string): Promise<string> {
+  const projectDir = getProjectDir(projectPath, projectSlug);
+  await secureFs.mkdir(projectDir, { recursive: true });
+  await secureFs.mkdir(getMilestonesDir(projectPath, projectSlug), { recursive: true });
+  return projectDir;
+}
+
+/**
+ * Create the directory structure for a specific milestone
+ *
+ * @param projectPath - Absolute path to project directory
+ * @param projectSlug - URL-safe project identifier
+ * @param milestoneSlug - URL-safe milestone identifier
+ * @returns Promise resolving to the created milestone directory path
+ */
+export async function ensureMilestoneDir(
+  projectPath: string,
+  projectSlug: string,
+  milestoneSlug: string
+): Promise<string> {
+  const milestoneDir = getMilestoneDir(projectPath, projectSlug, milestoneSlug);
+  await secureFs.mkdir(milestoneDir, { recursive: true });
+  return milestoneDir;
+}

@@ -329,3 +329,19 @@ export { PR_STATES, validatePRState } from './worktree.js';
 
 // Terminal types
 export type { TerminalInfo } from './terminal.js';
+
+// Project orchestration types
+export type {
+  SparcPRD,
+  PhaseComplexity,
+  PhaseStatus,
+  Phase,
+  MilestoneStatus,
+  Milestone,
+  ProjectStatus,
+  Project,
+  CreateProjectInput,
+  UpdateProjectInput,
+  CreateFeaturesFromProjectOptions,
+  CreateFeaturesResult,
+} from './project.js';

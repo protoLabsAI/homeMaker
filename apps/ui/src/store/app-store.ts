@@ -670,6 +670,8 @@ export interface AppState {
       changedFilesCount?: number;
     }>
   >;
+  // Track loading state for worktrees per project
+  worktreesLoadingByProject: Record<string, boolean>;
 
   // Keyboard Shortcuts
   keyboardShortcuts: KeyboardShortcuts; // User-defined keyboard shortcuts
@@ -1138,6 +1140,8 @@ export interface AppActions {
       changedFilesCount?: number;
     }>
   ) => void;
+  setWorktreesLoading: (projectPath: string, isLoading: boolean) => void;
+  getWorktreesLoading: (projectPath: string) => boolean;
   getCurrentWorktree: (projectPath: string) => { path: string | null; branch: string } | null;
   getWorktrees: (projectPath: string) => Array<{
     path: string;
@@ -1461,6 +1465,7 @@ const initialState: AppState = {
   useWorktrees: true, // Default to enabled (git worktree isolation)
   currentWorktreeByProject: {},
   worktreesByProject: {},
+  worktreesLoadingByProject: {}, // Track loading state per project (default=true via getter)
   keyboardShortcuts: DEFAULT_KEYBOARD_SHORTCUTS, // Default keyboard shortcuts
   muteDoneSound: false, // Default to sound enabled (not muted)
   serverLogLevel: 'info', // Default to info level for server logs
@@ -2489,6 +2494,20 @@ export const useAppStore = create<AppState & AppActions>()((set, get) => ({
         [projectPath]: worktrees,
       },
     });
+  },
+
+  setWorktreesLoading: (projectPath, isLoading) => {
+    const current = get().worktreesLoadingByProject;
+    set({
+      worktreesLoadingByProject: {
+        ...current,
+        [projectPath]: isLoading,
+      },
+    });
+  },
+
+  getWorktreesLoading: (projectPath) => {
+    return get().worktreesLoadingByProject[projectPath] ?? true; // Default to loading=true for safety
   },
 
   getCurrentWorktree: (projectPath) => {

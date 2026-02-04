@@ -38,6 +38,7 @@ import { createHealthRoutes, createDetailedHandler } from './routes/health/index
 import { createAgentRoutes } from './routes/agent/index.js';
 import { createSessionsRoutes } from './routes/sessions/index.js';
 import { createFeaturesRoutes } from './routes/features/index.js';
+import { createProjectsRoutes } from './routes/projects/index.js';
 import { createAutoModeRoutes } from './routes/auto-mode/index.js';
 import { createEnhancePromptRoutes } from './routes/enhance-prompt/index.js';
 import { createWorktreeRoutes } from './routes/worktree/index.js';
@@ -322,6 +323,7 @@ app.use('/api/fs', createFsRoutes(events));
 app.use('/api/agent', createAgentRoutes(agentService, events));
 app.use('/api/sessions', createSessionsRoutes(agentService));
 app.use('/api/features', createFeaturesRoutes(featureLoader, settingsService, events));
+app.use('/api/projects', createProjectsRoutes(featureLoader));
 app.use('/api/auto-mode', createAutoModeRoutes(autoModeService));
 app.use('/api/enhance-prompt', createEnhancePromptRoutes(settingsService));
 app.use('/api/worktree', createWorktreeRoutes(events, settingsService));
