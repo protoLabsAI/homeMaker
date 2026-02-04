@@ -1,0 +1,29 @@
+{
+  "name": "@automaker/mcp-server",
+  "version": "1.0.0",
+  "description": "MCP server for interacting with Automaker board and features",
+  "type": "module",
+  "main": "dist/index.js",
+  "bin": {
+    "automaker-mcp": "./dist/index.js"
+  },
+  "scripts": {
+    "build": "tsc",
+    "start": "node dist/index.js",
+    "dev": "tsx src/index.ts"
+  },
+  "keywords": [
+    "mcp",
+    "automaker",
+    "ai-agents",
+    "kanban"
+  ],
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.0.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "tsx": "^4.7.0",
+    "typescript": "^5.4.0"
+  }
+}

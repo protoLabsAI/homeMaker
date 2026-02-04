@@ -1,0 +1,657 @@
+#!/usr/bin/env node
+/**
+ * Automaker MCP Server
+ *
+ * Exposes Automaker's board and feature management via MCP protocol.
+ * Allows Claude Code and other MCP clients to interact with Automaker programmatically.
+ *
+ * Usage:
+ *   npx @automaker/mcp-server
+ *
+ * Environment variables:
+ *   AUTOMAKER_API_URL - API base URL (default: http://localhost:3008)
+ *   AUTOMAKER_API_KEY - API key for authentication
+ */
+
+import { Server } from '@modelcontextprotocol/sdk/server/index.js';
+import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
+import {
+  CallToolRequestSchema,
+  ListToolsRequestSchema,
+  Tool,
+} from '@modelcontextprotocol/sdk/types.js';
+
+// Configuration
+const API_URL = process.env.AUTOMAKER_API_URL || 'http://localhost:3008';
+const API_KEY = process.env.AUTOMAKER_API_KEY || '';
+
+// Helper for API calls
+async function apiCall(endpoint: string, body: Record<string, unknown>): Promise<unknown> {
+  const response = await fetch(`${API_URL}/api${endpoint}`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'X-API-Key': API_KEY,
+    },
+    body: JSON.stringify(body),
+  });
+
+  if (!response.ok) {
+    const text = await response.text();
+    throw new Error(`API error ${response.status}: ${text}`);
+  }
+
+  return response.json();
+}
+
+// Define all tools
+const tools: Tool[] = [
+  // ========== Feature Management ==========
+  {
+    name: 'list_features',
+    description:
+      'List all features in a project. Returns features organized by status (backlog, in-progress, review, done).',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        projectPath: {
+          type: 'string',
+          description: 'Absolute path to the project directory',
+        },
+        status: {
+          type: 'string',
+          enum: ['backlog', 'in-progress', 'review', 'done'],
+          description: 'Filter by status (optional)',
+        },
+      },
+      required: ['projectPath'],
+    },
+  },
+  {
+    name: 'get_feature',
+    description:
+      'Get detailed information about a specific feature including its description, status, and agent output.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        projectPath: {
+          type: 'string',
+          description: 'Absolute path to the project directory',
+        },
+        featureId: {
+          type: 'string',
+          description: 'The feature ID (UUID)',
+        },
+      },
+      required: ['projectPath', 'featureId'],
+    },
+  },
+  {
+    name: 'create_feature',
+    description:
+      'Create a new feature on the Kanban board. Features start in the backlog by default.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        projectPath: {
+          type: 'string',
+          description: 'Absolute path to the project directory',
+        },
+        title: {
+          type: 'string',
+          description: 'Short title for the feature',
+        },
+        description: {
+          type: 'string',
+          description:
+            'Detailed description with requirements and acceptance criteria. Be specific about file locations, components, and expected behavior.',
+        },
+        status: {
+          type: 'string',
+          enum: ['backlog', 'in-progress'],
+          default: 'backlog',
+          description: "Initial status. Use 'in-progress' to immediately start an agent.",
+        },
+      },
+      required: ['projectPath', 'title', 'description'],
+    },
+  },
+  {
+    name: 'update_feature',
+    description:
+      "Update a feature's properties. Can be used to change status, title, description, or move between columns.",
+    inputSchema: {
+      type: 'object',
+      properties: {
+        projectPath: {
+          type: 'string',
+          description: 'Absolute path to the project directory',
+        },
+        featureId: {
+          type: 'string',
+          description: 'The feature ID (UUID)',
+        },
+        title: {
+          type: 'string',
+          description: 'New title (optional)',
+        },
+        description: {
+          type: 'string',
+          description: 'New description (optional)',
+        },
+        status: {
+          type: 'string',
+          enum: ['backlog', 'in-progress', 'review', 'done'],
+          description: "New status (optional). Moving to 'in-progress' starts an agent.",
+        },
+      },
+      required: ['projectPath', 'featureId'],
+    },
+  },
+  {
+    name: 'delete_feature',
+    description: 'Delete a feature from the board.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        projectPath: {
+          type: 'string',
+          description: 'Absolute path to the project directory',
+        },
+        featureId: {
+          type: 'string',
+          description: 'The feature ID (UUID)',
+        },
+      },
+      required: ['projectPath', 'featureId'],
+    },
+  },
+  {
+    name: 'move_feature',
+    description:
+      'Move a feature to a different column on the board. This is a convenience wrapper around update_feature.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        projectPath: {
+          type: 'string',
+          description: 'Absolute path to the project directory',
+        },
+        featureId: {
+          type: 'string',
+          description: 'The feature ID (UUID)',
+        },
+        toStatus: {
+          type: 'string',
+          enum: ['backlog', 'in-progress', 'review', 'done'],
+          description: "Target column. Moving to 'in-progress' starts an agent.",
+        },
+      },
+      required: ['projectPath', 'featureId', 'toStatus'],
+    },
+  },
+
+  // ========== Agent Control ==========
+  {
+    name: 'start_agent',
+    description:
+      'Start an AI agent to work on a feature. The agent will create a git worktree and begin implementation.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        projectPath: {
+          type: 'string',
+          description: 'Absolute path to the project directory',
+        },
+        featureId: {
+          type: 'string',
+          description: 'The feature ID to work on',
+        },
+      },
+      required: ['projectPath', 'featureId'],
+    },
+  },
+  {
+    name: 'stop_agent',
+    description: 'Stop a running agent.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        featureId: {
+          type: 'string',
+          description: 'The feature ID of the running agent',
+        },
+      },
+      required: ['featureId'],
+    },
+  },
+  {
+    name: 'list_running_agents',
+    description: 'List all currently running agents across all projects.',
+    inputSchema: {
+      type: 'object',
+      properties: {},
+    },
+  },
+  {
+    name: 'get_agent_output',
+    description:
+      "Get the output/log from an agent's execution on a feature. Useful for reviewing what the agent did.",
+    inputSchema: {
+      type: 'object',
+      properties: {
+        projectPath: {
+          type: 'string',
+          description: 'Absolute path to the project directory',
+        },
+        featureId: {
+          type: 'string',
+          description: 'The feature ID',
+        },
+      },
+      required: ['projectPath', 'featureId'],
+    },
+  },
+  {
+    name: 'send_message_to_agent',
+    description:
+      'Send a message to a running agent. Use this to provide clarification or additional instructions.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        featureId: {
+          type: 'string',
+          description: 'The feature ID of the running agent',
+        },
+        message: {
+          type: 'string',
+          description: 'Message to send to the agent',
+        },
+      },
+      required: ['featureId', 'message'],
+    },
+  },
+
+  // ========== Queue Management ==========
+  {
+    name: 'queue_feature',
+    description:
+      'Add a feature to the agent queue for processing. Features in queue are automatically picked up.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        projectPath: {
+          type: 'string',
+          description: 'Absolute path to the project directory',
+        },
+        featureId: {
+          type: 'string',
+          description: 'The feature ID to queue',
+        },
+      },
+      required: ['projectPath', 'featureId'],
+    },
+  },
+  {
+    name: 'list_queue',
+    description: 'List all features currently in the agent queue.',
+    inputSchema: {
+      type: 'object',
+      properties: {},
+    },
+  },
+  {
+    name: 'clear_queue',
+    description: 'Clear all features from the agent queue.',
+    inputSchema: {
+      type: 'object',
+      properties: {},
+    },
+  },
+
+  // ========== Context Files ==========
+  {
+    name: 'list_context_files',
+    description:
+      "List all context files in a project's .automaker/context/ directory. These files are injected into agent prompts.",
+    inputSchema: {
+      type: 'object',
+      properties: {
+        projectPath: {
+          type: 'string',
+          description: 'Absolute path to the project directory',
+        },
+      },
+      required: ['projectPath'],
+    },
+  },
+  {
+    name: 'get_context_file',
+    description: 'Read the contents of a context file.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        projectPath: {
+          type: 'string',
+          description: 'Absolute path to the project directory',
+        },
+        filename: {
+          type: 'string',
+          description: "Name of the context file (e.g., 'coding-rules.md')",
+        },
+      },
+      required: ['projectPath', 'filename'],
+    },
+  },
+  {
+    name: 'create_context_file',
+    description:
+      'Create a new context file that will be injected into all agent prompts for this project.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        projectPath: {
+          type: 'string',
+          description: 'Absolute path to the project directory',
+        },
+        filename: {
+          type: 'string',
+          description: "Name for the context file (should end in .md, e.g., 'coding-rules.md')",
+        },
+        content: {
+          type: 'string',
+          description: 'Markdown content for the context file. This will be shown to agents.',
+        },
+      },
+      required: ['projectPath', 'filename', 'content'],
+    },
+  },
+  {
+    name: 'delete_context_file',
+    description: 'Delete a context file.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        projectPath: {
+          type: 'string',
+          description: 'Absolute path to the project directory',
+        },
+        filename: {
+          type: 'string',
+          description: 'Name of the context file to delete',
+        },
+      },
+      required: ['projectPath', 'filename'],
+    },
+  },
+
+  // ========== Project Spec ==========
+  {
+    name: 'get_project_spec',
+    description:
+      'Get the project specification from .automaker/spec.md. This provides architectural context to agents.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        projectPath: {
+          type: 'string',
+          description: 'Absolute path to the project directory',
+        },
+      },
+      required: ['projectPath'],
+    },
+  },
+  {
+    name: 'update_project_spec',
+    description:
+      'Update the project specification. This is shown to agents for architectural context.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        projectPath: {
+          type: 'string',
+          description: 'Absolute path to the project directory',
+        },
+        content: {
+          type: 'string',
+          description: 'New content for spec.md',
+        },
+      },
+      required: ['projectPath', 'content'],
+    },
+  },
+
+  // ========== Utilities ==========
+  {
+    name: 'health_check',
+    description: 'Check if the Automaker server is running and healthy.',
+    inputSchema: {
+      type: 'object',
+      properties: {},
+    },
+  },
+  {
+    name: 'get_board_summary',
+    description: 'Get a summary of the board state showing feature counts by status.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        projectPath: {
+          type: 'string',
+          description: 'Absolute path to the project directory',
+        },
+      },
+      required: ['projectPath'],
+    },
+  },
+];
+
+// Tool implementations
+async function handleTool(name: string, args: Record<string, unknown>): Promise<unknown> {
+  switch (name) {
+    // Feature Management
+    case 'list_features':
+      return apiCall('/features/list', {
+        projectPath: args.projectPath,
+        status: args.status,
+      });
+
+    case 'get_feature':
+      return apiCall('/features/get', {
+        projectPath: args.projectPath,
+        featureId: args.featureId,
+      });
+
+    case 'create_feature':
+      return apiCall('/features/create', {
+        projectPath: args.projectPath,
+        feature: {
+          title: args.title,
+          description: args.description,
+          status: args.status || 'backlog',
+        },
+      });
+
+    case 'update_feature': {
+      const updates: Record<string, unknown> = {};
+      if (args.title) updates.title = args.title;
+      if (args.description) updates.description = args.description;
+      if (args.status) updates.status = args.status;
+      return apiCall('/features/update', {
+        projectPath: args.projectPath,
+        featureId: args.featureId,
+        updates,
+      });
+    }
+
+    case 'delete_feature':
+      return apiCall('/features/delete', {
+        projectPath: args.projectPath,
+        featureId: args.featureId,
+      });
+
+    case 'move_feature':
+      return apiCall('/features/update', {
+        projectPath: args.projectPath,
+        featureId: args.featureId,
+        updates: { status: args.toStatus },
+      });
+
+    // Agent Control
+    case 'start_agent':
+      return apiCall('/agent/start', {
+        projectPath: args.projectPath,
+        featureId: args.featureId,
+      });
+
+    case 'stop_agent':
+      return apiCall('/agent/stop', {
+        featureId: args.featureId,
+      });
+
+    case 'list_running_agents':
+      return apiCall('/running-agents/list', {});
+
+    case 'get_agent_output':
+      return apiCall('/features/agent-output', {
+        projectPath: args.projectPath,
+        featureId: args.featureId,
+      });
+
+    case 'send_message_to_agent':
+      return apiCall('/agent/send', {
+        featureId: args.featureId,
+        message: args.message,
+      });
+
+    // Queue Management
+    case 'queue_feature':
+      return apiCall('/agent/queue/add', {
+        projectPath: args.projectPath,
+        featureId: args.featureId,
+      });
+
+    case 'list_queue':
+      return apiCall('/agent/queue/list', {});
+
+    case 'clear_queue':
+      return apiCall('/agent/queue/clear', {});
+
+    // Context Files
+    case 'list_context_files':
+      return apiCall('/context/list', {
+        projectPath: args.projectPath,
+      });
+
+    case 'get_context_file':
+      return apiCall('/context/get', {
+        projectPath: args.projectPath,
+        filename: args.filename,
+      });
+
+    case 'create_context_file':
+      return apiCall('/context/create', {
+        projectPath: args.projectPath,
+        filename: args.filename,
+        content: args.content,
+      });
+
+    case 'delete_context_file':
+      return apiCall('/context/delete', {
+        projectPath: args.projectPath,
+        filename: args.filename,
+      });
+
+    // Project Spec
+    case 'get_project_spec':
+      return apiCall('/app-spec/get', {
+        projectPath: args.projectPath,
+      });
+
+    case 'update_project_spec':
+      return apiCall('/app-spec/update', {
+        projectPath: args.projectPath,
+        content: args.content,
+      });
+
+    // Utilities
+    case 'health_check': {
+      const response = await fetch(`${API_URL}/api/health`);
+      return response.json();
+    }
+
+    case 'get_board_summary': {
+      const result = (await apiCall('/features/list', {
+        projectPath: args.projectPath,
+      })) as { features?: Array<{ status: string }> };
+      const features = result.features || [];
+      const summary = {
+        total: features.length,
+        backlog: features.filter((f) => f.status === 'backlog').length,
+        inProgress: features.filter((f) => f.status === 'in-progress').length,
+        review: features.filter((f) => f.status === 'review').length,
+        done: features.filter((f) => f.status === 'done').length,
+      };
+      return summary;
+    }
+
+    default:
+      throw new Error(`Unknown tool: ${name}`);
+  }
+}
+
+// Create and run server
+async function main() {
+  const server = new Server(
+    {
+      name: 'automaker-mcp-server',
+      version: '1.0.0',
+    },
+    {
+      capabilities: {
+        tools: {},
+      },
+    }
+  );
+
+  // List tools handler
+  server.setRequestHandler(ListToolsRequestSchema, async () => ({
+    tools,
+  }));
+
+  // Call tool handler
+  server.setRequestHandler(CallToolRequestSchema, async (request) => {
+    const { name, arguments: args } = request.params;
+
+    try {
+      const result = await handleTool(name, (args as Record<string, unknown>) || {});
+      return {
+        content: [
+          {
+            type: 'text',
+            text: JSON.stringify(result, null, 2),
+          },
+        ],
+      };
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      return {
+        content: [
+          {
+            type: 'text',
+            text: `Error: ${message}`,
+          },
+        ],
+        isError: true,
+      };
+    }
+  });
+
+  // Start server
+  const transport = new StdioServerTransport();
+  await server.connect(transport);
+
+  console.error('Automaker MCP Server running on stdio');
+}
+
+main().catch(console.error);
