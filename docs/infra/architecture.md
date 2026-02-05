@@ -1,6 +1,8 @@
 # System Architecture
 
-This document provides architectural diagrams and explanations of Automaker's infrastructure.
+This document covers both the single-instance architecture (what runs on one machine)
+and the multi-instance topology (how multiple Automaker instances coordinate as
+autonomous dev teams via Linear and Discord).
 
 ## High-Level Architecture
 
@@ -330,14 +332,123 @@ Browser                 nginx (UI)              Express (Server)
 └──────────────────────────────────────────────────┘
 ```
 
+## Multi-Instance Topology
+
+Automaker is designed to run as multiple independent instances, each acting as an
+autonomous development team. Coordination happens through Linear (project management)
+and Discord (communication), not through direct instance-to-instance communication.
+
+### Organizational Hierarchy
+
+```
+┌─────────────────────────────────────────────────────────────────────────┐
+│                         Coordination Layer                                │
+│                                                                           │
+│  ┌──────────────────────────┐    ┌──────────────────────────────────┐   │
+│  │        Linear             │    │           Discord                 │   │
+│  │  (Project Management)     │    │      (Team Communication)        │   │
+│  │                           │    │                                   │   │
+│  │  Initiatives              │    │  #dev - status updates           │   │
+│  │   └─ Projects             │    │  #alerts - CI/deploy notifs      │   │
+│  │       └─ Issues           │    │  #approvals - HITL requests      │   │
+│  │           └─ Sub-issues   │    │                                   │   │
+│  └──────────────────────────┘    └──────────────────────────────────┘   │
+│              │                                    │                       │
+│              │  distilled updates                 │  notifications        │
+│              │  (pertinent info only)             │  (summaries only)     │
+│              │                                    │                       │
+├──────────────┼────────────────────────────────────┼───────────────────────┤
+│              │         Execution Layer             │                       │
+│              ▼                                    ▼                       │
+│  ┌──────────────────┐  ┌──────────────────┐  ┌──────────────────┐       │
+│  │  Automaker        │  │  Automaker        │  │  Automaker        │       │
+│  │  Instance A       │  │  Instance B       │  │  Instance N       │       │
+│  │  (Team Alpha)     │  │  (Team Beta)      │  │  (Team ...)       │       │
+│  │                   │  │                   │  │                   │       │
+│  │  Kanban Board     │  │  Kanban Board     │  │  Kanban Board     │       │
+│  │  AI Agents        │  │  AI Agents        │  │  AI Agents        │       │
+│  │  Git Worktrees    │  │  Git Worktrees    │  │  Git Worktrees    │       │
+│  │  Local Context    │  │  Local Context    │  │  Local Context    │       │
+│  └──────────────────┘  └──────────────────┘  └──────────────────┘       │
+│                                                                           │
+└─────────────────────────────────────────────────────────────────────────┘
+```
+
+### Information Flow (Bottom-Up Distillation)
+
+Each layer only pushes the most pertinent information upward. Raw agent output
+stays local; summaries and outcomes propagate to coordination tools.
+
+```
+AI Agent (PE)                    Does the work, produces code + output
+    │
+    │ completion status, errors, PR links
+    ▼
+Automaker Board (Team Lead)      Local Kanban tracks features, manages agents
+    │
+    │ milestone progress, blockers, key decisions
+    ▼
+Linear Issues (Project Manager)  Cross-team visibility, priority, scheduling
+    │
+    │ project health, risk flags, milestone rollups
+    ▼
+Linear Projects (PM / CTO)      Strategic view, resource allocation
+```
+
+**What stays local (Automaker instance):**
+
+- Agent conversation logs and raw output
+- Individual feature status transitions
+- Git worktree management
+- Build/test results
+
+**What propagates to Linear:**
+
+- Feature completion (issue status updates)
+- Blockers requiring cross-team coordination
+- Milestone progress summaries
+- Architecture decisions needing approval
+
+**What goes to Discord:**
+
+- Status notifications (feature started/completed)
+- Escalation requests (HITL approval needed)
+- Cross-team announcements
+- CI/CD pipeline results
+
+### Role Mapping
+
+| Role                     | Where It Lives     | Responsibility                            |
+| ------------------------ | ------------------ | ----------------------------------------- |
+| CTO (Human)              | Linear + Discord   | Strategic direction, final approvals      |
+| PM                       | Linear projects    | What to build, why, priorities            |
+| Project Manager          | Linear issues      | When, how, milestone tracking             |
+| EM (Engineering Manager) | Automaker instance | Who does what, capacity, agent assignment |
+| PE (Product Engineer)    | Automaker agent    | Implementation, code, tests, PRs          |
+
+See the [Hierarchical Agent Organization System](https://linear.app/protolabsai) project in Linear (PRO-13 through PRO-34) for the implementation plan.
+
+### Each Instance is Autonomous
+
+Each Automaker instance:
+
+- Has its own Kanban board with features and backlog
+- Runs its own AI agents in isolated git worktrees
+- Maintains its own project context (`.automaker/context/`)
+- Manages its own auto-mode and feature queue
+- Reports upward via MCP integrations (Linear, Discord)
+
+Instances do NOT communicate directly with each other. All cross-team
+coordination happens through the coordination layer (Linear + Discord).
+
 ## Infrastructure Topology
 
 ### Hardware Inventory
 
-| Machine  | Role                          | Specs                | Tailscale Name               |
-| -------- | ----------------------------- | -------------------- | ---------------------------- |
-| Main Rig | Development, Automaker server | 128GB RAM, 48GB VRAM | `mainrig` (adjust to actual) |
-| Proxmox  | Infrastructure services       | 32GB RAM             | `proxmox` (adjust to actual) |
+| Machine  | Role                                  | Specs                | Tailscale Name               |
+| -------- | ------------------------------------- | -------------------- | ---------------------------- |
+| Main Rig | Primary Automaker instance            | 128GB RAM, 48GB VRAM | `mainrig` (adjust to actual) |
+| Proxmox  | Infrastructure + additional instances | 32GB RAM             | `proxmox` (adjust to actual) |
 
 ### Service Map
 
@@ -347,25 +458,21 @@ Browser                 nginx (UI)              Express (Server)
 ├────────────────────────────────────────────────────────────────┤
 │                                                                 │
 │  Main Rig (128GB RAM, 48GB VRAM)                               │
-│  ├── Automaker Server (:3008)                                  │
-│  ├── Automaker UI (:3007)                                      │
-│  ├── Claude Code CLI (local)                                    │
-│  ├── MCP Servers (automaker, discord, linear)                   │
+│  ├── Automaker Instance (primary dev team)                     │
+│  │   ├── Server (:3008)                                        │
+│  │   ├── UI (:3007)                                            │
+│  │   └── MCP Servers (automaker, discord, linear)              │
+│  ├── Claude Code CLI                                            │
 │  └── Docker (containers + volumes)                              │
 │                                                                 │
 │  Proxmox Server (32GB RAM)                                     │
 │  ├── Infisical (:8080) — secret management                     │
 │  ├── PostgreSQL (Infisical backend)                             │
 │  ├── Redis (Infisical cache)                                    │
-│  └── (capacity for additional services)                         │
-│                                                                 │
-│  Developer Machines                                             │
-│  ├── Claude Code CLI                                            │
-│  ├── MCP Servers (secrets via Infisical)                        │
-│  └── Browser → Main Rig Automaker UI                            │
+│  └── Automaker Instance(s) (additional dev teams, optional)    │
 │                                                                 │
 │  External (via Cloudflare Tunnel, if needed)                    │
-│  ├── GitHub Webhooks → Automaker Server                         │
+│  ├── GitHub Webhooks → Automaker Instances                      │
 │  └── CI/CD → Infisical API                                      │
 │                                                                 │
 └────────────────────────────────────────────────────────────────┘
