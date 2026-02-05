@@ -1157,6 +1157,17 @@ export interface GlobalSettings {
    * @see GraphiteSettings
    */
   graphite?: GraphiteSettings;
+
+  /**
+   * GitHub webhook settings for automated feature status transitions.
+   * When enabled, features automatically move to "done" when their PR is merged.
+   *
+   * Note: Webhook secret is stored separately in credentials.json for security.
+   */
+  githubWebhook?: {
+    /** Whether GitHub webhook integration is enabled */
+    enabled: boolean;
+  };
 }
 
 /**
@@ -1176,6 +1187,11 @@ export interface Credentials {
     google: string;
     /** OpenAI API key (for compatibility or alternative providers) */
     openai: string;
+  };
+  /** Webhook secrets for external integrations */
+  webhookSecrets?: {
+    /** GitHub webhook secret for HMAC-SHA256 signature verification */
+    github?: string;
   };
 }
 
