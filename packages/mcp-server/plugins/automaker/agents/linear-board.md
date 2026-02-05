@@ -89,9 +89,51 @@ Report: full issue context with timeline
 3. Flag issues with no recent activity
 ```
 
+### Team Capacity Overview
+
+```
+For each team:
+  1. getUsers() → all members
+  2. searchIssues({ teamId, states: ["In Progress"], limit: 50 })
+  3. searchIssues({ teamId, states: ["Todo"], limit: 50 })
+  Report: per-member workload, team total, available capacity
+```
+
+Output format:
+
+```markdown
+## Team Capacity
+
+| Team     | Members | In Progress | Todo | Blocked | Available Slots |
+| -------- | ------- | ----------- | ---- | ------- | --------------- |
+| Frontend | 3       | 9           | 6    | 1       | 9               |
+| Backend  | 2       | 4           | 3    | 0       | 9               |
+| DevOps   | 1       | 2           | 1    | 0       | 5               |
+```
+
+### Cross-Team Dependency Report
+
+```
+1. getIssues({ limit: 50 })
+2. For issues with relations, check if blocker is on different team
+3. Report cross-team blocking chains
+```
+
+Output format:
+
+```markdown
+## Cross-Team Dependencies
+
+| Issue | Team     | Blocked By | Blocker Team | Status      |
+| ----- | -------- | ---------- | ------------ | ----------- |
+| FE-97 | Frontend | BE-200     | Backend      | In Progress |
+| AI-15 | AI/ML    | BE-210     | Backend      | Todo        |
+```
+
 ## Important
 
 - This agent is primarily read-only (except for comments)
 - For mutations (create, update, assign), use the main /linear command
 - Always verify IDs before using them in subsequent calls
 - If a tool returns empty results, note it rather than failing silently
+- When reporting on teams, include capacity metrics to support hierarchy decisions

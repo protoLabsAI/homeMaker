@@ -57,6 +57,10 @@ allowed-tools:
   - mcp__linear__linear_getInitiativeProjects
   - mcp__linear__linear_addProjectToInitiative
   - mcp__linear__linear_removeProjectFromInitiative
+  # Automaker Board (for cross-referencing)
+  - mcp__plugin_automaker_automaker__list_features
+  - mcp__plugin_automaker_automaker__get_feature
+  - mcp__plugin_automaker_automaker__get_board_summary
 ---
 
 # Linear Project Manager
@@ -89,6 +93,7 @@ For specialized work, spawn sub-agents:
 | `/linear initiative [name]`   | View or manage initiatives                          |
 | `/linear triage`              | Triage unassigned/unprioritized issues              |
 | `/linear sprint`              | Sprint planning - review cycle, assign work         |
+| `/linear team [name]`         | View team mapping, capacity, and routing rules      |
 
 ## Workflow
 
@@ -104,6 +109,7 @@ Based on the user's input, determine the action:
 - `initiative [name]` → Initiative management
 - `triage` → Spawn triage sub-agent
 - `sprint` → Sprint planning workflow
+- `team [name]` → Team mapping, capacity, routing
 
 ---
 
@@ -495,6 +501,86 @@ Then batch-execute assignments and cycle additions.
 
 ---
 
+## Action: Team
+
+Manage team infrastructure and routing between Automaker agent teams and Linear teams.
+
+### View Team Mapping
+
+```
+mcp__linear__linear_getTeams()
+```
+
+Display current mapping:
+
+```markdown
+## Team Routing
+
+| Linear Team | Key | Automaker Role | Members | Active Issues |
+| ----------- | --- | -------------- | ------- | ------------- |
+| Frontend    | FE  | frontend       | 3       | 12            |
+| Backend     | BE  | backend        | 2       | 8             |
+| DevOps      | DO  | devops         | 1       | 4             |
+| AI/ML       | AI  | ai-ml          | 2       | 6             |
+| QA          | QA  | qa             | 1       | 3             |
+
+### Unmapped Teams
+
+- Design (DS) - No Automaker role assigned
+```
+
+### Team Capacity Report
+
+For each team, gather workload data:
+
+```
+mcp__linear__linear_getTeams()
+# For each team:
+mcp__linear__linear_getActiveCycle({ teamId })
+mcp__linear__linear_searchIssues({ teamId, states: ["In Progress"], limit: 50 })
+mcp__linear__linear_searchIssues({ teamId, states: ["Todo"], limit: 50 })
+mcp__linear__linear_getUsers()
+```
+
+Display:
+
+```markdown
+## Team Capacity Report
+
+### Frontend (FE)
+
+| Member | In Progress | Todo | Blocked | Capacity | Status    |
+| ------ | ----------- | ---- | ------- | -------- | --------- |
+| @alice | 3           | 2    | 0       | 5/8      | Available |
+| @bob   | 5           | 3    | 1       | 8/8      | At Limit  |
+| @carol | 1           | 1    | 0       | 2/8      | Available |
+
+**Team Total**: 9 in-progress, 6 todo, 1 blocked
+**Sprint Progress**: 65% (13/20)
+**Available Capacity**: 9 slots
+
+### Backend (BE)
+
+...
+```
+
+### Routing Rules
+
+When creating or assigning issues, use team routing to determine the correct Linear team:
+
+| Automaker Role      | Linear Team | Auto-Assign Rule                           |
+| ------------------- | ----------- | ------------------------------------------ |
+| frontend            | FE          | UI components, React, CSS, UX issues       |
+| backend             | BE          | API, database, server, service issues      |
+| devops              | DO          | Docker, CI/CD, deployment, infrastructure  |
+| ai-ml               | AI          | Agent prompts, model config, AI features   |
+| qa                  | QA          | Test coverage, E2E tests, bug verification |
+| product-manager     | -           | Creates epics, doesn't own implementation  |
+| project-manager     | -           | Decomposes epics, assigns to teams         |
+| engineering-manager | -           | Reviews assignments, manages team load     |
+
+---
+
 ## Syncing with Automaker
 
 When Automaker features map to Linear issues:
@@ -505,11 +591,15 @@ When Automaker features map to Linear issues:
 # Get feature details from Automaker board
 mcp__plugin_automaker_automaker__get_feature({ projectPath, featureId })
 
+# Determine target team from feature context
+# Use routing rules above or analyze feature description/title
+teamId = resolveTeamFromFeature(feature)
+
 # Create corresponding Linear issue
 mcp__linear__linear_createIssue({
   title: feature.title,
   description: feature.description,
-  teamId: "<team_id>",
+  teamId: teamId,
   priority: complexityToPriority(feature.complexity)
 })
 ```
@@ -525,6 +615,62 @@ mcp__linear__linear_updateIssue({
 mcp__linear__linear_createComment({
   issueId: "<linear_issue_id>",
   body: "Completed by Automaker agent. PR: #XX"
+})
+```
+
+### Hierarchy-Aware Issue Creation
+
+When the orchestration hierarchy delegates work:
+
+```
+# PM creates epic in Linear
+mcp__linear__linear_createIssue({
+  title: "Epic: User Authentication Overhaul",
+  teamId: "<project-team-id>",
+  priority: 2
+})
+
+# Project Manager decomposes into team-specific subtasks
+mcp__linear__linear_createIssue({
+  title: "Frontend: Login form redesign",
+  teamId: "<frontend-team-id>",
+  parentId: "<epic-issue-id>",
+  priority: 2
+})
+
+mcp__linear__linear_createIssue({
+  title: "Backend: OAuth2 provider integration",
+  teamId: "<backend-team-id>",
+  parentId: "<epic-issue-id>",
+  priority: 2
+})
+
+# Set blocking relationships
+mcp__linear__linear_createIssueRelation({
+  issueId: "<backend-issue-id>",
+  relatedIssueId: "<frontend-issue-id>",
+  type: "blocks"
+})
+```
+
+### Capacity-Aware Assignment
+
+Before assigning, check team capacity:
+
+```
+# Get team members and their current load
+mcp__linear__linear_getUsers()
+mcp__linear__linear_searchIssues({
+  teamId: "<target-team-id>",
+  states: ["In Progress"],
+  limit: 50
+})
+
+# Count per-member in-progress issues
+# Assign to member with lowest load (or most relevant expertise)
+mcp__linear__linear_assignIssue({
+  issueId: "<issue-id>",
+  assigneeId: "<lowest-load-member-id>"
 })
 ```
 

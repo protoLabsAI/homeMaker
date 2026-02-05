@@ -167,6 +167,52 @@ Then batch-execute the approved changes using:
 - `addIssueToCycle` for cycle additions
 - `createComment` to note triage actions
 
+## Team-Aware Triage
+
+When triaging, consider the Automaker team hierarchy:
+
+### Role-Based Assignment Rules
+
+| Automaker Role | Linear Team Pattern | Assignment Priority                 |
+| -------------- | ------------------- | ----------------------------------- |
+| frontend       | Frontend, FE, UI    | UI/UX issues, React components, CSS |
+| backend        | Backend, BE, API    | Server, database, API issues        |
+| devops         | DevOps, DO, Infra   | CI/CD, Docker, deployment           |
+| ai-ml          | AI, ML, Agent       | Agent prompts, model config         |
+| qa             | QA, Test            | Test coverage, bug verification     |
+
+### Capacity-Aware Suggestions
+
+When suggesting assignments:
+
+1. **Check team capacity first** - Don't assign to overloaded members
+2. **Respect specialization** - Match issue domain to team expertise
+3. **Balance across teams** - If one team is overloaded, flag for PM review
+4. **Consider dependencies** - If issue blocks another team's work, prioritize it
+
+### Cross-Team Dependencies
+
+Look for patterns that indicate cross-team work:
+
+- Frontend issue blocked by backend API not ready
+- DevOps issue blocking all teams (CI/CD broken)
+- AI/ML issue requiring frontend UI changes
+
+Flag these in the report under "Cross-Team Blockers" section.
+
+### Report Enhancement: Cross-Team Blockers
+
+Add this section to the triage report when cross-team issues are found:
+
+```markdown
+### Cross-Team Blockers
+
+| Blocker      | Team    | Blocks       | Impact                        |
+| ------------ | ------- | ------------ | ----------------------------- |
+| BE-200 (API) | Backend | FE-97, FE-98 | Frontend team blocked (2 dev) |
+| DO-50 (CI)   | DevOps  | All teams    | No deployments possible       |
+```
+
 ## Important
 
 - Always present findings BEFORE making changes
@@ -174,3 +220,4 @@ Then batch-execute the approved changes using:
 - Add a comment to issues when making triage changes (e.g., "Triaged: assigned to @alice, set priority to High")
 - Consider team context - don't assign frontend issues to backend engineers
 - Respect existing assignments unless clearly problematic
+- When suggesting reassignments, verify the target member's team role matches the issue domain
