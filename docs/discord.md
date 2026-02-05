@@ -45,6 +45,7 @@ Domain-specific technical discussion. Each channel maps to a team role in the [a
 | #ai-ml       | 1469049498729971733 | Agent prompts, model config, AI features, fine-tuning | `ai-ml`    |
 | #devops      | 1469049500487123086 | Docker, CI/CD, deployment, infrastructure             | `devops`   |
 | #code-review | 1469049502550720896 | PR reviews, architecture discussions, code quality    | all teams  |
+| #infra       | 1469109809939742814 | Infrastructure, Tailscale, Infisical, Docker, backups | `devops`   |
 
 ### AUTOMAKER
 
@@ -56,6 +57,8 @@ Automaker system activity and monitoring. Primarily bot/webhook-driven.
 | #pr-notifications | 1469049506472661034 | PR created/merged/reviewed notifications from GitHub  |
 | #deployments      | 1469049508909289752 | Deployment status, release notes, environment changes |
 | #bugs-and-issues  | 1469049510599594223 | Bug reports, system issues, incident tracking         |
+| #alerts           | 1469109811915522301 | Health checks, CI failures, monitoring, error alerts  |
+| #approvals        | 1469109813911752967 | Agent HITL requests, trust escalations, merge gates   |
 
 ### PROJECTS
 
@@ -189,7 +192,9 @@ AI agents in the Automaker hierarchy use Discord for status updates and coordina
 | frontend team       | #team-frontend    | #frontend         |
 | backend team        | #team-backend     | #backend          |
 | ai-ml team          | #team-ai-ml       | #ai-ml            |
-| devops team         | #team-devops      | #devops           |
+| devops team         | #team-devops      | #devops, #infra   |
+| trust system        | #approvals        | #alerts           |
+| health monitor      | #alerts           | #infra            |
 
 ### Message Format for Agents
 
@@ -206,19 +211,25 @@ Details: <brief description>
 
 Automaker emits events that can be routed to Discord channels:
 
-| Event                 | Channel           | Message                                   |
-| --------------------- | ----------------- | ----------------------------------------- |
-| `agent:started`       | #agent-logs       | Agent started working on feature X        |
-| `agent:completed`     | #agent-logs       | Agent completed feature X                 |
-| `agent:failed`        | #agent-logs       | Agent failed on feature X (error summary) |
-| `pr:created`          | #pr-notifications | PR #N created for feature X               |
-| `pr:merged`           | #pr-notifications | PR #N merged into main                    |
-| `pr:review`           | #pr-notifications | CodeRabbit review on PR #N                |
-| `deploy:started`      | #deployments      | Deployment started (version X)            |
-| `deploy:completed`    | #deployments      | Deployment completed successfully         |
-| `deploy:failed`       | #deployments      | Deployment failed (error summary)         |
-| `epic:completed`      | #announcements    | Epic "X" completed (N features)           |
-| `milestone:completed` | #announcements    | Milestone "X" reached                     |
+| Event                  | Channel           | Message                                   |
+| ---------------------- | ----------------- | ----------------------------------------- |
+| `agent:started`        | #agent-logs       | Agent started working on feature X        |
+| `agent:completed`      | #agent-logs       | Agent completed feature X                 |
+| `agent:failed`         | #agent-logs       | Agent failed on feature X (error summary) |
+| `pr:created`           | #pr-notifications | PR #N created for feature X               |
+| `pr:merged`            | #pr-notifications | PR #N merged into main                    |
+| `pr:review`            | #pr-notifications | CodeRabbit review on PR #N                |
+| `deploy:started`       | #deployments      | Deployment started (version X)            |
+| `deploy:completed`     | #deployments      | Deployment completed successfully         |
+| `deploy:failed`        | #deployments      | Deployment failed (error summary)         |
+| `epic:completed`       | #announcements    | Epic "X" completed (N features)           |
+| `milestone:completed`  | #announcements    | Milestone "X" reached                     |
+| `health:degraded`      | #alerts           | Service health check failed               |
+| `health:recovered`     | #alerts           | Service recovered from degraded state     |
+| `trust:approval`       | #approvals        | Agent requesting trust level promotion    |
+| `policy:denied`        | #approvals        | High-risk action needs human approval     |
+| `infra:backup`         | #infra            | Backup completed/failed                   |
+| `infra:secret-rotated` | #infra            | Secret rotation completed                 |
 
 ## Integration Points
 
@@ -253,12 +264,15 @@ Content-Type: application/json
 
 Recommended webhooks:
 
-| Channel           | Webhook Name    | Source              |
-| ----------------- | --------------- | ------------------- |
-| #agent-logs       | Automaker Agent | Automaker server    |
-| #pr-notifications | GitHub          | GitHub webhook      |
-| #deployments      | CI/CD           | GitHub Actions      |
-| #ai-news          | AI News Feed    | RSS/Atom aggregator |
+| Channel           | Webhook Name     | Source                |
+| ----------------- | ---------------- | --------------------- |
+| #agent-logs       | Automaker Agent  | Automaker server      |
+| #pr-notifications | GitHub           | GitHub webhook        |
+| #deployments      | CI/CD            | GitHub Actions        |
+| #ai-news          | AI News Feed     | RSS/Atom aggregator   |
+| #alerts           | Automaker Alerts | Health monitor        |
+| #approvals        | Trust System     | Policy engine         |
+| #infra            | DevOps Bot       | Backup/deploy scripts |
 
 ### Linear Integration
 
