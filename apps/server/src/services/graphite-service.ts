@@ -389,7 +389,7 @@ export class GraphiteService {
         success: false,
         rebased: false,
         conflicts: false,
-        error: 'Graphite CLI not available'
+        error: 'Graphite CLI not available',
       };
     }
 

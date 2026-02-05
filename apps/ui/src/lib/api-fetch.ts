@@ -13,6 +13,7 @@ import { getApiKey, getSessionToken, getServerUrlSync } from './http-api-client'
 
 // Server URL - uses shared cached URL from http-api-client
 const getServerUrl = (): string => getServerUrlSync();
+
 const DEFAULT_CACHE_MODE: RequestCache = 'no-store';
 
 export type HttpMethod = 'GET' | 'POST' | 'PUT' | 'DELETE' | 'PATCH';

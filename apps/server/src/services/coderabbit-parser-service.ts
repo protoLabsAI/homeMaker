@@ -68,7 +68,8 @@ function extractSuggestion(text: string): string | undefined {
  */
 function extractLocation(text: string): { path?: string; line?: number } | undefined {
   // Try to extract file path from markdown code fence or file references
-  const fileMatch = text.match(/(?:File|Path):\s*`([^`]+)`/i) || text.match(/```\w*\n\/\/\s*([^\n]+)/);
+  const fileMatch =
+    text.match(/(?:File|Path):\s*`([^`]+)`/i) || text.match(/```\w*\n\/\/\s*([^\n]+)/);
   const lineMatch = text.match(/(?:Line|L):\s*(\d+)/i);
 
   if (fileMatch || lineMatch) {
@@ -131,11 +132,7 @@ export class CodeRabbitParserService {
   /**
    * Parse GitHub PR comments to extract CodeRabbit reviews
    */
-  parseReview(
-    prNumber: number,
-    prUrl: string,
-    comments: GitHubComment[]
-  ): CodeRabbitParseResult {
+  parseReview(prNumber: number, prUrl: string, comments: GitHubComment[]): CodeRabbitParseResult {
     try {
       logger.debug(`Parsing ${comments.length} comments for PR #${prNumber}`);
 

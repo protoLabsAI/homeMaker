@@ -63,6 +63,7 @@ export function ProjectSwitcher() {
   const isCreatingSpec = specCreatingForProject !== null;
 
   // Version info
+  // eslint-disable-next-line no-undef
   const appVersion = typeof __APP_VERSION__ !== 'undefined' ? __APP_VERSION__ : '0.0.0';
   const { os } = useOSDetection();
   const appMode = import.meta.env.VITE_APP_MODE || '?';

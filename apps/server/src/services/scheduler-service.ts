@@ -177,7 +177,12 @@ const MONTH_NAMES: Record<string, number> = {
 /**
  * Parse a single cron field into allowed values
  */
-function parseCronField(field: string, min: number, max: number, names?: Record<string, number>): CronField {
+function parseCronField(
+  field: string,
+  min: number,
+  max: number,
+  names?: Record<string, number>
+): CronField {
   const values: Set<number> = new Set();
 
   // Handle names (e.g., "mon" -> 1)
@@ -516,7 +521,12 @@ export class SchedulerService {
     }
 
     // Emit event
-    this.emitEvent('scheduler:task_registered', { taskId: id, name, cronExpression, enabled: task.enabled });
+    this.emitEvent('scheduler:task_registered', {
+      taskId: id,
+      name,
+      cronExpression,
+      enabled: task.enabled,
+    });
 
     // Save tasks after registration
     await this.saveTasks();
@@ -556,7 +566,11 @@ export class SchedulerService {
     task.nextRun = getNextRunTime(task.cronExpression).toISOString();
     logger.info(`Enabled task "${task.name}" (${id})`);
 
-    this.emitEvent('scheduler:task_enabled', { taskId: id, name: task.name, nextRun: task.nextRun });
+    this.emitEvent('scheduler:task_enabled', {
+      taskId: id,
+      name: task.name,
+      nextRun: task.nextRun,
+    });
 
     // Save tasks after enabling
     await this.saveTasks();

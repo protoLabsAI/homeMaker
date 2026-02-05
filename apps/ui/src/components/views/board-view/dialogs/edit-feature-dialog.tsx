@@ -30,7 +30,6 @@ import { Feature, ModelAlias, ThinkingLevel, useAppStore, PlanningMode } from '@
 import type { ReasoningEffort, PhaseModelEntry, DescriptionHistoryEntry } from '@automaker/types';
 import { migrateModelId } from '@automaker/types';
 import {
-  TestingTabContent,
   PrioritySelector,
   WorkModeSelector,
   PlanningModeSelect,

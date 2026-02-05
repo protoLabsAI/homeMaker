@@ -62,11 +62,7 @@ export type GitHubCheckSuiteAction = 'completed' | 'requested' | 'rerequested';
 /**
  * GitHubCheckRunAction - Actions that can occur on check runs
  */
-export type GitHubCheckRunAction =
-  | 'created'
-  | 'completed'
-  | 'rerequested'
-  | 'requested_action';
+export type GitHubCheckRunAction = 'created' | 'completed' | 'rerequested' | 'requested_action';
 
 /**
  * GitHubUser - Simplified GitHub user object
@@ -140,14 +136,7 @@ export interface GitHubCheckSuite {
   node_id: string;
   head_branch: string | null;
   head_sha: string;
-  status:
-    | 'queued'
-    | 'in_progress'
-    | 'completed'
-    | 'waiting'
-    | 'requested'
-    | 'pending'
-    | null;
+  status: 'queued' | 'in_progress' | 'completed' | 'waiting' | 'requested' | 'pending' | null;
   conclusion:
     | 'success'
     | 'failure'

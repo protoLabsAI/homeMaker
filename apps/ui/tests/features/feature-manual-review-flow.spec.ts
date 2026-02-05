@@ -59,25 +59,9 @@ test.describe('Feature Manual Review Flow', () => {
       `# ${projectName}\n\nA test project for e2e testing.`
     );
 
-    // Create a feature file that is in waiting_approval status
+    // Create feature directory - actual feature created via HTTP API in test
     const featureDir = path.join(automakerDir, 'features', featureId);
     fs.mkdirSync(featureDir, { recursive: true });
-
-    const feature = {
-      id: featureId,
-      description: 'Test feature for manual review flow',
-      category: 'test',
-      status: 'waiting_approval',
-      skipTests: true,
-      model: 'sonnet',
-      thinkingLevel: 'none',
-      createdAt: new Date().toISOString(),
-      branchName: '',
-      priority: 2,
-    };
-
-    // Note: Feature is created via HTTP API in the test itself, not in beforeAll
-    // This ensures the feature exists when the board view loads it
   });
 
   test.afterAll(async () => {

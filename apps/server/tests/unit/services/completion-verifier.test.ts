@@ -226,7 +226,11 @@ describe('completion-verifier.ts', () => {
         vi.mocked(secureFs.readFile).mockResolvedValue('const VERSION = "1.2.3";');
 
         const result = await service.checkCriterion(
-          { type: 'file_contains', path: 'version.ts', pattern: 'VERSION\\s*=\\s*"\\d+\\.\\d+\\.\\d+"' },
+          {
+            type: 'file_contains',
+            path: 'version.ts',
+            pattern: 'VERSION\\s*=\\s*"\\d+\\.\\d+\\.\\d+"',
+          },
           '/project'
         );
 
@@ -342,10 +346,12 @@ describe('completion-verifier.ts', () => {
       });
 
       it('should use workDir option when provided', async () => {
-        mockExecAsyncImpl = vi.fn().mockImplementation((_cmd: string, options: { cwd?: string }) => {
-          expect(options.cwd).toBe('/custom/workdir');
-          return Promise.resolve({ stdout: 'Success', stderr: '' });
-        });
+        mockExecAsyncImpl = vi
+          .fn()
+          .mockImplementation((_cmd: string, options: { cwd?: string }) => {
+            expect(options.cwd).toBe('/custom/workdir');
+            return Promise.resolve({ stdout: 'Success', stderr: '' });
+          });
 
         const criteria: CompletionCriterion[] = [{ type: 'tests_pass', command: 'npm test' }];
 
@@ -357,10 +363,12 @@ describe('completion-verifier.ts', () => {
       });
 
       it('should include custom env variables', async () => {
-        mockExecAsyncImpl = vi.fn().mockImplementation((_cmd: string, options: { env?: Record<string, string> }) => {
-          expect(options.env?.CUSTOM_VAR).toBe('custom_value');
-          return Promise.resolve({ stdout: 'Success', stderr: '' });
-        });
+        mockExecAsyncImpl = vi
+          .fn()
+          .mockImplementation((_cmd: string, options: { env?: Record<string, string> }) => {
+            expect(options.env?.CUSTOM_VAR).toBe('custom_value');
+            return Promise.resolve({ stdout: 'Success', stderr: '' });
+          });
 
         const criteria: CompletionCriterion[] = [{ type: 'tests_pass', command: 'npm test' }];
 

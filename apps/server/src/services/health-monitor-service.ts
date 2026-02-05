@@ -161,9 +161,7 @@ export class HealthMonitorService {
     }
 
     this.isRunning = true;
-    logger.info(
-      `Starting health monitoring with interval of ${this.config.checkIntervalMs}ms`
-    );
+    logger.info(`Starting health monitoring with interval of ${this.config.checkIntervalMs}ms`);
 
     // Run initial check
     this.runHealthCheck().catch((error) => {
@@ -425,9 +423,7 @@ export class HealthMonitorService {
 
       // Get branch names from features
       const featureBranches = new Set(
-        features
-          .filter((f) => f.branchName)
-          .map((f) => f.branchName!.replace(/^feature\//, ''))
+        features.filter((f) => f.branchName).map((f) => f.branchName!.replace(/^feature\//, ''))
       );
 
       // Check for orphaned worktrees (worktrees without corresponding features)

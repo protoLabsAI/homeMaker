@@ -17,7 +17,6 @@ import {
   setupWelcomeView,
   authenticateForTests,
   handleLoginScreenIfPresent,
-  waitForNetworkIdle,
   sanitizeForTestId,
 } from '../utils';
 

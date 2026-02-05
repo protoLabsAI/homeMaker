@@ -13,6 +13,7 @@
  */
 
 import { test, expect } from '@playwright/test';
+import { execSync } from 'child_process';
 import * as fs from 'fs';
 import * as path from 'path';
 import { createTempDirPath, cleanupTempDir, authenticateForTests, API_BASE_URL } from './utils';
@@ -32,7 +33,6 @@ test.describe('MCP Server Endpoint Routing', () => {
     fs.mkdirSync(projectPath, { recursive: true });
 
     // Initialize git repo for worktree support
-    const { execSync } = require('child_process');
     execSync('git init', { cwd: projectPath });
     execSync('git config user.email "test@test.com"', { cwd: projectPath });
     execSync('git config user.name "Test User"', { cwd: projectPath });

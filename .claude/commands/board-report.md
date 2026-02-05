@@ -5,6 +5,7 @@ Generate comprehensive, digestible reports on board status, progress, and next a
 ## Purpose
 
 Provide quick, actionable insights into:
+
 - Current board health and progress
 - What just completed
 - What's actively being worked on
@@ -25,6 +26,7 @@ mcp__automaker__get_auto_mode_status()
 ### 2. Analyze Completed Work
 
 Check features in verified/review status:
+
 - Features completed in last 24 hours
 - PRs created/merged recently
 - Epics that completed
@@ -49,20 +51,20 @@ Check features in verified/review status:
 ```markdown
 # 📊 Board Report
 
-*Generated: [timestamp]*
-*Project: [project-path]*
+_Generated: [timestamp]_
+_Project: [project-path]_
 
 ---
 
 ## 🎯 Summary
 
-| Metric | Count | Status |
-|--------|-------|--------|
-| Total Features | X | |
-| Done | X | ✅ |
-| In Progress | X | 🔄 |
-| Review | X | 👀 |
-| Backlog | X | ⏳ |
+| Metric         | Count | Status |
+| -------------- | ----- | ------ |
+| Total Features | X     |        |
+| Done           | X     | ✅     |
+| In Progress    | X     | 🔄     |
+| Review         | X     | 👀     |
+| Backlog        | X     | ⏳     |
 
 **Completion Rate**: X% (Y of Z features)
 
@@ -71,6 +73,7 @@ Check features in verified/review status:
 ## ✅ Recently Completed (Last 24h)
 
 ### Features
+
 1. **[Feature Title]** - [Epic] (verified)
    - Branch: feature/xyz
    - Completed: 2h ago
@@ -82,6 +85,7 @@ Check features in verified/review status:
    - PR: #124 (merged)
 
 ### Epics Completed
+
 - **[Epic Name]** - All 5/5 features done
 
 ---
@@ -89,6 +93,7 @@ Check features in verified/review status:
 ## 🔄 Active Work
 
 ### Running Agents (X)
+
 1. **[Feature]** (Sonnet) - epic/[epic-name]
    - Started: 15m ago
    - Complexity: medium
@@ -98,6 +103,7 @@ Check features in verified/review status:
    - Complexity: small
 
 ### Auto-Mode
+
 - Status: ✅ Running / ⏸️ Stopped
 - Concurrency: 2 max
 - Queue: X features ready
@@ -109,15 +115,18 @@ Check features in verified/review status:
 **Total**: X features
 
 ### Ready to Start (No Dependencies)
+
 1. **[Feature]** - [Epic] (complexity: small)
 2. **[Feature]** - [Epic] (complexity: medium)
 3. **[Feature]** - Independent (complexity: small)
 
 ### Blocked (X features)
+
 - **[Feature]** - Waiting on: [dependency]
 - **[Feature]** - Waiting on: [dependency]
 
 ### By Epic
+
 - **[Epic Name]**: 5 features
 - **[Epic Name]**: 3 features
 - **Independent**: 8 features
@@ -127,16 +136,19 @@ Check features in verified/review status:
 ## 🎯 Recommended Next Actions
 
 ### High Priority
+
 1. **Review PRs** - 3 open PRs need attention
 2. **Start agents** - 5 ready features in backlog
 3. **Resolve blockers** - Check missing dependencies
 
 ### Quick Wins (< 30min each)
+
 - [Feature 1] - Type definitions only
 - [Feature 2] - Documentation update
 - [Feature 3] - Small config change
 
 ### High Impact
+
 - [Feature 1] - Unlocks 3 downstream features
 - [Feature 2] - Completes epic milestone
 
@@ -144,13 +156,13 @@ Check features in verified/review status:
 
 ## 🚦 Health Indicators
 
-| Indicator | Status | Notes |
-|-----------|--------|-------|
-| Auto-mode | ✅ / ⚠️ / ❌ | Running smoothly / Needs restart / Stopped |
-| PRs | ✅ / ⚠️ | X open, Y need review |
-| Blockers | ✅ / ⚠️ | No blockers / X features blocked |
-| Backlog | ✅ / ⚠️ | Healthy size / Growing / Empty |
-| Completion | ✅ / ⚠️ | On track / Slowing down |
+| Indicator  | Status       | Notes                                      |
+| ---------- | ------------ | ------------------------------------------ |
+| Auto-mode  | ✅ / ⚠️ / ❌ | Running smoothly / Needs restart / Stopped |
+| PRs        | ✅ / ⚠️      | X open, Y need review                      |
+| Blockers   | ✅ / ⚠️      | No blockers / X features blocked           |
+| Backlog    | ✅ / ⚠️      | Healthy size / Growing / Empty             |
+| Completion | ✅ / ⚠️      | On track / Slowing down                    |
 
 **Overall Health**: ✅ Excellent / 🟡 Good / ⚠️ Needs Attention / 🔴 Critical
 
@@ -176,6 +188,7 @@ Check features in verified/review status:
 ---
 
 Would you like to:
+
 - [ ] Start auto-mode on ready features?
 - [ ] Review and merge open PRs?
 - [ ] Create new features to fill backlog?
@@ -185,20 +198,25 @@ Would you like to:
 ## Report Variants
 
 ### Quick Report (--quick)
+
 Just summary stats and active work
 
 ### Epic Report (--epic [epic-id])
+
 Deep dive into specific epic progress
 
 ### Trend Report (--trend)
+
 Historical analysis over time
 
 ### Next Actions (--next)
+
 Just the recommended actions section
 
 ## When to Use
 
 Run this command:
+
 - At start/end of work session
 - Before sprint planning
 - When checking project health
@@ -235,6 +253,7 @@ Run this command:
 ## Integration
 
 Works well with:
+
 - `/groom` - For cleanup and maintenance
 - `/pr-review` - For PR management
 - `/auto-mode` - For execution planning

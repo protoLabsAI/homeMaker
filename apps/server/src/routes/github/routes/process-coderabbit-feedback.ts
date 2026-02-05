@@ -122,19 +122,21 @@ export function createProcessCodeRabbitFeedbackHandler(events: EventEmitter) {
 
       const commentsData = JSON.parse(commentsOutput);
       const comments: GitHubComment[] =
-        commentsData.data?.repository?.pullRequest?.comments?.nodes?.map((node: {
-          id: string;
-          author: { login: string };
-          body: string;
-          createdAt: string;
-          updatedAt: string;
-        }) => ({
-          id: node.id,
-          author: { login: node.author.login },
-          body: node.body,
-          createdAt: node.createdAt,
-          updatedAt: node.updatedAt,
-        })) || [];
+        commentsData.data?.repository?.pullRequest?.comments?.nodes?.map(
+          (node: {
+            id: string;
+            author: { login: string };
+            body: string;
+            createdAt: string;
+            updatedAt: string;
+          }) => ({
+            id: node.id,
+            author: { login: node.author.login },
+            body: node.body,
+            createdAt: node.createdAt,
+            updatedAt: node.updatedAt,
+          })
+        ) || [];
 
       logger.debug(`Fetched ${comments.length} comments for PR #${prNumber}`);
 

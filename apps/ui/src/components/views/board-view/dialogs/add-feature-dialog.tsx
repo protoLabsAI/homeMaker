@@ -27,18 +27,10 @@ import { useNavigate } from '@tanstack/react-router';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import { modelSupportsThinking } from '@/lib/utils';
-import {
-  useAppStore,
-  ModelAlias,
-  ThinkingLevel,
-  FeatureImage,
-  PlanningMode,
-  Feature,
-} from '@/store/app-store';
+import { useAppStore, ThinkingLevel, FeatureImage, PlanningMode, Feature } from '@/store/app-store';
 import type { ReasoningEffort, PhaseModelEntry, AgentModel } from '@automaker/types';
 import { supportsReasoningEffort, isClaudeModel } from '@automaker/types';
 import {
-  TestingTabContent,
   PrioritySelector,
   WorkModeSelector,
   PlanningModeSelect,
@@ -56,7 +48,7 @@ import {
   type AncestorContext,
 } from '@automaker/dependency-resolver';
 
-const logger = createLogger('AddFeatureDialog');
+const _logger = createLogger('AddFeatureDialog');
 
 /**
  * Determines the default work mode based on global settings and current worktree selection.

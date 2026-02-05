@@ -62,7 +62,7 @@ export async function openDirectoryPicker(): Promise<DirectoryPickerResult | nul
       }
     };
 
-    input.addEventListener('change', (e) => {
+    input.addEventListener('change', (_e) => {
       changeEventFired = true;
       if (focusTimeout) {
         clearTimeout(focusTimeout);

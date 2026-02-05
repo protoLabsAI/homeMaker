@@ -159,7 +159,9 @@ export class CompletionVerifierService {
         default:
           // Type exhaustiveness check
           const exhaustiveCheck: never = criterion;
-          throw new Error(`Unknown criterion type: ${(exhaustiveCheck as CompletionCriterion).type}`);
+          throw new Error(
+            `Unknown criterion type: ${(exhaustiveCheck as CompletionCriterion).type}`
+          );
       }
     } catch (error) {
       const duration = Date.now() - startTime;
@@ -215,7 +217,13 @@ export class CompletionVerifierService {
       };
     } catch (error) {
       const duration = Date.now() - startTime;
-      const execError = error as { stdout?: string; stderr?: string; message: string; killed?: boolean; signal?: string };
+      const execError = error as {
+        stdout?: string;
+        stderr?: string;
+        message: string;
+        killed?: boolean;
+        signal?: string;
+      };
 
       // Check if this was a timeout
       if (execError.killed && execError.signal === 'SIGTERM') {
@@ -333,7 +341,12 @@ export class CompletionVerifierService {
    * Run a custom script and check its exit code
    */
   private async checkCustomScript(
-    criterion: { type: 'custom_script'; command: string; successExitCode?: number; timeout?: number },
+    criterion: {
+      type: 'custom_script';
+      command: string;
+      successExitCode?: number;
+      timeout?: number;
+    },
     workDir: string,
     env?: Record<string, string>,
     startTime: number = Date.now()
@@ -341,7 +354,9 @@ export class CompletionVerifierService {
     const timeout = this.getTimeout(criterion.timeout);
     const expectedExitCode = criterion.successExitCode ?? 0;
 
-    logger.debug(`Running custom script: ${criterion.command} (expected exit: ${expectedExitCode})`);
+    logger.debug(
+      `Running custom script: ${criterion.command} (expected exit: ${expectedExitCode})`
+    );
 
     try {
       const { stdout, stderr } = await execAsync(criterion.command, {
@@ -377,7 +392,14 @@ export class CompletionVerifierService {
       }
     } catch (error) {
       const duration = Date.now() - startTime;
-      const execError = error as { stdout?: string; stderr?: string; message: string; code?: number; killed?: boolean; signal?: string };
+      const execError = error as {
+        stdout?: string;
+        stderr?: string;
+        message: string;
+        code?: number;
+        killed?: boolean;
+        signal?: string;
+      };
 
       // Check if this was a timeout
       if (execError.killed && execError.signal === 'SIGTERM') {
@@ -469,7 +491,11 @@ export class CompletionVerifierService {
   /**
    * Build a summary of the verification results
    */
-  private buildSummary(results: CriterionResult[], allPassed: boolean, totalDuration: number): string {
+  private buildSummary(
+    results: CriterionResult[],
+    allPassed: boolean,
+    totalDuration: number
+  ): string {
     const passedCount = results.filter((r) => r.passed).length;
     const totalCount = results.length;
 

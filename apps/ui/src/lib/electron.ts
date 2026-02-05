@@ -1070,7 +1070,7 @@ if (typeof window !== 'undefined') {
 }
 
 // Mock API for development/fallback when no backend is available
-const getMockElectronAPI = (): ElectronAPI => {
+const _getMockElectronAPI = (): ElectronAPI => {
   return {
     ping: async () => 'pong (mock)',
 
@@ -1492,7 +1492,7 @@ function createMockSetupAPI(): SetupAPI {
       };
     },
 
-    storeApiKey: async (provider: string, apiKey: string) => {
+    storeApiKey: async (provider: string, _apiKey: string) => {
       console.log('[Mock] Storing API key for:', provider);
       // In mock mode, we just pretend to store it (it's already in the app store)
       return { success: true };
@@ -1547,12 +1547,12 @@ function createMockSetupAPI(): SetupAPI {
       };
     },
 
-    onInstallProgress: (callback) => {
+    onInstallProgress: (_callback) => {
       // Mock progress events
       return () => {};
     },
 
-    onAuthProgress: (callback) => {
+    onAuthProgress: (_callback) => {
       // Mock auth events
       return () => {};
     },
@@ -1990,7 +1990,7 @@ function createMockWorktreeAPI(): WorktreeAPI {
       };
     },
 
-    onDevServerLogEvent: (callback) => {
+    onDevServerLogEvent: (_callback) => {
       console.log('[Mock] Subscribing to dev server log events');
       // Return unsubscribe function
       return () => {
@@ -2042,7 +2042,7 @@ function createMockWorktreeAPI(): WorktreeAPI {
       };
     },
 
-    onInitScriptEvent: (callback) => {
+    onInitScriptEvent: (_callback) => {
       console.log('[Mock] Subscribing to init script events');
       // Return unsubscribe function
       return () => {
@@ -2201,7 +2201,7 @@ function createMockAutoModeAPI(): AutoModeAPI {
       return { success: true, passes: true };
     },
 
-    resumeFeature: async (projectPath: string, featureId: string, useWorktrees?: boolean) => {
+    resumeFeature: async (projectPath: string, featureId: string, _useWorktrees?: boolean) => {
       if (mockRunningFeatures.has(featureId)) {
         return {
           success: false,
@@ -2337,7 +2337,7 @@ function createMockAutoModeAPI(): AutoModeAPI {
       featureId: string,
       prompt: string,
       imagePaths?: string[],
-      useWorktrees?: boolean
+      _useWorktrees?: boolean
     ) => {
       if (mockRunningFeatures.has(featureId)) {
         return {
@@ -2912,7 +2912,7 @@ function emitSpecRegenerationEvent(event: SpecRegenerationEvent) {
 async function simulateSpecCreation(
   projectPath: string,
   projectOverview: string,
-  generateFeatures = true
+  _generateFeatures = true
 ) {
   mockSpecRegenerationPhase = 'initialization';
   emitSpecRegenerationEvent({

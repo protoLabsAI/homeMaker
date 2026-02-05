@@ -6,14 +6,12 @@
 
 import { test, expect } from '@playwright/test';
 import * as fs from 'fs';
-import * as path from 'path';
 import {
   createTempDirPath,
   cleanupTempDir,
   setupWelcomeView,
   authenticateForTests,
   handleLoginScreenIfPresent,
-  waitForNetworkIdle,
   sanitizeForTestId,
 } from '../utils';
 

@@ -314,7 +314,7 @@ export function WorktreePanel({
         } else {
           toast.error(result.error || 'Failed to push changes');
         }
-      } catch (error) {
+      } catch (_error) {
         toast.error('Failed to push changes');
       }
     },

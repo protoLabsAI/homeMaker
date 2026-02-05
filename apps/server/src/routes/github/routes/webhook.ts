@@ -160,9 +160,7 @@ async function handlePushEvent(
 ): Promise<void> {
   const { ref, repository, commits } = payload;
 
-  logger.info(
-    `Received push event on ${repository.full_name} (${ref}): ${commits.length} commits`
-  );
+  logger.info(`Received push event on ${repository.full_name} (${ref}): ${commits.length} commits`);
 
   // Emit event for logging
   events.emit('webhook:github:push', {
@@ -240,7 +238,11 @@ export function createWebhookHandler(
 
       // Verify signature
       const signature = req.headers['x-hub-signature-256'] as string | undefined;
-      const verification = verifyWebhookSignature(rawBody, signature, webhookSettings.webhookSecret);
+      const verification = verifyWebhookSignature(
+        rawBody,
+        signature,
+        webhookSettings.webhookSecret
+      );
 
       if (!verification.valid) {
         logger.warn(`Webhook signature verification failed: ${verification.error}`);

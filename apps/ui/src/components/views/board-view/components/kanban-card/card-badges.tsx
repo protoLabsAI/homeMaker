@@ -3,7 +3,7 @@ import { memo, useEffect, useMemo, useState } from 'react';
 import { Feature, useAppStore } from '@/store/app-store';
 import { cn } from '@/lib/utils';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
-import { AlertCircle, Lock, Hand, Sparkles, Layers } from 'lucide-react';
+import { AlertCircle, Lock, Hand, Sparkles } from 'lucide-react';
 import { getBlockingDependencies } from '@automaker/dependency-resolver';
 import { useShallow } from 'zustand/react/shallow';
 import { EpicBadge } from './epic-badge';
@@ -101,13 +101,11 @@ export const PriorityBadges = memo(function PriorityBadges({ feature }: Priority
       return;
     }
 
-    // eslint-disable-next-line no-undef
     const interval = setInterval(() => {
       setCurrentTime(Date.now());
     }, 1000);
 
     return () => {
-      // eslint-disable-next-line no-undef
       clearInterval(interval);
     };
   }, [feature.justFinishedAt, feature.status, currentTime]);

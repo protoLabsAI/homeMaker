@@ -34,7 +34,12 @@ describe('Webhook Types', () => {
   });
 
   it('should accept valid check run actions', () => {
-    const actions: GitHubCheckRunAction[] = ['created', 'completed', 'rerequested', 'requested_action'];
+    const actions: GitHubCheckRunAction[] = [
+      'created',
+      'completed',
+      'rerequested',
+      'requested_action',
+    ];
     expect(actions).toHaveLength(4);
   });
 

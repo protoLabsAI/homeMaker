@@ -115,6 +115,7 @@ const PROVIDER_ICON_DEFINITIONS: Record<ProviderIconKey, ProviderIconDefinition>
   },
 };
 
+// eslint-disable-next-line no-undef
 export interface ProviderIconProps extends Omit<SVGProps<SVGSVGElement>, 'viewBox'> {
   provider: ProviderIconKey;
   title?: string;

@@ -1,5 +1,5 @@
 // @ts-nocheck
-import { useEffect, useState, useCallback, useMemo, useRef } from 'react';
+import { useEffect, useState, useCallback, useMemo } from 'react';
 import { createLogger } from '@automaker/utils/logger';
 import {
   DndContext,
@@ -29,11 +29,9 @@ class DialogAwarePointerSensor extends PointerSensor {
 import { useAppStore, Feature } from '@/store/app-store';
 import { getElectronAPI } from '@/lib/electron';
 import { getHttpApiClient } from '@/lib/http-api-client';
-import type { AutoModeEvent } from '@/types/electron';
-import type { ModelAlias, CursorModelId, BacklogPlanResult } from '@automaker/types';
+import type { BacklogPlanResult } from '@automaker/types';
 import { pathsEqual } from '@/lib/utils';
 import { toast } from 'sonner';
-import { getBlockingDependencies } from '@automaker/dependency-resolver';
 import { BoardBackgroundModal } from '@/components/dialogs/board-background-modal';
 import { Spinner } from '@/components/ui/spinner';
 import { useShallow } from 'zustand/react/shallow';
@@ -96,8 +94,8 @@ const logger = createLogger('Board');
 export function BoardView() {
   const {
     currentProject,
-    maxConcurrency: legacyMaxConcurrency,
-    setMaxConcurrency: legacySetMaxConcurrency,
+    maxConcurrency: _legacyMaxConcurrency,
+    setMaxConcurrency: _legacySetMaxConcurrency,
     defaultSkipTests,
     specCreatingForProject,
     setSpecCreatingForProject,
@@ -108,9 +106,9 @@ export function BoardView() {
     setCurrentWorktree,
     getWorktrees,
     setWorktrees,
-    useWorktrees,
-    enableDependencyBlocking,
-    skipVerificationInAutoMode,
+    useWorktrees: _useWorktrees,
+    enableDependencyBlocking: _enableDependencyBlocking,
+    skipVerificationInAutoMode: _skipVerificationInAutoMode,
     planUseSelectedWorktreeBranch,
     addFeatureUseSelectedWorktreeBranch,
     isPrimaryWorktreeBranch,
@@ -150,12 +148,12 @@ export function BoardView() {
   // Subscribe to worktreePanelVisibleByProject to trigger re-renders when it changes
   const worktreePanelVisibleByProject = useAppStore((state) => state.worktreePanelVisibleByProject);
   // Subscribe to showInitScriptIndicatorByProject to trigger re-renders when it changes
-  const showInitScriptIndicatorByProject = useAppStore(
+  const _showInitScriptIndicatorByProject = useAppStore(
     (state) => state.showInitScriptIndicatorByProject
   );
   const getShowInitScriptIndicator = useAppStore((state) => state.getShowInitScriptIndicator);
   const getDefaultDeleteBranch = useAppStore((state) => state.getDefaultDeleteBranch);
-  const shortcuts = useKeyboardShortcutsConfig();
+  const _shortcuts = useKeyboardShortcutsConfig();
   const {
     features: hookFeatures,
     isLoading,
@@ -522,8 +520,8 @@ export function BoardView() {
     handleMoveBackToInProgress,
     handleOpenFollowUp,
     handleSendFollowUp,
-    handleCommitFeature,
-    handleMergeFeature,
+    handleCommitFeature: _handleCommitFeature,
+    handleMergeFeature: _handleMergeFeature,
     handleCompleteFeature,
     handleUnarchiveFeature,
     handleViewOutput,

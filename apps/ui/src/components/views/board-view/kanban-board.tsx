@@ -79,6 +79,7 @@ type VirtualListItem = { id: string };
 
 interface VirtualListState<Item extends VirtualListItem> {
   contentRef: RefObject<HTMLDivElement>;
+  // eslint-disable-next-line no-undef
   onScroll: (event: UIEvent<HTMLDivElement>) => void;
   itemIds: string[];
   visibleItems: Item[];
@@ -179,10 +180,11 @@ function VirtualizedList<Item extends VirtualListItem>({
 
   const visibleItems = shouldVirtualize ? items.slice(startIndex, endIndex) : items;
 
+  // eslint-disable-next-line no-undef
   const onScroll = useCallback((event: UIEvent<HTMLDivElement>) => {
     const target = event.currentTarget;
     if (scrollRafRef.current !== null) {
-      cancelAnimationFrame(scrollRafRef.current);
+      cancelAnimationFrame(scrollRafRef.current); // eslint-disable-line no-undef
     }
     scrollRafRef.current = requestAnimationFrame(() => {
       setScrollTop(target.scrollTop);
@@ -239,7 +241,7 @@ function VirtualizedList<Item extends VirtualListItem>({
   useEffect(() => {
     return () => {
       if (scrollRafRef.current !== null) {
-        cancelAnimationFrame(scrollRafRef.current);
+        cancelAnimationFrame(scrollRafRef.current); // eslint-disable-line no-undef
       }
     };
   }, []);

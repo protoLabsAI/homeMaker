@@ -45,6 +45,7 @@ const SERVER_READY_MAX_ATTEMPTS = 8;
 const SERVER_READY_BACKOFF_BASE_MS = 250;
 const SERVER_READY_MAX_DELAY_MS = 1500;
 const SERVER_READY_TIMEOUT_MS = 2000;
+
 const NO_STORE_CACHE_MODE: RequestCache = 'no-store';
 const AUTO_OPEN_HISTORY_INDEX = 0;
 const SINGLE_PROJECT_COUNT = 1;
@@ -171,8 +172,8 @@ function RootLayoutContent() {
     skipSandboxWarning,
     setSkipSandboxWarning,
     fetchCodexModels,
-    sidebarOpen,
-    toggleSidebar,
+    sidebarOpen: _sidebarOpen,
+    toggleSidebar: _toggleSidebar,
   } = useAppStore();
   const { setupComplete, codexCliStatus } = useSetupStore();
   const navigate = useNavigate();
@@ -193,7 +194,7 @@ function RootLayoutContent() {
   const isLoginRoute = location.pathname === '/login';
   const isLoggedOutRoute = location.pathname === '/logged-out';
   const isDashboardRoute = location.pathname === '/dashboard';
-  const isBoardRoute = location.pathname === '/board';
+  const _isBoardRoute = location.pathname === '/board';
   const isRootRoute = location.pathname === '/';
   const [autoOpenStatus, setAutoOpenStatus] = useState<AutoOpenStatus>(AUTO_OPEN_STATUS.idle);
   const autoOpenCandidate = selectAutoOpenProject(currentProject, projects, projectHistory);
@@ -260,11 +261,11 @@ function RootLayoutContent() {
 
   // Get effective theme and fonts for the current project
   // Note: theme/fontFamilySans/fontFamilyMono are destructured above to ensure re-renders when they change
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+
   void theme; // Used for subscription
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+
   void fontFamilySans; // Used for subscription
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+
   void fontFamilyMono; // Used for subscription
   const effectiveFontSans = getEffectiveFontSans();
   const effectiveFontMono = getEffectiveFontMono();

@@ -20,7 +20,7 @@ export function createGetStatusHandler(schedulerService: SchedulerService) {
       const errorMessage = error instanceof Error ? error.message : String(error);
       res.status(500).json({
         success: false,
-        error: errorMessage
+        error: errorMessage,
       });
     }
   };

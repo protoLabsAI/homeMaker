@@ -25,9 +25,6 @@ type UsageError = {
   message: string;
 };
 
-// Fixed refresh interval (45 seconds)
-const REFRESH_INTERVAL_SECONDS = 45;
-
 // Helper to format reset time for Codex
 function formatCodexResetTime(unixTimestamp: number): string {
   const date = new Date(unixTimestamp * 1000);
@@ -236,9 +233,6 @@ export function UsagePopover() {
         codexUsage.rateLimits.secondary?.usedPercent || 0
       )
     : 0;
-
-  const maxPercentage = Math.max(claudeMaxPercentage, codexMaxPercentage);
-  const isStale = activeTab === 'claude' ? isClaudeStale : isCodexStale;
 
   const getProgressBarColor = (percentage: number) => {
     if (percentage >= 80) return 'bg-red-500';

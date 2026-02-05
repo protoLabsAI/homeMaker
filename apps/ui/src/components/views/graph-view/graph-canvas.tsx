@@ -175,9 +175,8 @@ function GraphCanvasInner({
       mql.addEventListener('change', update);
       return () => mql.removeEventListener('change', update);
     }
-    // eslint-disable-next-line deprecation/deprecation
+    // Legacy API for Safari < 14 (addListener is deprecated but needed for compatibility)
     mql.addListener(update);
-    // eslint-disable-next-line deprecation/deprecation
     return () => mql.removeListener(update);
   }, [effectiveTheme]);
 

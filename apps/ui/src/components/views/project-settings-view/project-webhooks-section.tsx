@@ -105,7 +105,7 @@ export function ProjectWebhooksSection({ project }: ProjectWebhooksSectionProps)
         description: 'The webhook URL has been copied to your clipboard.',
       });
       setTimeout(() => setCopiedWebhookUrl(false), 2000);
-    } catch (error) {
+    } catch (_error) {
       toast.error('Failed to copy URL', {
         description: 'Could not copy webhook URL to clipboard.',
       });

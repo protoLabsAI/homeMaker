@@ -43,6 +43,7 @@ import type { ModelId, ThinkingLevel, ReasoningEffort } from '@automaker/types';
 import { getGlobalFileBrowser } from '@/contexts/file-browser-context';
 
 const logger = createLogger('HttpClient');
+
 const NO_STORE_CACHE_MODE: RequestCache = 'no-store';
 
 // Cached server URL (set during initialization in Electron mode)

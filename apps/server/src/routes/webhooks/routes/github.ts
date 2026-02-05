@@ -81,10 +81,7 @@ async function findFeatureByBranch(
   }
 }
 
-export function createGitHubWebhookHandler(
-  events: EventEmitter,
-  settingsService: SettingsService
-) {
+export function createGitHubWebhookHandler(events: EventEmitter, settingsService: SettingsService) {
   const featureLoader = new FeatureLoader();
 
   return async (req: Request, res: Response): Promise<void> => {
@@ -135,7 +132,9 @@ export function createGitHubWebhookHandler(
 
       // Only handle merged PRs
       if (payload.action !== 'closed' || !payload.pull_request.merged) {
-        logger.debug(`Ignoring PR action: ${payload.action}, merged: ${payload.pull_request.merged}`);
+        logger.debug(
+          `Ignoring PR action: ${payload.action}, merged: ${payload.pull_request.merged}`
+        );
         res.json({ success: true, message: 'PR not merged' });
         return;
       }
@@ -158,7 +157,7 @@ export function createGitHubWebhookHandler(
         logger.info(`No feature found for branch: ${branchName}`);
         res.json({
           success: true,
-          message: `No feature found for branch ${branchName}`
+          message: `No feature found for branch ${branchName}`,
         });
         return;
       }
@@ -170,7 +169,7 @@ export function createGitHubWebhookHandler(
         logger.warn(`Feature ${feature.featureId} not found`);
         res.json({
           success: true,
-          message: 'Feature not found'
+          message: 'Feature not found',
         });
         return;
       }
@@ -182,7 +181,7 @@ export function createGitHubWebhookHandler(
         );
         res.json({
           success: true,
-          message: `Feature not in review status (current: ${currentFeature.status})`
+          message: `Feature not in review status (current: ${currentFeature.status})`,
         });
         return;
       }
@@ -192,7 +191,9 @@ export function createGitHubWebhookHandler(
         status: 'done',
       });
 
-      logger.info(`Feature "${feature.title}" moved from "review" to "done" after PR #${prNumber} was merged`);
+      logger.info(
+        `Feature "${feature.title}" moved from "review" to "done" after PR #${prNumber} was merged`
+      );
 
       // Emit event for UI notification
       events.emit('feature:pr-merged', {

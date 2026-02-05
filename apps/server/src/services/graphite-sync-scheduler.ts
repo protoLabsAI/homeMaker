@@ -201,7 +201,10 @@ export class GraphiteSyncScheduler {
   /**
    * Sync a worktree using Graphite
    */
-  private async syncWithGraphite(worktreePath: string, branchName: string): Promise<WorktreeSyncResult> {
+  private async syncWithGraphite(
+    worktreePath: string,
+    branchName: string
+  ): Promise<WorktreeSyncResult> {
     try {
       logger.debug(`Syncing worktree ${branchName} with Graphite...`);
 

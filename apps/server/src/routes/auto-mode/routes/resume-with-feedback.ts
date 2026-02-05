@@ -44,11 +44,9 @@ export function createResumeWithFeedbackHandler(autoModeService: AutoModeService
       logger.info(`Resuming feature ${featureId} with feedback`);
 
       // Start execution in background
-      autoModeService
-        .resumeWithFeedback(projectPath, featureId, feedback)
-        .catch((error) => {
-          logger.error(`Feature ${featureId} resume with feedback error:`, error);
-        });
+      autoModeService.resumeWithFeedback(projectPath, featureId, feedback).catch((error) => {
+        logger.error(`Feature ${featureId} resume with feedback error:`, error);
+      });
 
       res.json({ success: true });
     } catch (error) {

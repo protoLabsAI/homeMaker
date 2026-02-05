@@ -36,7 +36,7 @@ interface CardActionsProps {
 export const CardActions = memo(function CardActions({
   feature,
   isCurrentAutoTask,
-  hasContext,
+  hasContext: _hasContext,
   shortcutKey,
   isSelectionMode = false,
   onEdit,

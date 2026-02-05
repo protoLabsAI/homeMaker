@@ -239,10 +239,7 @@ export class MergeEligibilityService {
   /**
    * Check if PR has enough approving reviews
    */
-  private checkReviewsApproved(
-    prDetails: PRDetails,
-    minApprovals: number
-  ): PRCheckStatus {
+  private checkReviewsApproved(prDetails: PRDetails, minApprovals: number): PRCheckStatus {
     const checkType: AutoMergeCheckType = 'reviews_approved';
 
     if (!prDetails.reviews) {

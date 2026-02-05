@@ -68,6 +68,7 @@ Use `mcp__automaker__get_board_summary()` to get counts:
 #### 2. Identify Stale Features
 
 For features in `in-progress` or `review` status:
+
 - Check the `updatedAt` timestamp
 - If `now - updatedAt > staleThreshold`, mark as stale
 - Stale features are candidates for review/restart
@@ -85,6 +86,7 @@ Display stale features:
 #### 3. Check for Blockers
 
 For each feature in-progress or in review:
+
 - Check if it has `dependencies` or `blockedBy` fields
 - For features with dependencies, check if all are resolved
 - List features that are blocked
@@ -104,6 +106,7 @@ Display blockers:
 Based on board state, suggest actions in priority order:
 
 **If backlog is empty (< 1 feature):**
+
 ```
 💡 **Suggestion**: Your backlog is empty! Consider:
 - Creating new features for future work
@@ -111,6 +114,7 @@ Based on board state, suggest actions in priority order:
 ```
 
 **If many features in review (> 3):**
+
 ```
 💡 **Suggestion**: You have X features in review. Consider:
 - Reviewing and merging completed features
@@ -119,6 +123,7 @@ Based on board state, suggest actions in priority order:
 ```
 
 **If stale in-progress features exist:**
+
 ```
 💡 **Suggestion**: You have X features stale (no activity > 24h). Consider:
 - Checking on running agents
@@ -128,6 +133,7 @@ Based on board state, suggest actions in priority order:
 ```
 
 **If many done features:**
+
 ```
 💡 **Suggestion**: You have X completed features. Consider:
 - Archiving or moving them to a completed status
@@ -171,12 +177,15 @@ Would you like to:
 ## Edge Cases
 
 ### No Features on Board
+
 If the board is completely empty, suggest creating initial features or loading from a project spec.
 
 ### All Features Done
+
 Suggest archiving or creating the next phase of work.
 
 ### Recent Activity
+
 If all features are active and recent, provide a positive summary and suggest maintaining the pace.
 
 ## Error Handling

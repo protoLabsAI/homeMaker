@@ -4,245 +4,138 @@
 
 ## Current Focus
 
-**Auto-Merge Infrastructure** - Enabling automatic PR merging when all checks pass, completing the CI/CD automation loop.
+**Discord Integration** - Full Discord integration for project notifications, channel management, and UI settings. All 23 features implemented, PRs open for review.
 
 ## Board Summary
 
-| Status      | Count                   |
-| ----------- | ----------------------- |
-| Backlog     | 13 features             |
-| In Progress | 0 features              |
-| Review      | 0 features (0 open PRs) |
-| Done        | 57 features             |
-| **Total**   | **70 features**         |
+| Status      | Count                    |
+| ----------- | ------------------------ |
+| Backlog     | 0 features               |
+| In Progress | 0 features               |
+| Review      | 0 features (23 open PRs) |
+| Done        | 23 features              |
+| **Total**   | **23 features**          |
 
 ## Active Work
 
-### Recently Merged (Today)
+### Open PRs (23 total - Discord Integration)
 
-- ✅ **PR #68**: [Epic] Server Startup Integration
-- ✅ **PR #67**: Docker deployment guide for MCP plugin
-- ✅ **PR #65**: Fix auto-mode dependency enforcement
-- ✅ **PR #59**: Add webhook type definitions for check events
+**Epic PRs (targeting main):**
 
-### Open PRs (0 total)
+| PR  | Title                             |
+| --- | --------------------------------- |
+| #71 | Epic: Foundation & Settings Types |
+| #72 | Epic: Discord Service Layer       |
+| #73 | Epic: Event Integration           |
+| #74 | Epic: Project Lifecycle           |
+| #75 | Epic: Channel Reorganization      |
+| #76 | Epic: UI Settings Management      |
 
-All PRs merged! Codebase is clean.
+**Feature PRs (targeting epic branches):**
+
+| PR  | Title                           | Target Epic            |
+| --- | ------------------------------- | ---------------------- |
+| #77 | Settings type definitions       | foundation-settings    |
+| #78 | Settings migration              | foundation-settings    |
+| #79 | Core Discord service            | discord-service-layer  |
+| #80 | Channel management              | discord-service-layer  |
+| #81 | Notification system             | discord-service-layer  |
+| #82 | Event hook extension            | event-integration      |
+| #83 | Feature lifecycle notifications | event-integration      |
+| #84 | Auto-mode integration           | event-integration      |
+| #85 | Project creation hook           | project-lifecycle      |
+| #86 | Channel mapping storage         | project-lifecycle      |
+| #87 | Project cleanup                 | project-lifecycle      |
+| #88 | Channel reorganization API      | channel-reorganization |
+| #89 | Channel audit service           | channel-reorganization |
+| #90 | Migration tool command          | channel-reorganization |
+| #91 | Global settings UI              | ui-settings-management |
+| #92 | Project settings UI             | ui-settings-management |
+| #93 | Status indicators               | ui-settings-management |
+
+**Merge Order:** Feature PRs into epic branches first, then epic PRs into main.
 
 ## Epic Status Overview
 
-| Epic                                                              | Status    | Progress | Branch                                |
-| ----------------------------------------------------------------- | --------- | -------- | ------------------------------------- |
-| [Foundation](#foundation)                                         | ✅ Done   | 4/4      | `epic/foundation`                     |
-| [Ralph Loops](#ralph-loops)                                       | ✅ Done   | 3/3      | `epic/ralph-loops`                    |
-| [Claude Plugin Improvements](#claude-plugin-improvements)         | ✅ Done   | 3/3      | `epic/claude-plugin-improvements`     |
-| [Self-Learning Skills](#self-learning-skills)                     | ✅ Done   | 4/4      | `epic/self-learning-skills`           |
-| [Proactive Automation](#proactive-automation)                     | ✅ Done   | 4/4      | `epic/proactive-automation`           |
-| [Scheduled Task Persistence](#scheduled-task-persistence)         | ✅ Done   | 4/4      | `epic/scheduled-task-persistence`     |
-| [Agent Resume Integration](#agent-resume-integration)             | ✅ Done   | 4/4      | `epic/agent-resume-integration`       |
-| [CodeRabbit Feedback Processing](#coderabbit-feedback-processing) | ✅ Done   | 2/2      | `epic/coderabbit-feedback-processing` |
-| [Inbound Webhook Infrastructure](#inbound-webhook-infrastructure) | ✅ Done   | 6/6      | `epic/inbound-webhook-infrastructure` |
-| [Auto-Merge Pull Requests](#auto-merge-pull-requests)             | 🔄 Active | 0/15     | `epic/auto-merge-*`                   |
+| Epic                                                              | Status  | Progress | Branch                                |
+| ----------------------------------------------------------------- | ------- | -------- | ------------------------------------- |
+| [Foundation](#foundation)                                         | ✅ Done | 4/4      | `epic/foundation`                     |
+| [Ralph Loops](#ralph-loops)                                       | ✅ Done | 3/3      | `epic/ralph-loops`                    |
+| [Claude Plugin Improvements](#claude-plugin-improvements)         | ✅ Done | 3/3      | `epic/claude-plugin-improvements`     |
+| [Self-Learning Skills](#self-learning-skills)                     | ✅ Done | 4/4      | `epic/self-learning-skills`           |
+| [Proactive Automation](#proactive-automation)                     | ✅ Done | 4/4      | `epic/proactive-automation`           |
+| [Scheduled Task Persistence](#scheduled-task-persistence)         | ✅ Done | 4/4      | `epic/scheduled-task-persistence`     |
+| [Agent Resume Integration](#agent-resume-integration)             | ✅ Done | 4/4      | `epic/agent-resume-integration`       |
+| [CodeRabbit Feedback Processing](#coderabbit-feedback-processing) | ✅ Done | 2/2      | `epic/coderabbit-feedback-processing` |
+| [Inbound Webhook Infrastructure](#inbound-webhook-infrastructure) | ✅ Done | 6/6      | `epic/inbound-webhook-infrastructure` |
+| [Discord Integration](#discord-integration)                       | ✅ Done | 23/23    | `epic/discord-*` (6 epics)            |
 
 ---
 
-## Foundation
+## Discord Integration
 
-**Status:** ✅ Complete (4/4)
-**Branch:** `epic/foundation`
+**Status:** ✅ Complete (23/23 - PRs awaiting review)
+**Branches:** 6 epic branches + 17 feature branches
+**PRs:** #71-#93
 
-Core infrastructure for failure classification, completion verification, and recovery.
+Full Discord integration for Automaker with 6 milestones:
 
-| Feature                            | Status  |
-| ---------------------------------- | ------- |
-| Add Failure Classification Types   | ✅ Done |
-| Create Completion Verifier Service | ✅ Done |
-| Create Recovery Service            | ✅ Done |
-| Integrate Recovery into Auto-Mode  | ✅ Done |
+### Milestone 1: Foundation & Settings Types (2/2)
 
----
+| Feature            | Status  | PR  |
+| ------------------ | ------- | --- |
+| Type Definitions   | ✅ Done | #77 |
+| Settings Migration | ✅ Done | #78 |
 
-## Ralph Loops
+### Milestone 2: Discord Service Layer (3/3)
 
-**Status:** ✅ Complete (3/3)
-**Branch:** `epic/ralph-loops`
+| Feature              | Status  | PR  |
+| -------------------- | ------- | --- |
+| Core Discord Service | ✅ Done | #79 |
+| Channel Management   | ✅ Done | #80 |
+| Notification System  | ✅ Done | #81 |
 
-Persistent retry loops with external verification.
+### Milestone 3: Event Integration (3/3)
 
-| Feature                   | Status  | Notes                                        |
-| ------------------------- | ------- | -------------------------------------------- |
-| Add Ralph Mode Types      | ✅ Done |                                              |
-| Create Ralph Loop Service | ✅ Done |                                              |
-| Add Ralph Mode MCP Tools  | ✅ Done | 6 tools: start/stop/pause/resume/status/list |
+| Feature               | Status  | PR  |
+| --------------------- | ------- | --- |
+| Event Hook Extension  | ✅ Done | #82 |
+| Feature Lifecycle     | ✅ Done | #83 |
+| Auto-Mode Integration | ✅ Done | #84 |
 
----
+### Milestone 4: Project Lifecycle (3/3)
 
-## Claude Plugin Improvements
+| Feature          | Status  | PR  |
+| ---------------- | ------- | --- |
+| Project Creation | ✅ Done | #85 |
+| Channel Mapping  | ✅ Done | #86 |
+| Project Cleanup  | ✅ Done | #87 |
 
-**Status:** ✅ Complete (3/3)
-**Branch:** `epic/claude-plugin-improvements`
+### Milestone 5: Channel Reorganization (3/3)
 
-Improving the Claude Code plugin experience.
+| Feature            | Status  | PR  |
+| ------------------ | ------- | --- |
+| Reorganization API | ✅ Done | #88 |
+| Channel Audit      | ✅ Done | #89 |
+| Migration Tool     | ✅ Done | #90 |
 
-| Feature                                   | Status  | Notes                              |
-| ----------------------------------------- | ------- | ---------------------------------- |
-| Auto-generate branchName for new features | ✅ Done | Implemented in feature-loader.ts   |
-| Add Epic UI components to Kanban cards    | ✅ Done | epic-badge.tsx & epic-progress.tsx |
-| Update wiki with Claude Code plugin docs  | ✅ Done | 4 new sections added               |
+### Milestone 6: UI Settings (3/3)
 
----
-
-## Self-Learning Skills
-
-**Status:** ✅ Complete (4/4)
-**Branch:** `epic/self-learning-skills`
-
-Enable agents to create reusable skills for future use.
-
-| Feature                                 | Status  | Notes  |
-| --------------------------------------- | ------- | ------ |
-| Add Skill Types                         | ✅ Done | PR #25 |
-| Create Skills Loader                    | ✅ Done | PR #27 |
-| Update Agent Prompts for Skill Creation | ✅ Done | PR #28 |
-| Add Skills MCP Tools                    | ✅ Done | PR #30 |
-
----
-
-## Proactive Automation
-
-**Status:** ✅ Complete (4/4)
-**Branch:** `epic/proactive-automation`
-
-Health monitoring, auto-remediation, and scheduled tasks.
-
-| Feature                       | Status  | Notes                   |
-| ----------------------------- | ------- | ----------------------- |
-| Create Health Monitor Service | ✅ Done | PR #33                  |
-| Add Scheduled Task Types      | ✅ Done | PR #35                  |
-| Create Scheduler Service      | ✅ Done | PR #34                  |
-| Add New Event Hook Triggers   | ✅ Done | Event-driven automation |
-
----
-
-## Scheduled Task Persistence
-
-**Status:** ✅ Complete (4/4)
-**Branch:** `epic/scheduled-task-persistence`
-**PRs:** #42, #57, #58
-
-Persist scheduled tasks across server restarts.
-
-| Feature                                 | Status  | Notes                             |
-| --------------------------------------- | ------- | --------------------------------- |
-| Implement saveTasks in SchedulerService | ✅ Done | Atomic writes with backups        |
-| Implement loadTasks on startup          | ✅ Done | Restore state on init             |
-| Update task execution tracking          | ✅ Done | PR #57 - Auto-save after each run |
-| Add scheduler status endpoint           | ✅ Done | PR #58 - Observability            |
-
----
-
-## Agent Resume Integration
-
-**Status:** ✅ Complete (4/4)
-**Branch:** `epic/agent-resume-integration`
-**PR:** #45
-
-Resume agents with PR feedback from CodeRabbit.
-
-| Feature                            | Status     | Notes                 |
-| ---------------------------------- | ---------- | --------------------- |
-| Add Resume-with-Feedback Endpoint  | ✅ Done    | PR #48, #51           |
-| Add PR Feedback Event Hook Trigger | ✅ Done    | PR #47                |
-| Create Default PR Feedback Hook    | ✅ Done    | PR #50                |
-| Add PR Feedback Prompt Template    | 🔄 Backlog | Blocked by dependency |
-
----
-
-## CodeRabbit Feedback Processing
-
-**Status:** ✅ Complete (2/2)
-**Branch:** `epic/coderabbit-feedback-processing`
-**PR:** #46
-
-Process CodeRabbit feedback and trigger agent resume.
-
-| Feature                                | Status  |
-| -------------------------------------- | ------- |
-| Parse CodeRabbit feedback from webhook | ✅ Done |
-| Trigger agent resume with feedback     | ✅ Done |
-
----
-
-## Inbound Webhook Infrastructure
-
-**Status:** ✅ Complete (6/6)
-**Branch:** `epic/inbound-webhook-receiver`
-**PR:** #44
-
-GitHub webhook receiver for auto-closing features on PR merge.
-
-| Feature                           | Status  | Notes                    |
-| --------------------------------- | ------- | ------------------------ |
-| Add webhook signature validator   | ✅ Done | HMAC-SHA256 verification |
-| Generate and store webhook secret | ✅ Done | Credentials.json storage |
-| Implement feature status update   | ✅ Done | Auto-close on merge      |
-| Create webhook routes             | ✅ Done | /api/webhooks/github     |
-| Register webhook routes           | ✅ Done | Integrated in server     |
-| Add webhook setup documentation   | ✅ Done | PR #41                   |
-
----
-
-## Auto-Merge Pull Requests
-
-**Status:** 🔄 Active (0/15)
-**Branches:** Multiple epic branches
-
-Automatically merge PRs when all checks pass (including CodeRabbit).
-
-### Milestone 1: Event Handling Infrastructure (0/3)
-
-- 🔄 Webhook Type Definitions (in progress)
-- 🔄 Webhook Handler Extension (in progress)
-- ⏳ Event Processing Service
-
-### Milestone 2: Merge Eligibility Logic (0/3)
-
-- ⏳ Settings Types for Auto-Merge
-- ⏳ Create Merge Eligibility Service
-- ⏳ Check Integration
-
-### Milestone 3: Auto-Merge Execution (0/3)
-
-- ⏳ Create Merge Service
-- ⏳ Integrate Merge Service into Event Handler
-- ⏳ Add Merge Orchestration
-
-### Milestone 4: API and UI Integration (0/3)
-
-- ⏳ Add Manual Trigger Endpoint
-- ⏳ Add Settings UI Panel
-- ⏳ Add Merge History View
-
-### Milestone 5: Safety and Monitoring (0/3)
-
-- ⏳ Add Audit Log
-- ⏳ Add Rate Limiting
-- ⏳ Add Rollback Capability
+| Feature             | Status  | PR  |
+| ------------------- | ------- | --- |
+| Global Settings UI  | ✅ Done | #91 |
+| Project Settings UI | ✅ Done | #92 |
+| Status Indicators   | ✅ Done | #93 |
 
 ---
 
 ## Recently Completed (Last 7 Days)
 
-- ✅ **[Epic] Server Startup Integration** (PR #68) - Server startup improvements
-- ✅ **Docker deployment guide for MCP plugin** (PR #67) - Comprehensive Docker setup docs
-- ✅ **Fix auto-mode dependency enforcement** (PR #65) - Critical bug fix for parallel execution
-- ✅ **Webhook Type Definitions** (PR #59) - Check event types for auto-merge
-- ✅ **Scheduled Task Persistence Epic** (PRs #42, #57, #58) - Complete with observability
-- ✅ **Standardize feature categories for analytics** (#56) - Domain-based categorization
-- ✅ **Inbound Webhook Infrastructure Epic** (#44) - GitHub webhook receiver complete
-- ✅ **Add /pr-review plugin command** (#55) - Systematic PR review workflow
-- ✅ **GitHub webhook to auto-close features** (#41) - Auto-update on merge
-- ✅ **Agent Resume Integration Epic** (#45) - Resume with PR feedback
+- ✅ **Discord Integration** (PRs #71-#93) - Full Discord integration with 6 epics, 17 features
+- ✅ **Production Docker deployment** (PR #69) - Docker compose with proper path mapping
+- ✅ **Infrastructure docs & /devops skill** (PR #70) - Deployment documentation
+- ✅ **Add /headsdown skill** - Autonomous deep work mode
+- ✅ **Add /discord skill** - Team communication management
 
 ---
 
@@ -250,20 +143,20 @@ Automatically merge PRs when all checks pass (including CodeRabbit).
 
 ### High Priority
 
-- 🔧 **npm audit**: 13 vulnerabilities (1 low, 1 moderate, 11 high)
-- 🔧 **Remote branches**: 46 feature/epic branches to clean up (many merged)
-- 🔧 **Stale remote branches**: 1 merged branch needs pruning (origin/epic/self-learning-skills)
+- 🔧 **npm audit**: 13 vulnerabilities (1 low, 1 moderate, 11 high) - mostly electron-builder transitive deps
+- 🔧 **Remote branches**: ~70 remote branches, ~16 from merged PRs need pruning
+- 🔧 **Worktrees**: 23 active worktrees for Discord Integration (will clean after PR merge)
 
 ### Medium Priority
 
-- 📝 **Documentation**: Keep CLAUDE.md, README.md in sync
-- 🧪 **Test coverage**: Add tests for new webhook infrastructure
-- 📝 **TODO comments**: 16 TODO/FIXME/HACK comments in codex provider files
+- 📝 **Documentation**: status.md updated, CLAUDE.md current
+- 🧪 **Test failures**: 2 pre-existing test files failing (recovery-service, auto-mode integration)
+- 🔧 **Lint**: 1 error fixed (terminal-panel.tsx), 166 warnings remain (mostly `no-explicit-any`)
 
 ### Low Priority
 
-- 🗂️ **Worktree cleanup**: No .worktrees directory (clean)
 - 📦 **Dependencies**: Review `npm outdated` for safe updates
+- 🗂️ **Auto-Merge epic**: Backlog features from previous project (not started)
 
 ---
 
@@ -284,7 +177,9 @@ Automatically merge PRs when all checks pass (including CodeRabbit).
 - `/context` - Agent context configuration
 - `/pr-review` - PR review workflow
 - `/create-project` - Project orchestration
-- `/cleanup` - Codebase maintenance (new!)
+- `/cleanup` - Codebase maintenance
+- `/headsdown` - Autonomous deep work mode
+- `/discord` - Team communication management
 
 ---
 
@@ -298,4 +193,5 @@ When picking up work:
 4. **Run `/cleanup`** before major releases or after large changes
 5. **Keep epic status current** - mark epics done when all features complete
 
-**Branch Protection**: Main branch now requires CodeRabbit approval before merge.
+**Branch Protection**: Main branch requires CodeRabbit approval before merge.
+**PR Workflow**: Feature PRs target epic branches, epic PRs target main.

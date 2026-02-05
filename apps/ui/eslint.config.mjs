@@ -43,8 +43,10 @@ const eslintConfig = defineConfig([
         crypto: 'readonly',
         prompt: 'readonly',
         confirm: 'readonly',
+        alert: 'readonly',
         getComputedStyle: 'readonly',
         requestAnimationFrame: 'readonly',
+        cancelAnimationFrame: 'readonly',
         // DOM Element Types
         HTMLElement: 'readonly',
         HTMLInputElement: 'readonly',
@@ -55,23 +57,35 @@ const eslintConfig = defineConfig([
         HTMLHeadingElement: 'readonly',
         HTMLParagraphElement: 'readonly',
         HTMLImageElement: 'readonly',
+        HTMLAudioElement: 'readonly',
         Element: 'readonly',
         // Event Types
         Event: 'readonly',
         KeyboardEvent: 'readonly',
+        MouseEvent: 'readonly',
         DragEvent: 'readonly',
         PointerEvent: 'readonly',
         CustomEvent: 'readonly',
         ClipboardEvent: 'readonly',
         WheelEvent: 'readonly',
+        MediaQueryListEvent: 'readonly',
         DataTransfer: 'readonly',
         // Web APIs
         ResizeObserver: 'readonly',
+        IntersectionObserver: 'readonly',
         AbortSignal: 'readonly',
+        AbortController: 'readonly',
+        XMLHttpRequest: 'readonly',
         Audio: 'readonly',
         ScrollBehavior: 'readonly',
         URL: 'readonly',
         URLSearchParams: 'readonly',
+        // Fetch API types
+        RequestCache: 'readonly',
+        RequestInit: 'readonly',
+        Response: 'readonly',
+        Request: 'readonly',
+        Headers: 'readonly',
         // Timers
         setTimeout: 'readonly',
         setInterval: 'readonly',
@@ -90,6 +104,8 @@ const eslintConfig = defineConfig([
         Electron: 'readonly',
         // Console
         console: 'readonly',
+        // Vite defines
+        __APP_VERSION__: 'readonly',
       },
     },
     plugins: {
@@ -97,8 +113,22 @@ const eslintConfig = defineConfig([
     },
     rules: {
       ...ts.configs.recommended.rules,
-      '@typescript-eslint/no-unused-vars': ['warn', { argsIgnorePattern: '^_' }],
+      '@typescript-eslint/no-unused-vars': [
+        'warn',
+        {
+          argsIgnorePattern: '^_',
+          varsIgnorePattern: '^_',
+          destructuredArrayIgnorePattern: '^_',
+          caughtErrorsIgnorePattern: '^_',
+        },
+      ],
       '@typescript-eslint/no-explicit-any': 'warn',
+      '@typescript-eslint/ban-ts-comment': [
+        'warn',
+        {
+          'ts-nocheck': 'allow-with-description',
+        },
+      ],
     },
   },
   globalIgnores([
