@@ -90,6 +90,38 @@ Open discussion about AI/ML topics (not project-specific).
 | #prompt-engineering | 1469049563787563039 | Prompt techniques, templates, best practices  |
 | #ai-news            | 1469049565448503357 | AI industry news, releases, announcements     |
 
+### FEEDS
+
+Automated content feeds from external sources. These channels are bot-driven and provide a curated stream of industry knowledge.
+
+| Channel           | ID                  | Source                                              | Bot/Integration     |
+| ----------------- | ------------------- | --------------------------------------------------- | ------------------- |
+| #feed-ai-research | 1469054764833701942 | ArXiv (cs.AI, cs.LG, cs.CL), HuggingFace papers     | MonitoRSS           |
+| #feed-hackernews  | 1469054768675557460 | HackerNews front page and best stories              | MonitoRSS           |
+| #feed-reddit      | 1469054769493442746 | r/MachineLearning, r/LocalLLaMA, r/programming, etc | MonitoRSS           |
+| #feed-twitter     | 1469054770831425548 | AI researchers and companies on X/Twitter           | Readybot/TweetShift |
+| #feed-github      | 1469054773352206459 | Repo releases, trending repos                       | GitHub Webhooks     |
+| #feed-youtube     | 1469054774338125929 | AI/ML content creators                              | NotifyMe Bot        |
+
+**RSS Feeds configured:**
+
+- ArXiv AI: `https://arxiv.org/rss/cs.AI`
+- ArXiv ML: `https://arxiv.org/rss/cs.LG`
+- ArXiv NLP: `https://arxiv.org/rss/cs.CL`
+- HuggingFace Daily Papers: `https://papers.takara.ai/api/feed`
+- HackerNews: `https://news.ycombinator.com/rss`
+- HackerNews Best: `https://hnrss.org/best`
+- Reddit (per sub): `https://www.reddit.com/r/{subreddit}/hot/.rss`
+
+**Bots used:**
+
+| Bot        | Purpose               | Dashboard              | Cost        |
+| ---------- | --------------------- | ---------------------- | ----------- |
+| MonitoRSS  | RSS feed aggregation  | https://monitorss.xyz  | Free / $5mo |
+| Readybot   | Twitter, YouTube      | https://readybot.io    | Free        |
+| TweetShift | Twitter (alternative) | https://tweetshift.com | Free        |
+| NotifyMe   | YouTube notifications | https://notifyme.bot   | Free        |
+
 ### ARCHIVE
 
 Empty category for preserving old discussions. Channels are moved here when they are no longer active but contain valuable history.
