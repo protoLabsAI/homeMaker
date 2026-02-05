@@ -558,7 +558,10 @@ export class EventHookService {
 
     try {
       // Try to dynamically import discord service (provided by Discord Service Layer)
-      const discordServiceModule = await import('./discord-service.js').catch(() => null);
+      const discordServiceModule = await import('./discord-service.js').catch((err) => {
+        logger.debug(`Discord service module not available: ${err?.message ?? err}`);
+        return null;
+      });
       if (discordServiceModule?.getDiscordService) {
         const service = discordServiceModule.getDiscordService();
         if (service) {
