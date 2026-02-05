@@ -4,6 +4,7 @@
  * Listens to the event emitter and triggers configured hooks:
  * - Shell commands: Executed with configurable timeout
  * - HTTP webhooks: POST/GET/PUT/PATCH requests with variable substitution
+ * - Discord messages: Sent via Discord MCP server
  *
  * Also stores events to history for debugging and replay.
  *
@@ -32,6 +33,7 @@ import type {
   EventHookTrigger,
   EventHookShellAction,
   EventHookHttpAction,
+  EventHookDiscordAction,
 } from '@automaker/types';
 
 const execAsync = promisify(exec);
@@ -67,6 +69,11 @@ interface HookContext {
   // Health check specific fields
   healthStatus?: string;
   healthDetails?: string;
+  // Project specific fields
+  projectSlug?: string;
+  projectTitle?: string;
+  milestoneCount?: number;
+  featuresCreated?: number;
 }
 
 /**
@@ -146,6 +153,25 @@ export interface HealthCheckPayload {
 }
 
 /**
+ * Project scaffolded event payload structure
+ */
+export interface ProjectScaffoldedPayload {
+  projectPath: string;
+  projectSlug: string;
+  projectTitle: string;
+  milestoneCount: number;
+  featuresCreated: number;
+}
+
+/**
+ * Project deleted event payload structure
+ */
+export interface ProjectDeletedPayload {
+  projectPath: string;
+  projectSlug: string;
+}
+
+/**
  * Event Hook Service
  *
  * Manages execution of user-configured event hooks in response to system events.
@@ -188,6 +214,10 @@ export class EventHookService {
         this.handleMemoryLearningEvent(payload as MemoryLearningPayload);
       } else if (type === 'auto-mode:health-check') {
         this.handleHealthCheckEvent(payload as HealthCheckPayload);
+      } else if (type === 'project:scaffolded') {
+        this.handleProjectScaffoldedEvent(payload as ProjectScaffoldedPayload);
+      } else if (type === 'project:deleted') {
+        this.handleProjectDeletedEvent(payload as ProjectDeletedPayload);
       }
     });
 
@@ -369,6 +399,39 @@ export class EventHookService {
   }
 
   /**
+   * Handle project:scaffolded events and trigger matching hooks
+   */
+  private async handleProjectScaffoldedEvent(payload: ProjectScaffoldedPayload): Promise<void> {
+    const context: HookContext = {
+      projectPath: payload.projectPath,
+      projectName: this.extractProjectName(payload.projectPath),
+      projectSlug: payload.projectSlug,
+      projectTitle: payload.projectTitle,
+      milestoneCount: payload.milestoneCount,
+      featuresCreated: payload.featuresCreated,
+      timestamp: new Date().toISOString(),
+      eventType: 'project_scaffolded',
+    };
+
+    await this.executeHooksForTrigger('project_scaffolded', context);
+  }
+
+  /**
+   * Handle project:deleted events and trigger matching hooks
+   */
+  private async handleProjectDeletedEvent(payload: ProjectDeletedPayload): Promise<void> {
+    const context: HookContext = {
+      projectPath: payload.projectPath,
+      projectName: this.extractProjectName(payload.projectPath),
+      projectSlug: payload.projectSlug,
+      timestamp: new Date().toISOString(),
+      eventType: 'project_deleted',
+    };
+
+    await this.executeHooksForTrigger('project_deleted', context);
+  }
+
+  /**
    * Execute all enabled hooks matching the given trigger and store event to history
    */
   private async executeHooksForTrigger(
@@ -429,6 +492,8 @@ export class EventHookService {
         await this.executeShellHook(hook.action, context, hookName);
       } else if (hook.action.type === 'http') {
         await this.executeHttpHook(hook.action, context, hookName);
+      } else if (hook.action.type === 'discord') {
+        await this.executeDiscordHook(hook.action, context, hookName);
       }
     } catch (error) {
       logger.error(`Hook "${hookName}" failed:`, error);
@@ -537,6 +602,48 @@ export class EventHookService {
   }
 
   /**
+   * Execute a Discord message hook via the Discord MCP server
+   *
+   * Uses dynamic import of discord-service to avoid hard dependency.
+   * The discord-service module is provided by the Discord Service Layer feature.
+   */
+  private async executeDiscordHook(
+    action: EventHookDiscordAction,
+    context: HookContext,
+    hookName: string
+  ): Promise<void> {
+    const channelId = this.substituteVariables(action.channelId, context);
+    const message = this.substituteVariables(action.message, context);
+
+    logger.info(`Executing Discord hook "${hookName}" to channel ${channelId}`);
+
+    try {
+      // Try to dynamically import discord service (provided by Discord Service Layer)
+      const discordServiceModule = await import('./discord-service.js').catch((err) => {
+        logger.debug(`Discord service module not available: ${err?.message ?? err}`);
+        return null;
+      });
+      if (discordServiceModule?.getDiscordService) {
+        const service = discordServiceModule.getDiscordService();
+        if (service) {
+          await service.sendMessage({ channelId, message });
+          logger.info(`Discord hook "${hookName}" completed successfully`);
+          return;
+        }
+      }
+
+      // Fallback: log warning if discord service not available
+      logger.warn(
+        `Discord hook "${hookName}" skipped: Discord service not available. ` +
+        `Ensure the Discord Service Layer is configured and initialized.`
+      );
+    } catch (error) {
+      logger.error(`Discord hook "${hookName}" failed:`, error);
+      throw error;
+    }
+  }
+
+  /**
    * Substitute {{variable}} placeholders in a string
    */
   private substituteVariables(template: string, context: HookContext): string {
@@ -603,6 +710,24 @@ export class EventHookService {
   emitHealthCheck(payload: HealthCheckPayload): void {
     if (this.emitter) {
       this.emitter.emit('auto-mode:health-check', payload);
+    }
+  }
+
+  /**
+   * Emit a project scaffolded event
+   */
+  emitProjectScaffolded(payload: ProjectScaffoldedPayload): void {
+    if (this.emitter) {
+      this.emitter.emit('project:scaffolded', payload);
+    }
+  }
+
+  /**
+   * Emit a project deleted event
+   */
+  emitProjectDeleted(payload: ProjectDeletedPayload): void {
+    if (this.emitter) {
+      this.emitter.emit('project:deleted', payload);
     }
   }
 }

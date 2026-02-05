@@ -446,6 +446,61 @@ export type { WebhookSettings } from './webhook.js';
 export { DEFAULT_WEBHOOK_SETTINGS } from './webhook.js';
 
 // ============================================================================
+// Discord Integration Settings - Configuration for Discord bot and notifications
+// ============================================================================
+
+/**
+ * DiscordSettings - Configuration for Discord MCP integration
+ *
+ * Supports Discord bot integration via the discord-mcp server for:
+ * - Sending progress notifications to channels
+ * - Announcing feature completion
+ * - Headsdown mode status updates
+ * - Team communication automation
+ */
+export interface DiscordSettings {
+  /** Whether Discord integration is enabled */
+  enabled: boolean;
+  /** Discord bot token (stored in credentials.json for security) */
+  tokenConfigured?: boolean; // Just a flag, actual token in credentials
+  /** Discord server/guild ID */
+  guildId?: string;
+  /** Default channel ID for progress notifications */
+  notificationChannelId?: string;
+  /** Default channel name for display purposes */
+  notificationChannelName?: string;
+  /** Enable automatic progress updates during auto-mode */
+  autoNotify?: boolean;
+  /** Notify on feature start */
+  notifyOnFeatureStart?: boolean;
+  /** Notify on feature completion */
+  notifyOnFeatureComplete?: boolean;
+  /** Notify on milestone completion */
+  notifyOnMilestoneComplete?: boolean;
+  /** Notify on project completion */
+  notifyOnProjectComplete?: boolean;
+  /** Notify on agent errors/failures */
+  notifyOnError?: boolean;
+}
+
+/**
+ * Default Discord settings - disabled by default
+ */
+export const DEFAULT_DISCORD_SETTINGS: DiscordSettings = {
+  enabled: false,
+  tokenConfigured: false,
+  guildId: undefined,
+  notificationChannelId: undefined,
+  notificationChannelName: undefined,
+  autoNotify: false,
+  notifyOnFeatureStart: false,
+  notifyOnFeatureComplete: true,
+  notifyOnMilestoneComplete: true,
+  notifyOnProjectComplete: true,
+  notifyOnError: true,
+};
+
+// ============================================================================
 // Event Hooks - Custom actions triggered by system events
 // ============================================================================
 
@@ -463,6 +518,8 @@ export { DEFAULT_WEBHOOK_SETTINGS } from './webhook.js';
  * - skill_created: An agent created a new reusable skill
  * - memory_learning: A new learning was recorded from agent execution
  * - pr_feedback_received: Pull request received feedback that needs addressing
+ * - project_scaffolded: A project was scaffolded and features were created
+ * - project_deleted: A project was deleted
  */
 export type EventHookTrigger =
   | 'feature_created'
@@ -475,7 +532,9 @@ export type EventHookTrigger =
   | 'auto_mode_health_check'
   | 'skill_created'
   | 'memory_learning'
-  | 'pr_feedback_received';
+  | 'pr_feedback_received'
+  | 'project_scaffolded'
+  | 'project_deleted';
 
 // ============================================================================
 // Git Workflow Settings - Auto commit/push/PR after feature completion
@@ -615,8 +674,26 @@ export interface EventHookHttpAction {
   body?: string;
 }
 
+/**
+ * EventHookDiscordAction - Configuration for sending a Discord message via MCP
+ *
+ * Sends notifications to Discord channels using the Discord MCP server.
+ * Supports variable substitution in all string fields.
+ */
+export interface EventHookDiscordAction {
+  type: 'discord';
+  /** Discord channel ID or name to send message to. Supports {{variable}} substitution. */
+  channelId: string;
+  /** Message content to send. Supports {{variable}} substitution and Discord markdown. */
+  message: string;
+  /** Optional username override for the webhook (if using webhook method) */
+  username?: string;
+  /** Optional avatar URL override for the webhook (if using webhook method) */
+  avatarUrl?: string;
+}
+
 /** Union type for all hook action configurations */
-export type EventHookAction = EventHookShellAction | EventHookHttpAction;
+export type EventHookAction = EventHookShellAction | EventHookHttpAction | EventHookDiscordAction;
 
 /**
  * EventHook - Configuration for a single event hook
@@ -629,6 +706,10 @@ export type EventHookAction = EventHookShellAction | EventHookHttpAction;
  * - {{featureName}} - Name of the feature (if applicable)
  * - {{projectPath}} - Absolute path to the project
  * - {{projectName}} - Name of the project
+ * - {{projectSlug}} - Project slug (project events)
+ * - {{projectTitle}} - Project title (project events)
+ * - {{milestoneCount}} - Milestone count (project_scaffolded)
+ * - {{featuresCreated}} - Features created (project_scaffolded)
  * - {{error}} - Error message (for error events)
  * - {{timestamp}} - ISO timestamp of the event
  * - {{eventType}} - The event type that triggered the hook
@@ -659,6 +740,8 @@ export const EVENT_HOOK_TRIGGER_LABELS: Record<EventHookTrigger, string> = {
   skill_created: 'New skill created by agent',
   memory_learning: 'New learning recorded',
   pr_feedback_received: 'PR feedback received',
+  project_scaffolded: 'Project scaffolded with features',
+  project_deleted: 'Project deleted',
 };
 
 const DEFAULT_CODEX_AUTO_LOAD_AGENTS = false;
@@ -1215,6 +1298,13 @@ export interface GlobalSettings {
       maxConcurrency?: number;
     }>;
   };
+
+  /**
+   * Discord integration settings.
+   * Configuration for Discord MCP server integration and notifications.
+   * @see DiscordSettings
+   */
+  discord?: DiscordSettings;
 }
 
 /**
@@ -1239,6 +1329,11 @@ export interface Credentials {
   webhookSecrets?: {
     /** GitHub webhook secret for HMAC-SHA256 signature verification */
     github?: string;
+  };
+  /** Discord bot tokens for MCP integration */
+  discordTokens?: {
+    /** Discord bot token for the discord-mcp server */
+    botToken?: string;
   };
 }
 
@@ -1284,6 +1379,113 @@ export interface WorktreeInfo {
   hasChanges?: boolean;
   /** Number of files with changes */
   changedFilesCount?: number;
+}
+
+// ============================================================================
+// Integration Settings - Per-project Linear, Discord, and external service configuration
+// ============================================================================
+
+/**
+ * LinearIntegrationConfig - Configuration for Linear project management integration
+ *
+ * When enabled, ProtoMaker events (feature created, status changed, etc.) trigger
+ * Linear MCP tools to sync planning state between ProtoMaker and Linear.
+ */
+export interface LinearIntegrationConfig {
+  /** Enable Linear integration for this project */
+  enabled: boolean;
+  /** Linear workspace ID (optional - uses authenticated user's workspace if not specified) */
+  workspaceId?: string;
+  /** Linear team ID for creating issues */
+  teamId?: string;
+  /** Linear project ID to associate issues with */
+  projectId?: string;
+  /** Create Linear issue when ProtoMaker feature is created (default: true) */
+  syncOnFeatureCreate?: boolean;
+  /** Update Linear issue status when ProtoMaker feature status changes (default: true) */
+  syncOnStatusChange?: boolean;
+  /** Add Linear comment when agent completes feature (default: true) */
+  commentOnCompletion?: boolean;
+  /** Priority mapping: ProtoMaker complexity -> Linear priority (0=none, 1=urgent, 2=high, 3=normal, 4=low) */
+  priorityMapping?: {
+    small?: number;
+    medium?: number;
+    large?: number;
+    architectural?: number;
+  };
+  /** Custom label to apply to all synced issues */
+  labelName?: string;
+}
+
+/**
+ * DiscordIntegrationConfig - Configuration for Discord communication integration
+ *
+ * When enabled, ProtoMaker events trigger Discord MCP tools to post updates,
+ * create threads for agent work, and facilitate team communication.
+ */
+export interface DiscordIntegrationConfig {
+  /** Enable Discord integration for this project */
+  enabled: boolean;
+  /** Discord server (guild) ID */
+  serverId?: string;
+  /** Discord channel ID for project updates */
+  channelId?: string;
+  /** Create Discord thread when agent starts working on feature (default: true) */
+  createThreadsForAgents?: boolean;
+  /** Post notification when feature completes successfully (default: true) */
+  notifyOnCompletion?: boolean;
+  /** Post notification when feature fails (default: true) */
+  notifyOnError?: boolean;
+  /** Post notification when auto-mode completes all features (default: true) */
+  notifyOnAutoModeComplete?: boolean;
+  /** Tag users/roles on critical events (e.g., "@team" or "<@123456>") */
+  mentionOnError?: string;
+  /** Use webhook for posting (faster, no bot required) */
+  useWebhook?: boolean;
+  /** Webhook ID (if useWebhook is true) */
+  webhookId?: string;
+  /** Webhook token (if useWebhook is true) */
+  webhookToken?: string;
+}
+
+/**
+ * ProjectIntegrations - Container for all per-project integration configurations
+ *
+ * Extensible structure for adding new integrations (Slack, Jira, etc.) in the future.
+ * Each integration can be independently enabled/disabled per project.
+ */
+export interface ProjectIntegrations {
+  /** Linear project management integration */
+  linear?: LinearIntegrationConfig;
+  /** Discord team communication integration */
+  discord?: DiscordIntegrationConfig;
+  // Future integrations can be added here:
+  // slack?: SlackIntegrationConfig;
+  // jira?: JiraIntegrationConfig;
+  // etc.
+}
+
+/**
+ * IntegrationEventMapping - Maps ProtoMaker events to integration actions
+ *
+ * Used by the integration service to determine which MCP tools to invoke
+ * when specific events occur. This is the glue between EventHooks and MCP tools.
+ */
+export interface IntegrationEventMapping {
+  /** Event that triggers this integration action */
+  event: EventHookTrigger;
+  /** Which integration to use (linear, discord, etc.) */
+  integration: 'linear' | 'discord';
+  /** Action to perform (maps to MCP tool) */
+  action:
+    | 'create_issue'
+    | 'update_issue'
+    | 'add_comment'
+    | 'send_message'
+    | 'create_thread'
+    | 'add_reaction';
+  /** Optional condition function to determine if action should execute */
+  condition?: string;
 }
 
 /**
@@ -1373,6 +1575,13 @@ export interface ProjectSettings {
    */
   webhookSettings?: import('./webhook.js').WebhookSettings;
 
+  // Integration Settings (per-project)
+  /**
+   * Per-project integration configuration for Linear, Discord, and other external services.
+   * Enables event-driven actions where ProtoMaker events trigger integration tools via MCP.
+   */
+  integrations?: ProjectIntegrations;
+
   // Deprecated Claude API Profile Override
   /**
    * @deprecated Use phaseModelOverrides instead.
@@ -1380,6 +1589,14 @@ export interface ProjectSettings {
    * Each PhaseModelEntry can specify a providerId for provider-specific models.
    */
   activeClaudeApiProfileId?: string | null;
+
+  // Discord Integration (per-project override)
+  /**
+   * Project-specific Discord integration settings.
+   * Overrides global Discord settings for this project.
+   * @see DiscordSettings
+   */
+  discord?: DiscordSettings;
 }
 
 /**
@@ -1421,6 +1638,8 @@ export const PROJECT_SETTINGS_VERSION = 1;
 
 /** Default maximum concurrent agents for auto mode */
 export const DEFAULT_MAX_CONCURRENCY = 1;
+/** Hard system limit for maximum concurrent agents - prevents resource exhaustion */
+export const MAX_SYSTEM_CONCURRENCY = 2;
 
 /** Default keyboard shortcut bindings */
 export const DEFAULT_KEYBOARD_SHORTCUTS: KeyboardShortcuts = {
@@ -1527,6 +1746,30 @@ export const DEFAULT_CREDENTIALS: Credentials = {
     google: '',
     openai: '',
   },
+};
+
+/** Default Linear integration settings - disabled by default */
+export const DEFAULT_LINEAR_INTEGRATION: LinearIntegrationConfig = {
+  enabled: false,
+  syncOnFeatureCreate: true,
+  syncOnStatusChange: true,
+  commentOnCompletion: true,
+  priorityMapping: {
+    small: 4, // Low priority
+    medium: 3, // Normal priority
+    large: 2, // High priority
+    architectural: 1, // Urgent priority
+  },
+};
+
+/** Default Discord integration settings - disabled by default */
+export const DEFAULT_DISCORD_INTEGRATION: DiscordIntegrationConfig = {
+  enabled: false,
+  createThreadsForAgents: true,
+  notifyOnCompletion: true,
+  notifyOnError: true,
+  notifyOnAutoModeComplete: true,
+  useWebhook: false,
 };
 
 /** Default project settings (empty - all settings are optional and fall back to global) */

@@ -357,3 +357,31 @@ export interface CreateFeaturesResult {
   /** Any errors encountered */
   errors?: string[];
 }
+
+/**
+ * Discord channel mapping for a project
+ * Stores the association between a project and its Discord channels
+ */
+export interface DiscordChannelMapping {
+  /** Project slug */
+  projectSlug: string;
+
+  /** Category ID where project channels are organized */
+  categoryId?: string;
+
+  /** Category name */
+  categoryName?: string;
+
+  /** Channels created for this project */
+  channels: Array<{
+    /** Channel ID */
+    id: string;
+    /** Channel name */
+    name: string;
+    /** Channel purpose/description */
+    purpose?: string;
+  }>;
+
+  /** Timestamp when channels were created */
+  createdAt: string;
+}

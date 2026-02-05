@@ -6,10 +6,16 @@
  */
 
 import { Codex } from '@openai/codex-sdk';
-import { formatHistoryAsText, classifyError, getUserFriendlyErrorMessage } from '@automaker/utils';
+import {
+  formatHistoryAsText,
+  classifyError,
+  getUserFriendlyErrorMessage,
+  createLogger,
+} from '@automaker/utils';
 import { supportsReasoningEffort } from '@automaker/types';
 import type { ExecuteOptions, ProviderMessage } from './types.js';
 
+const logger = createLogger('CodexSDK');
 const OPENAI_API_KEY_ENV = 'OPENAI_API_KEY';
 const SDK_HISTORY_HEADER = 'Current request:\n';
 const DEFAULT_RESPONSE_TEXT = '';
@@ -161,12 +167,11 @@ export async function* executeCodexSdkQuery(
     const errorInfo = classifyError(error);
     const userMessage = getUserFriendlyErrorMessage(error);
     const combinedMessage = buildSdkErrorMessage(errorInfo.message, userMessage);
-    console.error('[CodexSDK] executeQuery() error during execution:', {
+    logger.error('executeQuery() error during execution:', {
       type: errorInfo.type,
       message: errorInfo.message,
       isRateLimit: errorInfo.isRateLimit,
       retryAfter: errorInfo.retryAfter,
-      stack: error instanceof Error ? error.stack : undefined,
     });
     yield { type: 'error', error: combinedMessage };
   }

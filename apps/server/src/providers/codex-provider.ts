@@ -757,7 +757,7 @@ export class CodexProvider extends BaseProvider {
         ? codexSettings.sandboxMode
         : 'danger-full-access';
       if (!sandboxCheck.enabled && sandboxCheck.message) {
-        console.warn(`[CodexProvider] ${sandboxCheck.message}`);
+        logger.warn(sandboxCheck.message);
       }
       const searchEnabled =
         codexSettings.enableWebSearch || resolveSearchEnabled(resolvedAllowedTools, restrictTools);
@@ -868,7 +868,7 @@ export class CodexProvider extends BaseProvider {
             enhancedError = `${errorText}\n\nTip: Make sure the Codex CLI is installed. Run 'npm install -g @openai/codex-cli' to install.`;
           }
 
-          console.error('[CodexProvider] CLI error event:', { errorText, event });
+          logger.error('CLI error event:', { errorText, event });
           yield { type: 'error', error: enhancedError };
           continue;
         }
@@ -1006,12 +1006,11 @@ export class CodexProvider extends BaseProvider {
         ? `${userMessage}\n\nTip: If you're rate limited, try reducing concurrent tasks or waiting a few minutes.`
         : userMessage;
 
-      console.error('[CodexProvider] executeQuery() error:', {
+      logger.error('executeQuery() error:', {
         type: errorInfo.type,
         message: errorInfo.message,
         isRateLimit: errorInfo.isRateLimit,
         retryAfter: errorInfo.retryAfter,
-        stack: error instanceof Error ? error.stack : undefined,
       });
 
       yield { type: 'error', error: enhancedMessage };

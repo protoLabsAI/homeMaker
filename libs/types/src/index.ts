@@ -197,6 +197,8 @@ export type {
   GitWorkflowResult,
   // Graphite CLI types
   GraphiteSettings,
+  // Discord integration types
+  DiscordSettings,
   // Claude-compatible provider types (new)
   ApiKeySource,
   ClaudeCompatibleProviderType,
@@ -215,6 +217,7 @@ export {
   DEFAULT_CREDENTIALS,
   DEFAULT_PROJECT_SETTINGS,
   DEFAULT_MAX_CONCURRENCY,
+  MAX_SYSTEM_CONCURRENCY,
   SETTINGS_VERSION,
   CREDENTIALS_VERSION,
   PROJECT_SETTINGS_VERSION,
@@ -226,6 +229,8 @@ export {
   DEFAULT_GIT_WORKFLOW_SETTINGS,
   // Graphite CLI defaults
   DEFAULT_GRAPHITE_SETTINGS,
+  // Discord integration defaults
+  DEFAULT_DISCORD_SETTINGS,
   // Claude-compatible provider templates (new)
   CLAUDE_PROVIDER_TEMPLATES,
   // Claude API profile constants (deprecated)
@@ -431,3 +436,21 @@ export type {
   AutoMergeSettings,
 } from './webhook.js';
 export { DEFAULT_WEBHOOK_SETTINGS, DEFAULT_AUTO_MERGE_SETTINGS } from './webhook.js';
+
+// Discord types
+export type {
+  DiscordChannelType,
+  DiscordChannel,
+  DiscordCategory,
+  DiscordServerInfo,
+  DiscordMessage,
+  DiscordWebhook,
+  DiscordUser,
+  CreateChannelOptions,
+  CreateCategoryOptions,
+  DiscordSendMessageOptions,
+  ReadMessagesOptions,
+  CreateWebhookOptions,
+  SendWebhookMessageOptions,
+  DiscordOperationResult,
+} from './discord.js';
