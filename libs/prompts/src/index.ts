@@ -116,3 +116,7 @@ export type {
 
 // Agent role prompts
 export { getProductManagerPrompt, getResearchPrompt } from './agents/product-manager-prompt.js';
+export {
+  getEngineeringManagerPrompt,
+  getRoleAnalysisPrompt,
+} from './agents/engineering-manager-prompt.js';

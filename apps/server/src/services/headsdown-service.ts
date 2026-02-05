@@ -21,6 +21,7 @@ import type {
 import { createLogger, atomicWriteJson, readJsonWithRecovery } from '@automaker/utils';
 import { EXAMPLE_GOAP_GOALS } from '@automaker/types';
 import { DiscordMonitor } from './discord-monitor.js';
+import { LinearMonitor } from './linear-monitor.js';
 import { v4 as uuidv4 } from 'uuid';
 import path from 'node:path';
 import { existsSync } from 'node:fs';
@@ -52,18 +53,34 @@ export class HeadsdownService {
   /** Discord monitor for detecting user messages */
   private discordMonitor: DiscordMonitor;
 
+  /** Linear monitor for detecting projects and issues */
+  private linearMonitor: LinearMonitor;
+
   constructor(
     private events: EventEmitter,
     private settingsService: SettingsService,
     private featureLoader: FeatureLoader
   ) {
     this.discordMonitor = new DiscordMonitor(events);
+    this.linearMonitor = new LinearMonitor(events);
 
     // Listen for Discord message detection events
     this.events.on('discord:message:detected', (data) => {
       logger.info(`Discord message detected in channel ${data.channelId}`);
       // Add message to work queue for appropriate agents
       // This will be picked up by agents monitoring that channel
+    });
+
+    // Listen for Linear project update events
+    this.events.on('linear:project:updated', (data) => {
+      logger.info(`Linear project updated: ${data.project.name}`);
+      // Add project to work queue for EM agents
+    });
+
+    // Listen for Linear issue detection events
+    this.events.on('linear:issue:detected', (data) => {
+      logger.info(`Linear issue detected: ${data.issue.identifier}`);
+      // Add issue to work queue for engineer agents
     });
   }
 
@@ -101,6 +118,12 @@ export class HeadsdownService {
       logger.info(`Started Discord monitoring for agent ${agentId}`);
     }
 
+    // Start Linear monitoring if configured
+    if (config.monitors.linear) {
+      await this.linearMonitor.startMonitoring(config.monitors.linear);
+      logger.info(`Started Linear monitoring for agent ${agentId}`);
+    }
+
     // Emit start event
     this.events.emit('headsdown:agent:started', {
       agentId,
@@ -133,6 +156,12 @@ export class HeadsdownService {
         this.discordMonitor.stopMonitoring(channelId);
       }
       logger.info(`Stopped Discord monitoring for agent ${agentId}`);
+    }
+
+    // Stop Linear monitoring if configured
+    if (agent.monitoring.linear) {
+      this.linearMonitor.stopAll();
+      logger.info(`Stopped Linear monitoring for agent ${agentId}`);
     }
 
     // Stop work loop
