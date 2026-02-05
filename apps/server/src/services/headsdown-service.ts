@@ -69,29 +69,30 @@ export class HeadsdownService {
     this.linearMonitor = new LinearMonitor(events);
     this.githubMonitor = new GitHubMonitor(events);
 
-    // Listen for Discord message detection events
-    this.events.on('discord:message:detected', (data) => {
-      logger.info(`Discord message detected in channel ${data.channelId}`);
-      // Add message to work queue for appropriate agents
-      // This will be picked up by agents monitoring that channel
-    });
+    // Subscribe to monitor events
+    this.events.subscribe((type, payload: any) => {
+      switch (type) {
+        case 'discord:message:detected':
+          logger.info(`Discord message detected in channel ${payload.channelId}`);
+          // Add message to work queue for appropriate agents
+          // This will be picked up by agents monitoring that channel
+          break;
 
-    // Listen for Linear project update events
-    this.events.on('linear:project:updated', (data) => {
-      logger.info(`Linear project updated: ${data.project.name}`);
-      // Add project to work queue for EM agents
-    });
+        case 'linear:project:updated':
+          logger.info(`Linear project updated: ${payload.project.name}`);
+          // Add project to work queue for EM agents
+          break;
 
-    // Listen for Linear issue detection events
-    this.events.on('linear:issue:detected', (data) => {
-      logger.info(`Linear issue detected: ${data.issue.identifier}`);
-      // Add issue to work queue for engineer agents
-    });
+        case 'linear:issue:detected':
+          logger.info(`Linear issue detected: ${payload.issue.identifier}`);
+          // Add issue to work queue for engineer agents
+          break;
 
-    // Listen for GitHub PR detection events
-    this.events.on('github:pr:detected', (data) => {
-      logger.info(`GitHub PR detected: #${data.pr.number}`);
-      // Add PR to work queue for QA agents
+        case 'github:pr:detected':
+          logger.info(`GitHub PR detected: #${payload.pr.number}`);
+          // Add PR to work queue for QA agents
+          break;
+      }
     });
   }
 
