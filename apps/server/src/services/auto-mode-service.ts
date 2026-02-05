@@ -1392,12 +1392,24 @@ export class AutoModeService {
       if (this.settingsService) {
         try {
           const settings = await this.settingsService.getGlobalSettings();
+
+          // Look up epic branch name if feature belongs to an epic
+          let epicBranchName: string | undefined;
+          if (feature.epicId && !feature.isEpic) {
+            const epicFeature = await this.featureLoader.get(projectPath, feature.epicId);
+            epicBranchName = epicFeature?.branchName;
+            if (epicBranchName) {
+              logger.info(`Feature ${featureId} belongs to epic, PR will target ${epicBranchName}`);
+            }
+          }
+
           gitWorkflowResult = await gitWorkflowService.runPostCompletionWorkflow(
             projectPath,
             featureId,
             feature,
             workDir,
-            settings
+            settings,
+            epicBranchName
           );
           if (gitWorkflowResult) {
             this.emitAutoModeEvent('auto_mode_git_workflow', {
@@ -1950,12 +1962,24 @@ Complete the pipeline step instructions above. Review the previous work and appl
       if (this.settingsService) {
         try {
           const settings = await this.settingsService.getGlobalSettings();
+
+          // Look up epic branch name if feature belongs to an epic
+          let epicBranchName: string | undefined;
+          if (feature.epicId && !feature.isEpic) {
+            const epicFeature = await this.featureLoader.get(projectPath, feature.epicId);
+            epicBranchName = epicFeature?.branchName;
+            if (epicBranchName) {
+              logger.info(`Feature ${featureId} belongs to epic, PR will target ${epicBranchName}`);
+            }
+          }
+
           gitWorkflowResult = await gitWorkflowService.runPostCompletionWorkflow(
             projectPath,
             featureId,
             feature,
             workDir,
-            settings
+            settings,
+            epicBranchName
           );
           if (gitWorkflowResult) {
             this.emitAutoModeEvent('auto_mode_git_workflow', {
@@ -2254,12 +2278,24 @@ Address the follow-up instructions above. Review the previous work and make the 
       if (feature && this.settingsService) {
         try {
           const settings = await this.settingsService.getGlobalSettings();
+
+          // Look up epic branch name if feature belongs to an epic
+          let epicBranchName: string | undefined;
+          if (feature.epicId && !feature.isEpic) {
+            const epicFeature = await this.featureLoader.get(projectPath, feature.epicId);
+            epicBranchName = epicFeature?.branchName;
+            if (epicBranchName) {
+              logger.info(`Feature ${featureId} belongs to epic, PR will target ${epicBranchName}`);
+            }
+          }
+
           gitWorkflowResult = await gitWorkflowService.runPostCompletionWorkflow(
             projectPath,
             featureId,
             feature,
             workDir,
-            settings
+            settings,
+            epicBranchName
           );
           if (gitWorkflowResult) {
             this.emitAutoModeEvent('auto_mode_git_workflow', {

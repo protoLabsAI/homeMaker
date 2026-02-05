@@ -311,6 +311,31 @@ interface Feature {
 }
 ```
 
+### Epic Git Workflow
+
+When features belong to an epic, the git workflow follows a hierarchical PR structure:
+
+```
+main
+  ↑
+epic/foundation ──────────── Epic PR (targets main)
+  ↑         ↑         ↑
+feat-a    feat-b    feat-c   Feature PRs (target epic branch)
+```
+
+**Automatic Behavior:**
+
+- Feature PRs automatically target their epic's branch (not main)
+- Epic PRs target main
+- Features without an epic target main directly
+
+**Merge Order:**
+
+1. Merge all feature PRs into the epic branch
+2. Once all features complete, merge the epic PR into main
+
+This keeps main clean while allowing incremental feature development within epics.
+
 ### Creating a Project via MCP
 
 ```typescript

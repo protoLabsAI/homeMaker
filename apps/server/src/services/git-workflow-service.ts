@@ -120,6 +120,7 @@ export class GitWorkflowService {
    * @param feature - The feature object
    * @param workDir - Working directory (worktree path or project path)
    * @param settings - Global settings containing git workflow config
+   * @param epicBranchName - Optional epic branch name to use as PR base (for features in epics)
    * @returns GitWorkflowResult with details of what was done, or null if no workflow needed
    */
   async runPostCompletionWorkflow(
@@ -127,9 +128,21 @@ export class GitWorkflowService {
     featureId: string,
     feature: Feature,
     workDir: string,
-    settings: GlobalSettings
+    settings: GlobalSettings,
+    epicBranchName?: string
   ): Promise<GitWorkflowResult | null> {
     const gitSettings = this.resolveGitWorkflowSettings(feature, settings);
+
+    // Determine PR base branch:
+    // - If feature belongs to an epic and epicBranchName is provided, use it
+    // - If feature is an epic itself, use the default base (main)
+    // - Otherwise use the default base from settings
+    const prBaseBranch =
+      epicBranchName && !feature.isEpic ? epicBranchName : gitSettings.prBaseBranch;
+
+    logger.debug(
+      `Git workflow for ${featureId}: isEpic=${feature.isEpic}, epicId=${feature.epicId}, base=${prBaseBranch}`
+    );
 
     // If all operations disabled, skip entirely
     if (!gitSettings.autoCommit) {
@@ -183,7 +196,7 @@ export class GitWorkflowService {
               projectPath,
               feature,
               branchName,
-              gitSettings.prBaseBranch
+              prBaseBranch
             );
             result.prUrl = prResult.prUrl;
             result.prNumber = prResult.prNumber;
