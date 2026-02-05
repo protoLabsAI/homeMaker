@@ -1286,6 +1286,113 @@ export interface WorktreeInfo {
   changedFilesCount?: number;
 }
 
+// ============================================================================
+// Integration Settings - Per-project Linear, Discord, and external service configuration
+// ============================================================================
+
+/**
+ * LinearIntegrationConfig - Configuration for Linear project management integration
+ *
+ * When enabled, ProtoMaker events (feature created, status changed, etc.) trigger
+ * Linear MCP tools to sync planning state between ProtoMaker and Linear.
+ */
+export interface LinearIntegrationConfig {
+  /** Enable Linear integration for this project */
+  enabled: boolean;
+  /** Linear workspace ID (optional - uses authenticated user's workspace if not specified) */
+  workspaceId?: string;
+  /** Linear team ID for creating issues */
+  teamId?: string;
+  /** Linear project ID to associate issues with */
+  projectId?: string;
+  /** Create Linear issue when ProtoMaker feature is created (default: true) */
+  syncOnFeatureCreate?: boolean;
+  /** Update Linear issue status when ProtoMaker feature status changes (default: true) */
+  syncOnStatusChange?: boolean;
+  /** Add Linear comment when agent completes feature (default: true) */
+  commentOnCompletion?: boolean;
+  /** Priority mapping: ProtoMaker complexity -> Linear priority (0=none, 1=urgent, 2=high, 3=normal, 4=low) */
+  priorityMapping?: {
+    small?: number;
+    medium?: number;
+    large?: number;
+    architectural?: number;
+  };
+  /** Custom label to apply to all synced issues */
+  labelName?: string;
+}
+
+/**
+ * DiscordIntegrationConfig - Configuration for Discord communication integration
+ *
+ * When enabled, ProtoMaker events trigger Discord MCP tools to post updates,
+ * create threads for agent work, and facilitate team communication.
+ */
+export interface DiscordIntegrationConfig {
+  /** Enable Discord integration for this project */
+  enabled: boolean;
+  /** Discord server (guild) ID */
+  serverId?: string;
+  /** Discord channel ID for project updates */
+  channelId?: string;
+  /** Create Discord thread when agent starts working on feature (default: true) */
+  createThreadsForAgents?: boolean;
+  /** Post notification when feature completes successfully (default: true) */
+  notifyOnCompletion?: boolean;
+  /** Post notification when feature fails (default: true) */
+  notifyOnError?: boolean;
+  /** Post notification when auto-mode completes all features (default: true) */
+  notifyOnAutoModeComplete?: boolean;
+  /** Tag users/roles on critical events (e.g., "@team" or "<@123456>") */
+  mentionOnError?: string;
+  /** Use webhook for posting (faster, no bot required) */
+  useWebhook?: boolean;
+  /** Webhook ID (if useWebhook is true) */
+  webhookId?: string;
+  /** Webhook token (if useWebhook is true) */
+  webhookToken?: string;
+}
+
+/**
+ * ProjectIntegrations - Container for all per-project integration configurations
+ *
+ * Extensible structure for adding new integrations (Slack, Jira, etc.) in the future.
+ * Each integration can be independently enabled/disabled per project.
+ */
+export interface ProjectIntegrations {
+  /** Linear project management integration */
+  linear?: LinearIntegrationConfig;
+  /** Discord team communication integration */
+  discord?: DiscordIntegrationConfig;
+  // Future integrations can be added here:
+  // slack?: SlackIntegrationConfig;
+  // jira?: JiraIntegrationConfig;
+  // etc.
+}
+
+/**
+ * IntegrationEventMapping - Maps ProtoMaker events to integration actions
+ *
+ * Used by the integration service to determine which MCP tools to invoke
+ * when specific events occur. This is the glue between EventHooks and MCP tools.
+ */
+export interface IntegrationEventMapping {
+  /** Event that triggers this integration action */
+  event: EventHookTrigger;
+  /** Which integration to use (linear, discord, etc.) */
+  integration: 'linear' | 'discord';
+  /** Action to perform (maps to MCP tool) */
+  action:
+    | 'create_issue'
+    | 'update_issue'
+    | 'add_comment'
+    | 'send_message'
+    | 'create_thread'
+    | 'add_reaction';
+  /** Optional condition function to determine if action should execute */
+  condition?: string;
+}
+
 /**
  * ProjectSettings - Project-specific overrides stored in {projectPath}/.automaker/settings.json
  *
@@ -1372,6 +1479,13 @@ export interface ProjectSettings {
    * @see WebhookSettings in webhook.ts
    */
   webhookSettings?: import('./webhook.js').WebhookSettings;
+
+  // Integration Settings (per-project)
+  /**
+   * Per-project integration configuration for Linear, Discord, and other external services.
+   * Enables event-driven actions where ProtoMaker events trigger integration tools via MCP.
+   */
+  integrations?: ProjectIntegrations;
 
   // Deprecated Claude API Profile Override
   /**
@@ -1527,6 +1641,30 @@ export const DEFAULT_CREDENTIALS: Credentials = {
     google: '',
     openai: '',
   },
+};
+
+/** Default Linear integration settings - disabled by default */
+export const DEFAULT_LINEAR_INTEGRATION: LinearIntegrationConfig = {
+  enabled: false,
+  syncOnFeatureCreate: true,
+  syncOnStatusChange: true,
+  commentOnCompletion: true,
+  priorityMapping: {
+    small: 4, // Low priority
+    medium: 3, // Normal priority
+    large: 2, // High priority
+    architectural: 1, // Urgent priority
+  },
+};
+
+/** Default Discord integration settings - disabled by default */
+export const DEFAULT_DISCORD_INTEGRATION: DiscordIntegrationConfig = {
+  enabled: false,
+  createThreadsForAgents: true,
+  notifyOnCompletion: true,
+  notifyOnError: true,
+  notifyOnAutoModeComplete: true,
+  useWebhook: false,
 };
 
 /** Default project settings (empty - all settings are optional and fall back to global) */

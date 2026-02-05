@@ -1,18 +1,22 @@
 <p align="center">
-  <img src="apps/ui/public/readme_logo.svg" alt="Automaker Logo" height="80" />
+  <img src="apps/ui/public/readme_logo.svg" alt="ProtoMaker Logo" height="80" />
 </p>
+
+> **[!NOTE]**
+>
+> **ProtoMaker** is a fork of [Automaker](https://github.com/AutoMaker-Org/automaker) by Proto Labs AI, evolved to support **multi-agent swarm management** across teams and projects. We're grateful to the original Automaker team for the foundation that made this possible.
 
 > **[!TIP]**
 >
 > **Learn more about Agentic Coding!**
 >
-> Automaker itself was built by a group of engineers using AI and agentic coding techniques to build features faster than ever. By leveraging tools like Cursor IDE and Claude Code CLI, the team orchestrated AI agents to implement complex functionality in days instead of weeks.
+> ProtoMaker was built using AI and agentic coding techniques, leveraging tools like Cursor IDE and Claude Code CLI to orchestrate AI agents that implement complex functionality in days instead of weeks.
 >
-> **Learn how:** Master these same techniques and workflows in the [Agentic Jumpstart course](https://agenticjumpstart.com/?utm=automaker-gh).
+> **Learn how:** Master these same techniques and workflows in the [Agentic Jumpstart course](https://agenticjumpstart.com/?utm=protomaker-gh).
 
-# Automaker
+# ProtoMaker
 
-**Stop typing code. Start directing AI agents.**
+**From solo agents to swarm intelligence. Build software at team scale with AI.**
 
 <details open>
 <summary><h2>Table of Contents</h2></summary>
@@ -58,29 +62,57 @@
 
 </details>
 
-Automaker is an autonomous AI development studio that transforms how you build software. Instead of manually writing every line of code, you describe features on a Kanban board and watch as AI agents powered by Claude Agent SDK automatically implement them. Built with React, Vite, Electron, and Express, Automaker provides a complete workflow for managing AI agents through a desktop application (or web browser), with features like real-time streaming, git worktree isolation, plan approval, and multi-agent task execution.
+ProtoMaker is an **autonomous AI development studio** that transforms how teams build software at scale. Instead of manually writing code, you orchestrate **swarms of AI agents** across multiple projects, teams, and communication channels. Agents collaborate through Linear (planning) and Discord (communication), working together like an agile development team—but fully autonomous.
 
-![Automaker UI](https://i.imgur.com/jdwKydM.png)
+Built with React, Vite, Electron, Express, and powered by Claude Agent SDK, ProtoMaker provides enterprise-grade workflow orchestration for managing multiple AI agents through a desktop application (or web browser), with features like real-time streaming, git worktree isolation, Linear project sync, Discord thread management, and cross-team collaboration.
 
-## What Makes Automaker Different?
+![ProtoMaker UI](https://i.imgur.com/jdwKydM.png)
 
-Traditional development tools help you write code. Automaker helps you **orchestrate AI agents** to build entire features autonomously. Think of it as having a team of AI developers working for you—you define what needs to be built, and Automaker handles the implementation.
+## What Makes ProtoMaker Different?
+
+Traditional development tools help you write code. **ProtoMaker orchestrates swarms of AI agents** across your entire organization. Think of it as having multiple AI development teams working simultaneously—you define projects in Linear, agents implement features autonomously, and teams collaborate through Discord threads. It's **swarm management, agile style.**
+
+### The Evolution from Automaker
+
+ProtoMaker extends the original Automaker concept with:
+
+- **Multi-project orchestration**: Manage agents across multiple codebases simultaneously
+- **Linear integration**: Planning and project management in Linear, execution in ProtoMaker
+- **Discord collaboration**: Real-time updates, threaded discussions, and team communication
+- **Swarm intelligence**: Agents can collaborate across teams and projects
+- **Enterprise scale**: Built for organizations with multiple products and teams
 
 ### The Workflow
 
+1. **Plan in Linear** - Create issues and projects in Linear for your team's work
+2. **Sync to ProtoMaker** - Features automatically sync to the ProtoMaker board
+3. **Agents Execute** - AI agents pick up features and implement them autonomously
+4. **Collaborate in Discord** - Watch real-time updates, discuss progress in threads
+5. **Ship at Scale** - Multiple agents working across multiple projects simultaneously
+
+### Core Workflow
+
 1. **Add Features** - Describe features you want built (with text, images, or screenshots)
-2. **Move to "In Progress"** - Automaker automatically assigns an AI agent to implement the feature
+2. **Move to "In Progress"** - ProtoMaker automatically assigns an AI agent to implement the feature
 3. **Watch It Build** - See real-time progress as the agent writes code, runs tests, and makes changes
 4. **Review & Verify** - Review the changes, run tests, and approve when ready
 5. **Ship Faster** - Build entire applications in days, not weeks
 
 ### Powered by Claude Agent SDK
 
-Automaker leverages the [Claude Agent SDK](https://www.npmjs.com/package/@anthropic-ai/claude-agent-sdk) to give AI agents full access to your codebase. Agents can read files, write code, execute commands, run tests, and make git commits—all while working in isolated git worktrees to keep your main branch safe. The SDK provides autonomous AI agents that can use tools, make decisions, and complete complex multi-step tasks without constant human intervention.
+ProtoMaker leverages the [Claude Agent SDK](https://www.npmjs.com/package/@anthropic-ai/claude-agent-sdk) to give AI agents full access to your codebase. Agents can read files, write code, execute commands, run tests, and make git commits—all while working in isolated git worktrees to keep your main branch safe. The SDK provides autonomous AI agents that can use tools, make decisions, and complete complex multi-step tasks without constant human intervention.
+
+### Integrated with Linear & Discord via MCP
+
+ProtoMaker uses the [Model Context Protocol (MCP)](https://modelcontextprotocol.io) to integrate with:
+
+- **Linear**: Project management, issue tracking, roadmap planning
+- **Discord**: Real-time communication, threaded discussions, team updates
+- **Cross-team collaboration**: Agents share context and coordinate across projects
 
 ### Why This Matters
 
-The future of software development is **agentic coding**—where developers become architects directing AI agents rather than manual coders. Automaker puts this future in your hands today, letting you experience what it's like to build software 10x faster with AI agents handling the implementation while you focus on architecture and business logic.
+The future of software development is **swarm intelligence**—where multiple AI agents collaborate like an agile team, coordinating through shared context and communication channels. ProtoMaker brings this future to your organization today, letting you scale from a single agent to a full AI development team working across multiple projects simultaneously. You focus on strategy and architecture; the swarm handles implementation.
 
 ## Community & Support
 
@@ -110,20 +142,20 @@ In the Discord, you can:
 
 ```bash
 # 1. Clone the repository
-git clone https://github.com/AutoMaker-Org/automaker.git
-cd automaker
+git clone https://github.com/proto-labs-ai/protomaker.git
+cd protomaker
 
 # 2. Install dependencies
 npm install
 
-# 3. Start Automaker
+# 3. Start ProtoMaker
 npm run dev
 # Choose between:
 #   1. Web Application (browser at localhost:3007)
 #   2. Desktop Application (Electron - recommended)
 ```
 
-**Authentication:** Automaker integrates with your authenticated Claude Code CLI. Make sure you have [installed and authenticated](https://code.claude.com/docs/en/quickstart) the Claude Code CLI before running Automaker. Your CLI credentials will be detected automatically.
+**Authentication:** ProtoMaker integrates with your authenticated Claude Code CLI. Make sure you have [installed and authenticated](https://code.claude.com/docs/en/quickstart) the Claude Code CLI before running ProtoMaker. Your CLI credentials will be detected automatically.
 
 **For Development:** `npm run dev` starts the development server with Vite live reload and hot module replacement for fast refresh and instant updates as you make changes.
 
