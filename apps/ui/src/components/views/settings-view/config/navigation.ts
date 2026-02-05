@@ -16,6 +16,7 @@ import {
   GitBranch,
   Code2,
   Webhook,
+  MessageCircle,
 } from 'lucide-react';
 import { AnthropicIcon, CursorIcon, OpenAIIcon, OpenCodeIcon } from '@/components/ui/provider-icon';
 import type { SettingsViewId } from '../hooks/use-settings-view';
@@ -54,6 +55,7 @@ export const GLOBAL_NAV_GROUPS: NavigationGroup[] = [
         ],
       },
       { id: 'mcp-servers', label: 'MCP Servers', icon: Plug },
+      { id: 'discord', label: 'Discord', icon: MessageCircle },
     ],
   },
   {
