@@ -633,6 +633,10 @@ export type EventHookAction = EventHookShellAction | EventHookHttpAction;
  * - {{featureName}} - Name of the feature (if applicable)
  * - {{projectPath}} - Absolute path to the project
  * - {{projectName}} - Name of the project
+ * - {{projectSlug}} - Project slug (project events)
+ * - {{projectTitle}} - Project title (project events)
+ * - {{milestoneCount}} - Milestone count (project_scaffolded)
+ * - {{featuresCreated}} - Features created (project_scaffolded)
  * - {{error}} - Error message (for error events)
  * - {{timestamp}} - ISO timestamp of the event
  * - {{eventType}} - The event type that triggered the hook
