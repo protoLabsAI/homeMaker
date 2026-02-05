@@ -4,6 +4,7 @@
  * Listens to the event emitter and triggers configured hooks:
  * - Shell commands: Executed with configurable timeout
  * - HTTP webhooks: POST/GET/PUT/PATCH requests with variable substitution
+ * - Discord messages: Sent via Discord MCP server
  *
  * Also stores events to history for debugging and replay.
  *
@@ -23,6 +24,8 @@
 import { exec } from 'child_process';
 import { promisify } from 'util';
 import { createLogger } from '@automaker/utils';
+import { Client } from '@modelcontextprotocol/sdk/client/index.js';
+import { StdioClientTransport } from '@modelcontextprotocol/sdk/client/stdio.js';
 import type { EventEmitter } from '../lib/events.js';
 import type { SettingsService } from './settings-service.js';
 import type { EventHistoryService } from './event-history-service.js';
@@ -32,6 +35,8 @@ import type {
   EventHookTrigger,
   EventHookShellAction,
   EventHookHttpAction,
+  EventHookDiscordAction,
+  MCPServerConfig,
 } from '@automaker/types';
 
 const execAsync = promisify(exec);
@@ -429,6 +434,8 @@ export class EventHookService {
         await this.executeShellHook(hook.action, context, hookName);
       } else if (hook.action.type === 'http') {
         await this.executeHttpHook(hook.action, context, hookName);
+      } else if (hook.action.type === 'discord') {
+        await this.executeDiscordHook(hook.action, context, hookName);
       }
     } catch (error) {
       logger.error(`Hook "${hookName}" failed:`, error);
