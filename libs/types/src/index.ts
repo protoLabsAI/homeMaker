@@ -504,3 +504,22 @@ export {
   areConditionsSatisfied,
   applyEffects,
 } from './goap.js';
+
+// Policy and trust types
+export type {
+  TrustLevel,
+  RiskLevel,
+  AuthorityRole,
+  PolicyActionType,
+  ActionProposal,
+  PolicyDecision,
+  TrustProfile,
+  PermissionEntry,
+  StatusTransitionRule,
+  PolicyConfig,
+  ApprovalRequest,
+  DelegationRule,
+} from './policy.js';
+
+// Authority and work item types
+export type { WorkItemState, AuthorityAgent, AuthorizedWorkItem } from './authority.js';
