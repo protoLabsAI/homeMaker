@@ -296,8 +296,10 @@ export class GitWorkflowService {
     const title = feature.title || extractTitleFromDescription(feature.description);
     const body = `## Summary\n\n${feature.description.substring(0, 500)}${feature.description.length > 500 ? '...' : ''}\n\n---\n*Created automatically by Automaker*`;
 
-    // Detect fork workflow by checking remotes
+    // Detect repository info by checking remotes
+    // We need to explicitly set --repo to avoid gh defaulting to wrong upstream
     let upstreamRepo: string | null = null;
+    let originRepo: string | null = null;
     let originOwner: string | null = null;
 
     try {
@@ -317,11 +319,12 @@ export class GitWorkflowService {
         }
 
         if (match) {
-          const [, remoteName, owner] = match;
+          const [, remoteName, owner, repoName] = match;
           if (remoteName === 'upstream') {
-            upstreamRepo = `${owner}/${match[3]}`;
+            upstreamRepo = `${owner}/${repoName}`;
           } else if (remoteName === 'origin') {
             originOwner = owner;
+            originRepo = `${owner}/${repoName}`;
           }
         }
       }
@@ -329,9 +332,11 @@ export class GitWorkflowService {
       // Couldn't parse remotes
     }
 
-    // Check if PR already exists
+    // Determine target repo: use upstream if it's a fork, otherwise use origin
+    // Always use explicit --repo to avoid gh CLI defaulting to wrong repo
+    const targetRepo = upstreamRepo || originRepo;
     const headRef = upstreamRepo && originOwner ? `${originOwner}:${branchName}` : branchName;
-    const repoArg = upstreamRepo ? ` --repo "${upstreamRepo}"` : '';
+    const repoArg = targetRepo ? ` --repo "${targetRepo}"` : '';
 
     try {
       const listCmd = `gh pr list${repoArg} --head "${headRef}" --json number,title,url,state --limit 1`;
@@ -363,11 +368,16 @@ export class GitWorkflowService {
       // No existing PR found, continue to create
     }
 
-    // Create new PR
+    // Create new PR - always use explicit --repo to target correct repository
     let prCmd = `gh pr create --base "${baseBranch}"`;
 
+    if (targetRepo) {
+      prCmd += ` --repo "${targetRepo}"`;
+    }
+
     if (upstreamRepo && originOwner) {
-      prCmd += ` --repo "${upstreamRepo}" --head "${originOwner}:${branchName}"`;
+      // Fork workflow: need to specify head as owner:branch
+      prCmd += ` --head "${originOwner}:${branchName}"`;
     } else {
       prCmd += ` --head "${branchName}"`;
     }
