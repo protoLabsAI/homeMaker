@@ -518,6 +518,8 @@ export const DEFAULT_DISCORD_SETTINGS: DiscordSettings = {
  * - skill_created: An agent created a new reusable skill
  * - memory_learning: A new learning was recorded from agent execution
  * - pr_feedback_received: Pull request received feedback that needs addressing
+ * - project_scaffolded: A project was scaffolded and features were created
+ * - project_deleted: A project was deleted
  */
 export type EventHookTrigger =
   | 'feature_created'
@@ -530,7 +532,9 @@ export type EventHookTrigger =
   | 'auto_mode_health_check'
   | 'skill_created'
   | 'memory_learning'
-  | 'pr_feedback_received';
+  | 'pr_feedback_received'
+  | 'project_scaffolded'
+  | 'project_deleted';
 
 // ============================================================================
 // Git Workflow Settings - Auto commit/push/PR after feature completion
@@ -702,6 +706,10 @@ export type EventHookAction = EventHookShellAction | EventHookHttpAction | Event
  * - {{featureName}} - Name of the feature (if applicable)
  * - {{projectPath}} - Absolute path to the project
  * - {{projectName}} - Name of the project
+ * - {{projectSlug}} - Project slug (project events)
+ * - {{projectTitle}} - Project title (project events)
+ * - {{milestoneCount}} - Milestone count (project_scaffolded)
+ * - {{featuresCreated}} - Features created (project_scaffolded)
  * - {{error}} - Error message (for error events)
  * - {{timestamp}} - ISO timestamp of the event
  * - {{eventType}} - The event type that triggered the hook
@@ -732,6 +740,8 @@ export const EVENT_HOOK_TRIGGER_LABELS: Record<EventHookTrigger, string> = {
   skill_created: 'New skill created by agent',
   memory_learning: 'New learning recorded',
   pr_feedback_received: 'PR feedback received',
+  project_scaffolded: 'Project scaffolded with features',
+  project_deleted: 'Project deleted',
 };
 
 const DEFAULT_CODEX_AUTO_LOAD_AGENTS = false;

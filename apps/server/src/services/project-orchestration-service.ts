@@ -322,11 +322,23 @@ export async function orchestrateProjectFeatures(
   }
 
   // Emit completion
+  const errorCount = result.errors?.length ?? 0;
   events?.emit('project:features:done', {
     projectSlug,
     featuresCreated: result.featuresCreated,
-    errorCount: result.errors?.length ?? 0,
+    errorCount,
   });
+
+  // Only emit project:scaffolded hook event if scaffolding succeeded without errors
+  if (errorCount === 0) {
+    events?.emit('project:scaffolded', {
+      projectPath,
+      projectSlug,
+      projectTitle: project.title,
+      milestoneCount: project.milestones.length,
+      featuresCreated: result.featuresCreated,
+    });
+  }
 
   return result;
 }

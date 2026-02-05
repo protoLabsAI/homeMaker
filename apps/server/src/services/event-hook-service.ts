@@ -69,6 +69,11 @@ interface HookContext {
   // Health check specific fields
   healthStatus?: string;
   healthDetails?: string;
+  // Project specific fields
+  projectSlug?: string;
+  projectTitle?: string;
+  milestoneCount?: number;
+  featuresCreated?: number;
 }
 
 /**
@@ -148,6 +153,25 @@ export interface HealthCheckPayload {
 }
 
 /**
+ * Project scaffolded event payload structure
+ */
+export interface ProjectScaffoldedPayload {
+  projectPath: string;
+  projectSlug: string;
+  projectTitle: string;
+  milestoneCount: number;
+  featuresCreated: number;
+}
+
+/**
+ * Project deleted event payload structure
+ */
+export interface ProjectDeletedPayload {
+  projectPath: string;
+  projectSlug: string;
+}
+
+/**
  * Event Hook Service
  *
  * Manages execution of user-configured event hooks in response to system events.
@@ -190,6 +214,10 @@ export class EventHookService {
         this.handleMemoryLearningEvent(payload as MemoryLearningPayload);
       } else if (type === 'auto-mode:health-check') {
         this.handleHealthCheckEvent(payload as HealthCheckPayload);
+      } else if (type === 'project:scaffolded') {
+        this.handleProjectScaffoldedEvent(payload as ProjectScaffoldedPayload);
+      } else if (type === 'project:deleted') {
+        this.handleProjectDeletedEvent(payload as ProjectDeletedPayload);
       }
     });
 
@@ -368,6 +396,39 @@ export class EventHookService {
     };
 
     await this.executeHooksForTrigger('auto_mode_health_check', context);
+  }
+
+  /**
+   * Handle project:scaffolded events and trigger matching hooks
+   */
+  private async handleProjectScaffoldedEvent(payload: ProjectScaffoldedPayload): Promise<void> {
+    const context: HookContext = {
+      projectPath: payload.projectPath,
+      projectName: this.extractProjectName(payload.projectPath),
+      projectSlug: payload.projectSlug,
+      projectTitle: payload.projectTitle,
+      milestoneCount: payload.milestoneCount,
+      featuresCreated: payload.featuresCreated,
+      timestamp: new Date().toISOString(),
+      eventType: 'project_scaffolded',
+    };
+
+    await this.executeHooksForTrigger('project_scaffolded', context);
+  }
+
+  /**
+   * Handle project:deleted events and trigger matching hooks
+   */
+  private async handleProjectDeletedEvent(payload: ProjectDeletedPayload): Promise<void> {
+    const context: HookContext = {
+      projectPath: payload.projectPath,
+      projectName: this.extractProjectName(payload.projectPath),
+      projectSlug: payload.projectSlug,
+      timestamp: new Date().toISOString(),
+      eventType: 'project_deleted',
+    };
+
+    await this.executeHooksForTrigger('project_deleted', context);
   }
 
   /**
@@ -649,6 +710,24 @@ export class EventHookService {
   emitHealthCheck(payload: HealthCheckPayload): void {
     if (this.emitter) {
       this.emitter.emit('auto-mode:health-check', payload);
+    }
+  }
+
+  /**
+   * Emit a project scaffolded event
+   */
+  emitProjectScaffolded(payload: ProjectScaffoldedPayload): void {
+    if (this.emitter) {
+      this.emitter.emit('project:scaffolded', payload);
+    }
+  }
+
+  /**
+   * Emit a project deleted event
+   */
+  emitProjectDeleted(payload: ProjectDeletedPayload): void {
+    if (this.emitter) {
+      this.emitter.emit('project:deleted', payload);
     }
   }
 }
