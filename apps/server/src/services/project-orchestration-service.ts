@@ -328,6 +328,15 @@ export async function orchestrateProjectFeatures(
     errorCount: result.errors?.length ?? 0,
   });
 
+  // Emit project:scaffolded event for hooks (e.g., Discord channel creation)
+  events?.emit('project:scaffolded', {
+    projectPath,
+    projectSlug,
+    projectTitle: project.title,
+    milestoneCount: project.milestones.length,
+    featuresCreated: result.featuresCreated,
+  });
+
   return result;
 }
 
