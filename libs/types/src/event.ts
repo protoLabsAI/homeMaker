@@ -108,6 +108,11 @@ export type EventType =
   | 'integration:discord'
   // Project orchestration events
   | 'project:scaffolded'
-  | 'project:deleted';
+  | 'project:deleted'
+  // PRD events (Product Requirements Documents)
+  | 'prd:created'
+  | 'prd:status:updated'
+  // Discord monitoring events
+  | 'discord:message:detected';
 
 export type EventCallback = (type: EventType, payload: unknown) => void;
