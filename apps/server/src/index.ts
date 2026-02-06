@@ -110,6 +110,7 @@ import { DiscordApprovalRouter } from './services/authority-agents/discord-appro
 import { AuditService } from './services/audit-service.js';
 import { PRFeedbackService } from './services/pr-feedback-service.js';
 import { WorktreeLifecycleService } from './services/worktree-lifecycle-service.js';
+import { DiscordBotService } from './services/discord-bot-service.js';
 
 const PORT = parseInt(process.env.PORT || '3008', 10);
 const HOST = process.env.HOST || '0.0.0.0';
@@ -323,6 +324,16 @@ prFeedbackService.initialize();
 // Initialize Worktree Lifecycle Service (auto-cleanup after merge)
 const worktreeLifecycleService = new WorktreeLifecycleService(events, featureLoader);
 worktreeLifecycleService.initialize();
+
+// Initialize Discord Bot Service for CTO /idea command
+// Only connects if DISCORD_BOT_TOKEN is set in environment
+const discordBotService = new DiscordBotService(
+  events,
+  authorityService,
+  featureLoader,
+  process.cwd()
+);
+void discordBotService.initialize();
 
 // Initialize Scheduler Service with event emitter and data directory
 const schedulerService = getSchedulerService();

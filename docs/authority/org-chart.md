@@ -209,15 +209,19 @@ Agents can delegate work to others based on direction:
 
 All endpoints require authentication.
 
-| Method | Path                       | Description                    |
-| ------ | -------------------------- | ------------------------------ |
-| GET    | `/api/authority/status`    | Authority system status        |
-| POST   | `/api/authority/register`  | Register new authority agent   |
-| POST   | `/api/authority/propose`   | Submit action proposal         |
-| POST   | `/api/authority/resolve`   | Approve/reject/modify proposal |
-| POST   | `/api/authority/approvals` | List pending approvals         |
-| POST   | `/api/authority/agents`    | List authority agents          |
-| POST   | `/api/authority/trust`     | Get/set trust profiles         |
+| Method | Path                          | Description                    |
+| ------ | ----------------------------- | ------------------------------ |
+| GET    | `/api/authority/status`       | Authority system status        |
+| POST   | `/api/authority/register`     | Register new authority agent   |
+| POST   | `/api/authority/propose`      | Submit action proposal         |
+| POST   | `/api/authority/resolve`      | Approve/reject/modify proposal |
+| POST   | `/api/authority/approvals`    | List pending approvals         |
+| POST   | `/api/authority/agents`       | List authority agents          |
+| POST   | `/api/authority/trust`        | Get/set trust profiles         |
+| POST   | `/api/authority/inject-idea`  | CTO submits feature idea       |
+| POST   | `/api/authority/dashboard`    | CTO system overview            |
+| POST   | `/api/authority/audit`        | Query audit trail              |
+| POST   | `/api/authority/trust-scores` | View agent trust scores        |
 
 ## Configuration
 
@@ -244,26 +248,51 @@ When `authoritySystem.enabled` is `false` (default), all features work exactly a
 
 The authority system emits these events via WebSocket:
 
-| Event                          | Payload                                     | When                    |
-| ------------------------------ | ------------------------------------------- | ----------------------- |
-| `authority:proposal-submitted` | `{ proposalId, agentId, action, target }`   | Proposal received       |
-| `authority:approved`           | `{ agentId, action, auto }`                 | Action approved         |
-| `authority:rejected`           | `{ agentId, action, reason }`               | Action rejected         |
-| `authority:awaiting-approval`  | `{ requestId, agentId, action, target }`    | Queued for human review |
-| `authority:agent-registered`   | `{ agentId, role, trustLevel }`             | Agent registered        |
-| `authority:trust-updated`      | `{ agentId, oldTrustLevel, newTrustLevel }` | Trust level changed     |
+### Authority Events
+
+| Event                             | Payload                                     | When                    |
+| --------------------------------- | ------------------------------------------- | ----------------------- |
+| `authority:proposal-submitted`    | `{ proposalId, agentId, action, target }`   | Proposal received       |
+| `authority:approved`              | `{ agentId, action, auto }`                 | Action approved         |
+| `authority:rejected`              | `{ agentId, action, reason }`               | Action rejected         |
+| `authority:awaiting-approval`     | `{ requestId, agentId, action, target }`    | Queued for human review |
+| `authority:agent-registered`      | `{ agentId, role, trustLevel }`             | Agent registered        |
+| `authority:trust-updated`         | `{ agentId, oldTrustLevel, newTrustLevel }` | Trust level changed     |
+| `authority:idea-injected`         | `{ projectPath, featureId, title }`         | CTO submitted idea      |
+| `authority:pm-research-started`   | `{ projectPath, featureId, agentId }`       | PM began research       |
+| `authority:pm-research-completed` | `{ projectPath, featureId, analysis }`      | PM finished research    |
+| `authority:pm-epic-created`       | `{ epicId, title, childCount }`             | PM created epic         |
+
+### PR Feedback Events
+
+| Event                          | Payload                                   | When                     |
+| ------------------------------ | ----------------------------------------- | ------------------------ |
+| `pr:feedback-received`         | `{ featureId, prNumber, type }`           | Any PR review activity   |
+| `pr:changes-requested`         | `{ featureId, prNumber, feedback }`       | Reviewer requested fixes |
+| `pr:approved`                  | `{ featureId, prNumber, approvers }`      | PR approved              |
+| `feature:reassigned-for-fixes` | `{ featureId, prNumber, iterationCount }` | EM sent back for fixes   |
+| `feature:worktree-cleaned`     | `{ featureId, branchName }`               | Worktree auto-removed    |
+| `feature:pr-merged`            | `{ featureId, prNumber, branchName }`     | PR merged via webhook    |
 
 ## File Locations
 
-| File                                            | Purpose                                            |
-| ----------------------------------------------- | -------------------------------------------------- |
-| `libs/types/src/policy.ts`                      | All policy and trust type definitions              |
-| `libs/types/src/authority.ts`                   | Authority agent and work item types                |
-| `libs/policy-engine/src/engine.ts`              | Core `checkPolicy()` function                      |
-| `libs/policy-engine/src/defaults.ts`            | Default permission matrix and transitions          |
-| `libs/policy-engine/tests/engine.test.ts`       | 37 unit tests for policy engine                    |
-| `apps/server/src/services/authority-service.ts` | Authority service (registry, proposals, approvals) |
-| `apps/server/src/routes/authority/index.ts`     | REST API routes                                    |
+| File                                                                   | Purpose                                            |
+| ---------------------------------------------------------------------- | -------------------------------------------------- |
+| `libs/types/src/policy.ts`                                             | All policy and trust type definitions              |
+| `libs/types/src/authority.ts`                                          | Authority agent and work item types                |
+| `libs/policy-engine/src/engine.ts`                                     | Core `checkPolicy()` function                      |
+| `libs/policy-engine/src/defaults.ts`                                   | Default permission matrix and transitions          |
+| `libs/policy-engine/tests/engine.test.ts`                              | 37 unit tests for policy engine                    |
+| `apps/server/src/services/authority-service.ts`                        | Authority service (registry, proposals, approvals) |
+| `apps/server/src/routes/authority/index.ts`                            | REST API routes                                    |
+| `apps/server/src/services/authority-agents/pm-agent.ts`                | PM agent (idea research + PRD + epics)             |
+| `apps/server/src/services/authority-agents/projm-agent.ts`             | ProjM agent (epic decomposition + deps)            |
+| `apps/server/src/services/authority-agents/em-agent.ts`                | EM agent (assignment + capacity + PR feedback)     |
+| `apps/server/src/services/authority-agents/status-agent.ts`            | Status agent (blocker detection + escalation)      |
+| `apps/server/src/services/authority-agents/discord-approval-router.ts` | Discord approval notifications                     |
+| `apps/server/src/services/audit-service.ts`                            | Append-only JSONL audit trail                      |
+| `apps/server/src/services/pr-feedback-service.ts`                      | GitHub PR review monitoring                        |
+| `apps/server/src/services/worktree-lifecycle-service.ts`               | Auto-cleanup on merge/complete                     |
 
 ## Persistence
 
