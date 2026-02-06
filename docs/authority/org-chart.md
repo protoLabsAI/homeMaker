@@ -38,13 +38,13 @@ CTO (Trust=3, Autonomous)
 
 ## Roles
 
-| Role                | Code    | Trust           | Owns                   | Description                                                                                      |
-| ------------------- | ------- | --------------- | ---------------------- | ------------------------------------------------------------------------------------------------ |
-| CTO                 | `CTO`   | 3 (Autonomous)  | Strategy & direction   | Human-in-the-loop bridge. Full access to all actions and risk levels. Routes approvals to human. |
-| Product Manager     | `PM`    | 1 (Assisted)    | What & Why             | Researches ideas, creates PRDs, defines scope. Creates work and manages scope changes.           |
-| Project Manager     | `ProjM` | 1 (Assisted)    | When & How             | Decomposes epics into tasks, manages dependencies, assigns work.                                 |
-| Engineering Manager | `EM`    | 1 (Assisted)    | Who & Capacity         | Assigns engineers, manages capacity/WIP limits, quality gates.                                   |
-| Principal Engineer  | `PE`    | 2 (Conditional) | Architecture & Quality | Reviews architecture decisions, approves work, blocks releases for quality.                      |
+| Role                | Code    | Trust           | Owns                   | Description                                                                                                   |
+| ------------------- | ------- | --------------- | ---------------------- | ------------------------------------------------------------------------------------------------------------- |
+| CTO                 | `CTO`   | 3 (Autonomous)  | Strategy & direction   | **The human user.** Full access to all actions. Injects ideas, approves/rejects proposals, sets trust levels. |
+| Product Manager     | `PM`    | 1 (Assisted)    | What & Why             | Researches ideas, creates PRDs, defines scope. Creates work and manages scope changes.                        |
+| Project Manager     | `ProjM` | 1 (Assisted)    | When & How             | Decomposes epics into tasks, manages dependencies, assigns work.                                              |
+| Engineering Manager | `EM`    | 1 (Assisted)    | Who & Capacity         | Assigns engineers, manages capacity/WIP limits, quality gates.                                                |
+| Principal Engineer  | `PE`    | 2 (Conditional) | Architecture & Quality | Reviews architecture decisions, approves work, blocks releases for quality.                                   |
 
 ## Trust Levels
 

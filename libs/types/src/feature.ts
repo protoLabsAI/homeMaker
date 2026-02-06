@@ -6,6 +6,7 @@ import type { PlanningMode, ThinkingLevel, GitWorkflowSettings } from './setting
 import type { ReasoningEffort } from './provider.js';
 import type { FeatureRalphConfig } from './ralph.js';
 import type { AgentRole } from './agent-roles.js';
+import type { WorkItemState } from './authority.js';
 
 /**
  * A single entry in the description history
@@ -111,6 +112,12 @@ export interface Feature {
    * Direct link to the Linear issue for this feature.
    */
   linearIssueUrl?: string;
+  /**
+   * Work item state for the authority system.
+   * Extended lifecycle: idea → research → planned → ready → in_progress → blocked → testing → done
+   * Only used when authority system is enabled.
+   */
+  workItemState?: WorkItemState;
   [key: string]: unknown; // Keep catch-all for extensibility
 }
 

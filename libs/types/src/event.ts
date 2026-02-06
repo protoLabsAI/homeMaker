@@ -139,6 +139,10 @@ export type EventType =
   | 'authority:rejected'
   | 'authority:awaiting-approval'
   | 'authority:agent-registered'
-  | 'authority:trust-updated';
+  | 'authority:trust-updated'
+  | 'authority:idea-injected'
+  | 'authority:pm-research-started'
+  | 'authority:pm-research-completed'
+  | 'authority:pm-epic-created';
 
 export type EventCallback = (type: EventType, payload: unknown) => void;

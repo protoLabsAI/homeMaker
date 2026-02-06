@@ -1,6 +1,6 @@
 # Authority System - Sprint Progress
 
-## Current Status: Sprint 2 Complete, Sprint 3 Next
+## Current Status: Sprint 4 Complete, Sprint 5 Next
 
 ### Sprint 1: Policy Engine Types + Core Check Function - DONE
 
@@ -35,22 +35,39 @@
 - Type bridging between authority and engine layers
 - Persistence to `.automaker/authority/` JSON files
 
-### Sprint 3: Policy-Gated Feature Mutations - IN PROGRESS
+### Sprint 3: Policy-Gated Feature Mutations - DONE
 
-| Feature                      | Status  | Board ID                          |
-| ---------------------------- | ------- | --------------------------------- |
-| Policy-Gated FeatureLoader   | Backlog | `feature-1770331863015-8c81i3p6e` |
-| Auto-Mode Policy Integration | Backlog | `feature-1770331866107-bq3q2hbm2` |
+| Feature                      | Status | Commit     |
+| ---------------------------- | ------ | ---------- |
+| Policy-Gated FeatureLoader   | Done   | `1613cade` |
+| Auto-Mode Policy Integration | Done   | `1613cade` |
 
-**Goal:** Wrap FeatureLoader so when authority system is enabled, status changes go through policy. When disabled, unchanged.
+**Deliverables:**
 
-### Sprint 4: CTO Agent + PM Agent - PLANNED
+- Policy-gated feature update route in `apps/server/src/routes/features/routes/update.ts`
+- Auto-mode policy integration in `apps/server/src/services/auto-mode-service.ts`
+- Fail-open pattern: authority errors logged but don't block
+- 403 on deny, 202 on require_approval, pass-through on allow
 
-| Feature                  | Status  | Board ID                          |
-| ------------------------ | ------- | --------------------------------- |
-| CTO Agent (Human Bridge) | Backlog | `feature-1770331869156-g7bam3kmt` |
-| PM Authority Agent       | Backlog | `feature-1770331872210-4y5gnimac` |
-| Inject Idea Endpoint     | Backlog | `feature-1770331875288-lttcqq8su` |
+### Sprint 4: CTO Tools + PM Agent - DONE
+
+| Feature                        | Status | Commit |
+| ------------------------------ | ------ | ------ |
+| CTO Tools & Approval Interface | Done   | TBD    |
+| PM Authority Agent             | Done   | TBD    |
+| Inject Idea Endpoint           | Done   | TBD    |
+
+**Key Reframe:** CTO = the human user, NOT an AI agent. The CTO tools are the interface for the human to interact with the authority system.
+
+**Deliverables:**
+
+- `workItemState?: WorkItemState` field added to Feature interface
+- `POST /api/authority/inject-idea` - CTO submits ideas that create features with `workItemState='idea'`
+- `POST /api/authority/dashboard` - CTO overview of agents, approvals, and ideas in pipeline
+- `apps/server/src/services/authority-agents/pm-agent.ts` - First AI executive agent
+- PM agent: listens for ideas, transitions idea → research → planned, creates epics for multi-component ideas
+- New events: `authority:idea-injected`, `authority:pm-research-started`, `authority:pm-research-completed`, `authority:pm-epic-created`
+- PM agent initialized lazily per-project when first idea is injected
 
 ### Sprint 5: ProjM Agent + EM Agent - PLANNED
 
