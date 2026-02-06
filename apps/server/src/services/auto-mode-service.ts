@@ -847,7 +847,10 @@ export class AutoModeService {
 
         if (nextFeature) {
           // Double-check we're not at capacity (defensive check before starting)
-          const currentRunningCount = await this.getRunningCountForWorktree(projectPath, branchName);
+          const currentRunningCount = await this.getRunningCountForWorktree(
+            projectPath,
+            branchName
+          );
           if (currentRunningCount >= projectState.config.maxConcurrency) {
             logger.warn(
               `[AutoLoop] Race condition detected: at capacity ${currentRunningCount}/${projectState.config.maxConcurrency} when trying to start feature ${nextFeature.id}, skipping`
@@ -3884,6 +3887,11 @@ Format your response as a structured markdown document.`;
           `[loadPendingFeatures] ${blockedFeatures.length} features blocked by dependencies: ${blockedFeatures.map((b) => `${b.feature.id} (${b.reason})`).join('; ')}`
         );
       }
+
+      // Sort by priority (lower number = higher priority, picked up first)
+      // 0 = No priority and undefined both default to 3 (Normal) for sorting
+      const priorityOrder = (p?: number | null): number => (p === 0 || p == null ? 3 : p);
+      readyFeatures.sort((a, b) => priorityOrder(a.priority) - priorityOrder(b.priority));
 
       logger.info(
         `[loadPendingFeatures] After dependency filtering: ${readyFeatures.length} ready features (skipVerification=${skipVerification})`
