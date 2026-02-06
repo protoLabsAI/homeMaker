@@ -19,6 +19,9 @@ import type {
  */
 export type WorkItemState =
   | 'idea'
+  | 'pm_review'
+  | 'pm_changes_requested'
+  | 'approved'
   | 'research'
   | 'planned'
   | 'ready'

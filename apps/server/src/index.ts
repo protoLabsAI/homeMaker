@@ -111,6 +111,7 @@ import { AuditService } from './services/audit-service.js';
 import { PRFeedbackService } from './services/pr-feedback-service.js';
 import { WorktreeLifecycleService } from './services/worktree-lifecycle-service.js';
 import { DiscordBotService } from './services/discord-bot-service.js';
+import { ProjectService } from './services/project-service.js';
 
 const PORT = parseInt(process.env.PORT || '3008', 10);
 const HOST = process.env.HOST || '0.0.0.0';
@@ -305,7 +306,8 @@ autoModeService.setAuthorityService(authorityService);
 
 // Initialize Authority Agents (AI executives)
 const pmAgent = new PMAuthorityAgent(events, authorityService, featureLoader);
-const projmAgent = new ProjMAuthorityAgent(events, authorityService, featureLoader);
+const projectService = new ProjectService(featureLoader);
+const projmAgent = new ProjMAuthorityAgent(events, authorityService, featureLoader, projectService);
 const emAgent = new EMAuthorityAgent(events, authorityService, featureLoader);
 const statusMonitor = new StatusMonitorAgent(events, authorityService, featureLoader);
 

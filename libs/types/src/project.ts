@@ -25,7 +25,13 @@ export type ProjectStatus =
 /**
  * Status of a milestone
  */
-export type MilestoneStatus = 'pending' | 'in-progress' | 'completed';
+export type MilestoneStatus =
+  | 'stub'
+  | 'planning'
+  | 'planned'
+  | 'pending'
+  | 'in-progress'
+  | 'completed';
 
 /**
  * A phase within a milestone - becomes a Feature when scaffolded

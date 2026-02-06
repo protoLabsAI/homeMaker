@@ -55,6 +55,9 @@ export interface Feature {
   isEpic?: boolean; // True if this feature is an epic (container for child features)
   epicId?: string; // ID of parent epic (if this feature belongs to an epic)
   epicColor?: string; // Color for epic badge display (hex color)
+  // Project/milestone tracking for milestone-gated execution
+  projectSlug?: string; // Project this feature belongs to
+  milestoneSlug?: string; // Milestone this feature belongs to
   skipTests?: boolean;
   thinkingLevel?: ThinkingLevel;
   reasoningEffort?: ReasoningEffort;

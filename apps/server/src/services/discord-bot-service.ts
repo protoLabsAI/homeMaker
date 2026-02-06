@@ -2,14 +2,19 @@
  * Discord Bot Service - Connects to Discord for CTO interaction
  *
  * Provides the `/idea` slash command and message-prefix command (`!idea`)
- * so the CTO can inject ideas directly from Discord. When an idea is
- * processed by the PM agent, the PRD is posted back to Discord for approval.
+ * so the CTO can inject ideas directly from Discord. Supports:
+ *
+ * - Rich input: file attachments (images, .txt, .md) on /idea
+ * - Thread-based review: PM feedback posted in a review thread
+ * - CTO response loop: CTO replies in thread to approve or revise
+ * - /approve-idea <featureId>: Explicitly approve from anywhere
+ * - Milestone notifications: updates when milestones start/complete
  *
  * Setup:
  * 1. Set DISCORD_BOT_TOKEN in .env or environment
  * 2. Invite bot to server with scopes: bot, applications.commands
  * 3. Bot permissions: Send Messages, Read Message History, Add Reactions,
- *    Use Slash Commands, Manage Messages
+ *    Use Slash Commands, Manage Messages, Create Public Threads
  *
  * The service is optional - if no token is configured, it logs a warning
  * and the rest of the server operates normally.
@@ -21,15 +26,21 @@ import {
   SlashCommandBuilder,
   REST,
   Routes,
+  ChannelType,
   type Interaction,
   type Message,
   type TextChannel,
+  type ThreadChannel,
   Events,
 } from 'discord.js';
 import { createLogger } from '@automaker/utils';
 import type { EventEmitter } from '../lib/events.js';
 import type { AuthorityService } from './authority-service.js';
 import type { FeatureLoader } from './feature-loader.js';
+import * as https from 'node:https';
+import * as http from 'node:http';
+import * as fs from 'node:fs';
+import * as path from 'node:path';
 
 const logger = createLogger('DiscordBot');
 
@@ -47,11 +58,12 @@ const GUILD_ID = '1070606339363049492';
 /** Message prefix alternative to slash command */
 const IDEA_PREFIX = '!idea ';
 
-/** Pending ideas waiting for PRD completion, keyed by featureId */
+/** Pending ideas waiting for PM review, keyed by featureId */
 interface PendingIdea {
   channelId: string;
   interactionToken?: string;
   messageId?: string;
+  threadId?: string;
   userId: string;
   title: string;
   createdAt: number;
@@ -66,11 +78,14 @@ export class DiscordBotService {
   private client: Client | null = null;
   private initialized = false;
 
-  /** Track pending ideas to post PRD results back */
+  /** Track pending ideas to post review results back */
   private pendingIdeas = new Map<string, PendingIdea>();
 
   /** Track approval messages to map reactions to feature IDs */
   private approvalMessages = new Map<string, { featureId: string; projectPath: string }>();
+
+  /** Map thread IDs to feature IDs for CTO reply handling */
+  private reviewThreads = new Map<string, string>();
 
   constructor(
     events: EventEmitter,
@@ -128,7 +143,7 @@ export class DiscordBotService {
         void this.handleReaction(reaction.message.id, reaction.emoji.name || '', user.id, true);
       });
 
-      // Listen for PM agent completion events
+      // Listen for PM agent review events
       this.listenForAgentEvents();
 
       // Connect to Discord
@@ -152,15 +167,28 @@ export class DiscordBotService {
       const commands = [
         new SlashCommandBuilder()
           .setName('idea')
-          .setDescription('Submit a feature idea for the team to build')
+          .setDescription('Submit a feature idea / PRD for the team to build')
           .addStringOption((option) =>
             option.setName('title').setDescription('Short title for the idea').setRequired(true)
           )
           .addStringOption((option) =>
             option
               .setName('description')
-              .setDescription('Detailed description of what you want built')
+              .setDescription('Detailed spec/description of what you want built')
               .setRequired(false)
+          )
+          .addAttachmentOption((option) =>
+            option
+              .setName('attachment')
+              .setDescription('Attach a file (image, .md, .txt) with additional details')
+              .setRequired(false)
+          ),
+
+        new SlashCommandBuilder()
+          .setName('approve-idea')
+          .setDescription('Approve a pending idea after PM review')
+          .addStringOption((option) =>
+            option.setName('feature-id').setDescription('Feature ID to approve').setRequired(true)
           ),
 
         new SlashCommandBuilder()
@@ -208,6 +236,9 @@ export class DiscordBotService {
       case 'idea':
         await this.handleIdeaCommand(interaction);
         break;
+      case 'approve-idea':
+        await this.handleApproveIdeaCommand(interaction);
+        break;
       case 'dashboard':
         await this.handleDashboardCommand(interaction);
         break;
@@ -221,11 +252,12 @@ export class DiscordBotService {
   }
 
   /**
-   * Handle /idea slash command.
+   * Handle /idea slash command with attachment support.
    */
   private async handleIdeaCommand(interaction: any): Promise<void> {
     const title = interaction.options.getString('title');
     const description = interaction.options.getString('description') || '';
+    const attachment = interaction.options.getAttachment('attachment');
 
     if (!title) {
       await interaction.reply({ content: 'Title is required.', ephemeral: true });
@@ -236,28 +268,119 @@ export class DiscordBotService {
     await interaction.deferReply();
 
     try {
-      const result = await this.injectIdea(title, description, interaction.user.id);
+      // Download attachment if provided
+      let attachmentData: {
+        textFiles?: Array<{ filename: string; content: string }>;
+        imagePaths?: string[];
+      } = {};
+      if (attachment) {
+        attachmentData = await this.processAttachment(attachment);
+      }
+
+      const result = await this.injectIdea(
+        title,
+        description,
+        interaction.user.id,
+        attachmentData.textFiles,
+        attachmentData.imagePaths
+      );
 
       if (result.success) {
-        await interaction.editReply(
+        // Create a review thread for this idea
+        const channel = interaction.channel as TextChannel;
+        const reply = await interaction.editReply(
           `**Idea submitted:** "${title}"\n` +
             `**Feature ID:** \`${result.featureId}\`\n` +
-            `The PM agent is researching this idea. I'll post the PRD here when it's ready for your approval.`
+            `PM agent is reviewing your idea...`
         );
 
-        // Track this idea for PRD followup
+        // Create a thread for the review conversation
+        let thread: ThreadChannel | null = null;
+        try {
+          const fetchedReply = await interaction.fetchReply();
+          thread = await (channel as TextChannel).threads.create({
+            name: `Review: ${title.slice(0, 90)}`,
+            autoArchiveDuration: 1440, // 24 hours
+            type: ChannelType.PublicThread,
+            startMessage: fetchedReply.id,
+          });
+
+          await thread.send(
+            `**PM Review Thread**\n` +
+              `The PM agent is reviewing this idea. Results will be posted here.\n` +
+              `<@${interaction.user.id}> - Reply in this thread to provide feedback or approve changes.`
+          );
+        } catch (threadError) {
+          logger.warn('Could not create review thread:', threadError);
+        }
+
+        // Track this idea for review followup
         this.pendingIdeas.set(result.featureId!, {
           channelId: interaction.channelId,
           userId: interaction.user.id,
           title,
+          threadId: thread?.id,
           createdAt: Date.now(),
         });
+
+        // Map thread to feature for CTO reply handling
+        if (thread) {
+          this.reviewThreads.set(thread.id, result.featureId!);
+        }
       } else {
         await interaction.editReply(`Failed to submit idea: ${result.error}`);
       }
     } catch (error) {
       logger.error('Error handling /idea command:', error);
       await interaction.editReply('An error occurred while submitting your idea.');
+    }
+  }
+
+  /**
+   * Handle /approve-idea slash command - explicitly approve an idea from anywhere.
+   */
+  private async handleApproveIdeaCommand(interaction: any): Promise<void> {
+    const featureId = interaction.options.getString('feature-id');
+    if (!featureId) {
+      await interaction.reply({ content: 'Feature ID is required.', ephemeral: true });
+      return;
+    }
+
+    try {
+      const feature = await this.featureLoader.get(this.projectPath, featureId);
+      if (!feature) {
+        await interaction.reply({
+          content: `Feature \`${featureId}\` not found.`,
+          ephemeral: true,
+        });
+        return;
+      }
+
+      if (
+        feature.workItemState !== 'pm_changes_requested' &&
+        feature.workItemState !== 'pm_review'
+      ) {
+        await interaction.reply({
+          content: `Feature is in \`${feature.workItemState}\` state, not awaiting approval.`,
+          ephemeral: true,
+        });
+        return;
+      }
+
+      // Emit CTO approval event for PM agent to pick up
+      this.events.emit('authority:cto-approved-idea', {
+        projectPath: this.projectPath,
+        featureId,
+        approvedBy: `discord:${interaction.user.id}`,
+      });
+
+      await interaction.reply(
+        `**Approved:** "${feature.title}" (\`${featureId}\`)\n` +
+          `PM agent will proceed with decomposition.`
+      );
+    } catch (error) {
+      const msg = error instanceof Error ? error.message : 'Unknown error';
+      await interaction.reply({ content: `Failed: ${msg}`, ephemeral: true });
     }
   }
 
@@ -295,19 +418,23 @@ export class DiscordBotService {
         }
       }
 
-      // Pipeline
+      // Pipeline (updated with new states)
       lines.push('\n**Idea Pipeline:**');
       const features = await this.featureLoader.getAll(this.projectPath);
       const ideas = features.filter((f) => f.workItemState === 'idea');
-      const researching = features.filter((f) => f.workItemState === 'research');
+      const pmReview = features.filter((f) => f.workItemState === 'pm_review');
+      const changesReq = features.filter((f) => f.workItemState === 'pm_changes_requested');
+      const approved = features.filter((f) => f.workItemState === 'approved');
       const planned = features.filter((f) => f.workItemState === 'planned');
       const ready = features.filter((f) => f.workItemState === 'ready');
       const inProgress = features.filter((f) => f.workItemState === 'in_progress');
 
       lines.push(
-        `  Ideas: ${ideas.length} | Researching: ${researching.length} | Planned: ${planned.length}`
+        `  Ideas: ${ideas.length} | PM Review: ${pmReview.length} | Changes Requested: ${changesReq.length}`
       );
-      lines.push(`  Ready: ${ready.length} | In Progress: ${inProgress.length}`);
+      lines.push(
+        `  Approved: ${approved.length} | Planned: ${planned.length} | Ready: ${ready.length} | In Progress: ${inProgress.length}`
+      );
 
       await interaction.editReply(lines.join('\n'));
     } catch (error) {
@@ -356,60 +483,261 @@ export class DiscordBotService {
   }
 
   /**
-   * Handle message-prefix commands (!idea ...).
+   * Handle message-prefix commands and thread replies.
    */
   private async handleMessage(message: Message): Promise<void> {
     if (message.author.bot) return;
 
     const content = message.content.trim();
 
-    if (content.startsWith(IDEA_PREFIX)) {
-      const ideaText = content.slice(IDEA_PREFIX.length).trim();
-      if (!ideaText) {
-        await message.reply('Usage: `!idea <title> | <description>` or `!idea <title>`');
+    // Handle CTO replies in review threads
+    if (message.channel.isThread()) {
+      const featureId = this.reviewThreads.get(message.channelId);
+      if (featureId) {
+        await this.handleThreadReply(message, featureId);
         return;
       }
+    }
 
-      // Parse title and optional description separated by |
-      const [title, ...descParts] = ideaText.split('|');
-      const description = descParts.join('|').trim();
-
-      try {
-        const result = await this.injectIdea(title.trim(), description, message.author.id);
-
-        if (result.success) {
-          const reply = await message.reply(
-            `**Idea submitted:** "${title.trim()}"\n` +
-              `**Feature ID:** \`${result.featureId}\`\n` +
-              `PM agent is researching... I'll follow up with the PRD.`
-          );
-
-          this.pendingIdeas.set(result.featureId!, {
-            channelId: message.channelId,
-            messageId: reply.id,
-            userId: message.author.id,
-            title: title.trim(),
-            createdAt: Date.now(),
-          });
-        } else {
-          await message.reply(`Failed: ${result.error}`);
-        }
-      } catch (error) {
-        logger.error('Error handling !idea command:', error);
-        await message.reply('Error submitting idea.');
-      }
+    // Handle !idea prefix command
+    if (content.startsWith(IDEA_PREFIX)) {
+      await this.handleBangIdeaCommand(message, content);
     }
   }
 
   /**
-   * Inject an idea through the authority system.
+   * Handle CTO reply in a review thread.
+   * If the reply contains "approve" or "lgtm", treat as approval.
+   * Otherwise, treat as updated description/feedback for PM re-review.
+   */
+  private async handleThreadReply(message: Message, featureId: string): Promise<void> {
+    const content = message.content.trim();
+    const lower = content.toLowerCase();
+
+    // Check for approval keywords
+    const isApproval =
+      /^(approve[d]?|lgtm|looks good|ship it|go ahead|approved?)$/i.test(lower) ||
+      lower.startsWith('approve');
+
+    if (isApproval) {
+      // CTO approves - emit event for PM agent
+      this.events.emit('authority:cto-approved-idea', {
+        projectPath: this.projectPath,
+        featureId,
+        approvedBy: `discord:${message.author.id}`,
+      });
+
+      await message.reply(
+        'Approved! PM agent will proceed with project creation and decomposition.'
+      );
+      logger.info(`CTO approved idea ${featureId} via thread reply`);
+    } else {
+      // CTO provided updated description/feedback - emit for PM re-review
+      this.events.emit('authority:cto-approved-idea', {
+        projectPath: this.projectPath,
+        featureId,
+        updatedDescription: content,
+        approvedBy: `discord:${message.author.id}`,
+      });
+
+      await message.reply('Got it. PM agent will re-review with your updates.');
+      logger.info(`CTO provided feedback for ${featureId} via thread reply`);
+    }
+  }
+
+  /**
+   * Handle !idea prefix command with attachment support.
+   */
+  private async handleBangIdeaCommand(message: Message, content: string): Promise<void> {
+    const ideaText = content.slice(IDEA_PREFIX.length).trim();
+    if (!ideaText) {
+      await message.reply('Usage: `!idea <title> | <description>` or `!idea <title>`');
+      return;
+    }
+
+    // Parse title and optional description separated by |
+    const [title, ...descParts] = ideaText.split('|');
+    const description = descParts.join('|').trim();
+
+    // Process any message attachments
+    let attachmentData: {
+      textFiles?: Array<{ filename: string; content: string }>;
+      imagePaths?: string[];
+    } = {};
+    if (message.attachments.size > 0) {
+      const firstAttachment = message.attachments.first()!;
+      attachmentData = await this.processAttachment(firstAttachment);
+    }
+
+    try {
+      const result = await this.injectIdea(
+        title.trim(),
+        description,
+        message.author.id,
+        attachmentData.textFiles,
+        attachmentData.imagePaths
+      );
+
+      if (result.success) {
+        const reply = await message.reply(
+          `**Idea submitted:** "${title.trim()}"\n` +
+            `**Feature ID:** \`${result.featureId}\`\n` +
+            `PM agent is reviewing...`
+        );
+
+        // Create a review thread
+        let thread: ThreadChannel | null = null;
+        try {
+          const channel = message.channel as TextChannel;
+          thread = await channel.threads.create({
+            name: `Review: ${title.trim().slice(0, 90)}`,
+            autoArchiveDuration: 1440,
+            type: ChannelType.PublicThread,
+            startMessage: reply.id,
+          });
+
+          await thread.send(
+            `**PM Review Thread**\n` +
+              `Reply here to provide feedback or approve changes.\n` +
+              `<@${message.author.id}>`
+          );
+        } catch (threadError) {
+          logger.warn('Could not create review thread for !idea:', threadError);
+        }
+
+        this.pendingIdeas.set(result.featureId!, {
+          channelId: message.channelId,
+          messageId: reply.id,
+          threadId: thread?.id,
+          userId: message.author.id,
+          title: title.trim(),
+          createdAt: Date.now(),
+        });
+
+        if (thread) {
+          this.reviewThreads.set(thread.id, result.featureId!);
+        }
+      } else {
+        await message.reply(`Failed: ${result.error}`);
+      }
+    } catch (error) {
+      logger.error('Error handling !idea command:', error);
+      await message.reply('Error submitting idea.');
+    }
+  }
+
+  /**
+   * Process a Discord attachment: download and categorize as text or image.
+   */
+  private async processAttachment(
+    attachment: any
+  ): Promise<{ textFiles?: Array<{ filename: string; content: string }>; imagePaths?: string[] }> {
+    const result: {
+      textFiles?: Array<{ filename: string; content: string }>;
+      imagePaths?: string[];
+    } = {};
+
+    if (!attachment?.url || !attachment?.name) return result;
+
+    const filename = attachment.name as string;
+    const url = attachment.url as string;
+    const contentType = (attachment.contentType || '') as string;
+
+    try {
+      const isText = /\.(txt|md|markdown|text)$/i.test(filename) || contentType.startsWith('text/');
+      const isImage =
+        /\.(png|jpg|jpeg|gif|webp)$/i.test(filename) || contentType.startsWith('image/');
+
+      if (isText) {
+        const content = await this.downloadAsText(url);
+        result.textFiles = [{ filename, content }];
+      } else if (isImage) {
+        // Save image to a temp path for the feature
+        const tmpDir = path.join(this.projectPath, '.automaker', 'tmp');
+        await fs.promises.mkdir(tmpDir, { recursive: true });
+        const tmpPath = path.join(tmpDir, `discord-${Date.now()}-${filename}`);
+        await this.downloadToFile(url, tmpPath);
+        result.imagePaths = [tmpPath];
+      }
+    } catch (error) {
+      logger.error(`Failed to process attachment ${filename}:`, error);
+    }
+
+    return result;
+  }
+
+  /**
+   * Download a URL as text content.
+   */
+  private downloadAsText(url: string): Promise<string> {
+    return new Promise((resolve, reject) => {
+      const client = url.startsWith('https') ? https : http;
+      client
+        .get(url, (res) => {
+          // Follow redirects
+          if (res.statusCode === 301 || res.statusCode === 302) {
+            if (res.headers.location) {
+              this.downloadAsText(res.headers.location).then(resolve, reject);
+              return;
+            }
+          }
+          let data = '';
+          res.on('data', (chunk) => {
+            data += chunk;
+          });
+          res.on('end', () => resolve(data));
+          res.on('error', reject);
+        })
+        .on('error', reject);
+    });
+  }
+
+  /**
+   * Download a URL to a file path.
+   */
+  private downloadToFile(url: string, filePath: string): Promise<void> {
+    return new Promise((resolve, reject) => {
+      const client = url.startsWith('https') ? https : http;
+      client
+        .get(url, (res) => {
+          if (res.statusCode === 301 || res.statusCode === 302) {
+            if (res.headers.location) {
+              this.downloadToFile(res.headers.location, filePath).then(resolve, reject);
+              return;
+            }
+          }
+          const ws = fs.createWriteStream(filePath);
+          res.pipe(ws);
+          ws.on('finish', () => {
+            ws.close();
+            resolve();
+          });
+          ws.on('error', reject);
+        })
+        .on('error', reject);
+    });
+  }
+
+  /**
+   * Inject an idea through the authority system with optional attachments.
    */
   private async injectIdea(
     title: string,
     description: string,
-    userId: string
+    userId: string,
+    textFiles?: Array<{ filename: string; content: string }>,
+    imagePaths?: string[]
   ): Promise<{ success: boolean; featureId?: string; error?: string }> {
     try {
+      // Build text file paths for the feature
+      const textFilePaths = textFiles?.map((tf, i) => ({
+        id: `discord-${Date.now()}-${i}`,
+        path: `inline:${tf.filename}`,
+        filename: tf.filename,
+        mimeType: 'text/plain',
+        content: tf.content,
+      }));
+
       // Create feature in 'idea' state via the inject-idea pipeline
       const feature = await this.featureLoader.create(this.projectPath, {
         title,
@@ -417,6 +745,8 @@ export class DiscordBotService {
         status: 'backlog',
         workItemState: 'idea',
         category: 'Authority Ideas',
+        ...(textFilePaths?.length ? { textFilePaths } : {}),
+        ...(imagePaths?.length ? { imagePaths } : {}),
       });
 
       // Emit the idea-injected event for PM agent to pick up
@@ -439,78 +769,155 @@ export class DiscordBotService {
   }
 
   /**
-   * Listen for PM agent events to post PRD results back to Discord.
+   * Listen for PM agent review events and milestone events.
    */
   private listenForAgentEvents(): void {
     this.events.subscribe((type, payload) => {
-      if (type === 'authority:pm-research-completed') {
-        const data = payload as Record<string, unknown>;
+      const data = payload as Record<string, unknown>;
+
+      // PM review approved - post to thread
+      if (type === 'authority:pm-review-approved') {
         const featureId = data.featureId as string;
-        if (featureId && this.pendingIdeas.has(featureId)) {
-          void this.postPRDResult(featureId);
+        if (featureId) {
+          void this.postReviewResult(featureId, 'approved', data);
         }
       }
 
+      // PM review changes requested - post to thread
+      if (type === 'authority:pm-review-changes-requested') {
+        const featureId = data.featureId as string;
+        if (featureId) {
+          void this.postReviewResult(featureId, 'changes_requested', data);
+        }
+      }
+
+      // PM review started - post to thread
+      if (type === 'authority:pm-review-started') {
+        const featureId = data.featureId as string;
+        if (featureId) {
+          void this.postReviewStarted(featureId);
+        }
+      }
+
+      // Epic created notification
       if (type === 'authority:pm-epic-created') {
-        const data = payload as Record<string, unknown>;
         const epicId = data.epicId as string;
         if (epicId && this.pendingIdeas.has(epicId)) {
           void this.postEpicCreated(epicId, data);
         }
       }
 
+      // Milestone events
+      if (
+        type === 'milestone:completed' ||
+        type === 'milestone:planning-started' ||
+        type === 'milestone:cto-approval-requested'
+      ) {
+        void this.postMilestoneEvent(type, data);
+      }
+
       // Post approval requests to Discord
       if (type === 'authority:awaiting-approval') {
-        void this.postApprovalRequest(payload as Record<string, unknown>);
+        void this.postApprovalRequest(data);
       }
     });
   }
 
   /**
-   * Post PRD/analysis results back to the Discord channel.
+   * Post "PM is reviewing..." to the review thread.
    */
-  private async postPRDResult(featureId: string): Promise<void> {
+  private async postReviewStarted(featureId: string): Promise<void> {
     const pending = this.pendingIdeas.get(featureId);
-    if (!pending || !this.client) return;
+    if (!pending?.threadId || !this.client) return;
 
     try {
-      const feature = await this.featureLoader.get(this.projectPath, featureId);
-      if (!feature) return;
+      const thread = (await this.client.channels.fetch(pending.threadId)) as ThreadChannel;
+      if (!thread?.isThread()) return;
 
-      const channel = (await this.client.channels.fetch(pending.channelId)) as TextChannel;
+      await thread.send('**PM agent is reviewing your idea...**\nThis may take a moment.');
+    } catch (error) {
+      logger.warn(`Failed to post review started for ${featureId}:`, error);
+    }
+  }
+
+  /**
+   * Post PM review result to the review thread (or channel if no thread).
+   */
+  private async postReviewResult(
+    featureId: string,
+    verdict: 'approved' | 'changes_requested',
+    data: Record<string, unknown>
+  ): Promise<void> {
+    const pending = this.pendingIdeas.get(featureId);
+    if (!this.client) return;
+
+    const feedback = (data.feedback as string) || '';
+    const complexity = (data.complexity as string) || 'TBD';
+    const suggestedDesc = data.suggestedDescription as string;
+
+    try {
+      // Try to post in thread, fallback to channel
+      let channel: TextChannel | ThreadChannel | null = null;
+
+      if (pending?.threadId) {
+        channel = (await this.client.channels.fetch(pending.threadId)) as ThreadChannel;
+      }
+      if (!channel && pending?.channelId) {
+        channel = (await this.client.channels.fetch(pending.channelId)) as TextChannel;
+      }
+      if (!channel) {
+        channel = (await this.client.channels.fetch(CHANNELS.suggestions)) as TextChannel;
+      }
       if (!channel?.isTextBased()) return;
 
-      // Build PRD message
-      const lines: string[] = [];
-      lines.push(`**PRD Ready: "${pending.title}"**`);
-      lines.push(`<@${pending.userId}> - The PM agent has analyzed your idea.\n`);
+      if (verdict === 'approved') {
+        const lines: string[] = [];
+        lines.push('**PM Review: APPROVED**');
+        if (pending?.userId) lines.push(`<@${pending.userId}>`);
+        lines.push('');
+        lines.push(`**Feedback:** ${feedback}`);
+        lines.push(`**Complexity:** ${complexity}`);
+        lines.push('');
+        lines.push(
+          'The ProjM agent will now create a project with milestones and begin execution.'
+        );
 
-      // Include the enhanced description (PRD)
-      const desc = feature.description || 'No description generated.';
-      // Truncate to Discord's 2000 char limit
-      const truncatedDesc = desc.length > 1500 ? desc.slice(0, 1500) + '\n...(truncated)' : desc;
-      lines.push(truncatedDesc);
+        const msg = await channel.send(lines.join('\n'));
+        await msg.react('🎉');
 
-      lines.push(`\n**Complexity:** ${feature.complexity || 'TBD'}`);
-      lines.push(`**Status:** ${feature.workItemState || 'planned'}`);
-      lines.push(`\nReact with ✅ to approve or ❌ to reject.`);
+        // Clean up tracking - idea is now flowing through the pipeline
+        if (pending) {
+          this.pendingIdeas.delete(featureId);
+        }
+      } else {
+        const lines: string[] = [];
+        lines.push('**PM Review: CHANGES REQUESTED**');
+        if (pending?.userId) lines.push(`<@${pending.userId}>`);
+        lines.push('');
+        lines.push(`**Feedback:** ${feedback}`);
+        lines.push(`**Complexity:** ${complexity}`);
+        lines.push('');
 
-      const msg = await channel.send(lines.join('\n'));
+        if (suggestedDesc) {
+          const truncated =
+            suggestedDesc.length > 800
+              ? suggestedDesc.slice(0, 800) + '\n...(truncated)'
+              : suggestedDesc;
+          lines.push(`**Suggested improvements:**\n${truncated}`);
+          lines.push('');
+        }
 
-      // Add approval reactions
-      await msg.react('✅');
-      await msg.react('❌');
+        lines.push(
+          '**To approve:** Reply "approve" in this thread or use `/approve-idea feature-id:' +
+            featureId +
+            '`'
+        );
+        lines.push('**To revise:** Reply with your updated description and PM will re-review.');
 
-      // Track this message for reaction handling
-      this.approvalMessages.set(msg.id, {
-        featureId,
-        projectPath: this.projectPath,
-      });
-
-      this.pendingIdeas.delete(featureId);
-      logger.info(`PRD posted to Discord for "${pending.title}"`);
+        await channel.send(lines.join('\n'));
+      }
     } catch (error) {
-      logger.error(`Failed to post PRD result for ${featureId}:`, error);
+      logger.error(`Failed to post review result for ${featureId}:`, error);
     }
   }
 
@@ -519,20 +926,63 @@ export class DiscordBotService {
    */
   private async postEpicCreated(epicId: string, data: Record<string, unknown>): Promise<void> {
     const pending = this.pendingIdeas.get(epicId);
-    if (!pending || !this.client) return;
+    if (!this.client) return;
 
     try {
-      const channel = (await this.client.channels.fetch(pending.channelId)) as TextChannel;
+      const channelId = pending?.threadId || pending?.channelId || CHANNELS.suggestions;
+      const channel = (await this.client.channels.fetch(channelId)) as TextChannel | ThreadChannel;
       if (!channel?.isTextBased()) return;
 
       const childCount = data.childCount as number;
       await channel.send(
-        `**Epic Created:** "${pending.title}"\n` +
+        `**Epic Created:** "${pending?.title || 'Feature'}"\n` +
           `Decomposed into **${childCount}** child features.\n` +
-          `The ProjM agent will now set up dependencies, and the EM agent will assign work.`
+          `The ProjM agent will now set up dependencies and begin milestone-gated execution.`
       );
     } catch (error) {
       logger.error(`Failed to post epic notification for ${epicId}:`, error);
+    }
+  }
+
+  /**
+   * Post milestone lifecycle events to Discord.
+   */
+  private async postMilestoneEvent(
+    eventType: string,
+    data: Record<string, unknown>
+  ): Promise<void> {
+    if (!this.client) return;
+
+    try {
+      const channel = (await this.client.channels.fetch(CHANNELS.projectPlanning)) as TextChannel;
+      if (!channel?.isTextBased()) return;
+
+      const milestoneTitle = (data.milestoneTitle as string) || 'Unknown';
+      const projectTitle = (data.projectTitle as string) || '';
+
+      if (eventType === 'milestone:completed') {
+        await channel.send(
+          `**Milestone Complete:** "${milestoneTitle}"${projectTitle ? ` (${projectTitle})` : ''}\n` +
+            `All features in this milestone are done. Planning next milestone...`
+        );
+      } else if (eventType === 'milestone:planning-started') {
+        await channel.send(
+          `**Planning Milestone:** "${milestoneTitle}"${projectTitle ? ` (${projectTitle})` : ''}\n` +
+            `ProjM agent is detailing phases and creating features...`
+        );
+      } else if (eventType === 'milestone:cto-approval-requested') {
+        const plan = (data.plan as string) || '';
+        const truncatedPlan = plan.length > 1000 ? plan.slice(0, 1000) + '\n...(truncated)' : plan;
+
+        await channel.send(
+          `**Milestone Plan Ready:** "${milestoneTitle}"\n` +
+            `${projectTitle ? `**Project:** ${projectTitle}\n` : ''}` +
+            `\n${truncatedPlan}\n\n` +
+            `React ✅ to approve or ❌ to request changes.`
+        );
+      }
+    } catch (error) {
+      logger.error(`Failed to post milestone event ${eventType}:`, error);
     }
   }
 
@@ -595,11 +1045,10 @@ export class DiscordBotService {
       logger.info(`Feature ${approval.featureId} approved via Discord reaction by ${userId}`);
 
       // Emit approval event
-      this.events.emit('authority:approved', {
+      this.events.emit('authority:cto-approved-idea', {
         projectPath: approval.projectPath,
         featureId: approval.featureId,
         approvedBy: `discord:${userId}`,
-        method: 'reaction',
       });
 
       // Post confirmation
