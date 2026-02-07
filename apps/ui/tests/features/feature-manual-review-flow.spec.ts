@@ -159,18 +159,8 @@ test.describe('Feature Manual Review Flow', () => {
     await waitForBoardFeaturesLoaded(page);
 
     // Wait for the feature card to appear
-    // CI runners are slow - retry with reload if card doesn't appear
     const featureCard = page.locator(`[data-testid="kanban-card-${featureId}"]`);
-    await expect(async () => {
-      if (!(await featureCard.isVisible())) {
-        await page.reload();
-        await page.waitForLoadState('load');
-        await handleLoginScreenIfPresent(page);
-        await waitForNetworkIdle(page);
-        await waitForBoardFeaturesLoaded(page);
-      }
-      await expect(featureCard).toBeVisible();
-    }).toPass({ timeout: 45000 });
+    await expect(featureCard).toBeVisible({ timeout: 30000 });
 
     // Verify the feature appears in the waiting_approval column
     const waitingApprovalColumn = await getKanbanColumn(page, 'waiting_approval');
