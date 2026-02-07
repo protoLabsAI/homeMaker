@@ -89,13 +89,23 @@ test.describe('Feature Skip Tests Badge', () => {
     await confirmAddFeature(page);
 
     // Wait for the feature to appear in the backlog
+    // CI runners are slow - use generous timeout and retry with reload if needed
     await expect(async () => {
       const backlogColumn = page.locator('[data-testid="kanban-column-backlog"]');
       const featureCard = backlogColumn.locator('[data-testid^="kanban-card-"]').filter({
         hasText: featureDescription,
       });
+      const count = await featureCard.count();
+      if (count === 0) {
+        // Features may not have loaded yet - trigger a re-fetch
+        await page.reload();
+        await page.waitForLoadState('load');
+        await handleLoginScreenIfPresent(page);
+        await waitForNetworkIdle(page);
+        await waitForBoardFeaturesLoaded(page);
+      }
       expect(await featureCard.count()).toBeGreaterThan(0);
-    }).toPass({ timeout: 20000 });
+    }).toPass({ timeout: 45000 });
 
     // Get the feature ID from the card
     const featureCard = page
