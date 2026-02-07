@@ -10,8 +10,9 @@
 import type { Request, Response } from 'express';
 import { exec } from 'child_process';
 import { promisify } from 'util';
-import { getErrorMessage, logError, isValidBranchName, execGitCommand } from '../common.js';
+import { getErrorMessage, logError, execGitCommand } from '../common.js';
 import { createLogger } from '@automaker/utils';
+import { isValidBranchName, sanitizeCommitMessage } from '@automaker/platform';
 
 const execAsync = promisify(exec);
 const logger = createLogger('Worktree');
@@ -35,8 +36,26 @@ export function createMergeHandler() {
         return;
       }
 
+      // Validate branch names before use in shell commands
+      if (!isValidBranchName(branchName)) {
+        res.status(400).json({
+          success: false,
+          error: `Invalid branch name: "${branchName}"`,
+        });
+        return;
+      }
+
       // Determine the target branch (default to 'main')
       const mergeTo = targetBranch || 'main';
+
+      // Validate target branch name if provided
+      if (targetBranch && !isValidBranchName(targetBranch)) {
+        res.status(400).json({
+          success: false,
+          error: `Invalid target branch name: "${targetBranch}"`,
+        });
+        return;
+      }
 
       // Validate source branch exists
       try {
@@ -60,10 +79,15 @@ export function createMergeHandler() {
         return;
       }
 
+      // Sanitize commit message if provided
+      const commitMessage = options?.message
+        ? sanitizeCommitMessage(options.message)
+        : sanitizeCommitMessage(`Merge ${branchName} into ${mergeTo}`);
+
       // Merge the feature branch into the target branch
       const mergeCmd = options?.squash
         ? `git merge --squash ${branchName}`
-        : `git merge ${branchName} -m "${options?.message || `Merge ${branchName} into ${mergeTo}`}"`;
+        : `git merge ${branchName} -m "${commitMessage}"`;
 
       try {
         await execAsync(mergeCmd, { cwd: projectPath });
@@ -90,7 +114,10 @@ export function createMergeHandler() {
 
       // If squash merge, need to commit
       if (options?.squash) {
-        await execAsync(`git commit -m "${options?.message || `Merge ${branchName} (squash)`}"`, {
+        const squashMessage = options?.message
+          ? sanitizeCommitMessage(options.message)
+          : sanitizeCommitMessage(`Merge ${branchName} (squash)`);
+        await execAsync(`git commit -m "${squashMessage}"`, {
           cwd: projectPath,
         });
       }
