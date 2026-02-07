@@ -9,6 +9,10 @@ export function createSessionDeleteHandler() {
   return (req: Request, res: Response): void => {
     const terminalService = getTerminalService();
     const { id } = req.params;
+    if (typeof id !== 'string') {
+      res.status(400).json({ success: false, error: 'Invalid session id' });
+      return;
+    }
     const killed = terminalService.killSession(id);
 
     if (!killed) {

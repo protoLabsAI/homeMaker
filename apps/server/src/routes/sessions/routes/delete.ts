@@ -10,6 +10,10 @@ export function createDeleteHandler(agentService: AgentService) {
   return async (req: Request, res: Response): Promise<void> => {
     try {
       const { sessionId } = req.params;
+      if (typeof sessionId !== 'string') {
+        res.status(400).json({ success: false, error: 'Invalid sessionId' });
+        return;
+      }
       const success = await agentService.deleteSession(sessionId);
 
       if (!success) {
