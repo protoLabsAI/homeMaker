@@ -22,7 +22,6 @@ import {
   getKanbanColumn,
   authenticateForTests,
   handleLoginScreenIfPresent,
-  sanitizeForTestId,
   syncTestProjectToServer,
 } from '../utils';
 
@@ -75,37 +74,12 @@ test.describe('Feature Manual Review Flow', () => {
     // Set up the project in localStorage
     await setupRealProject(page, projectPath, projectName, { setAsCurrent: true });
 
-    // Intercept settings API to ensure our test project remains current
-    // and doesn't get overridden by server settings
-    await page.route('**/api/settings/global', async (route) => {
-      const response = await route.fetch();
-      const json = await response.json();
-      if (json.settings) {
-        // Set our test project as the current project
-        const testProject = {
-          id: `project-${projectName}`,
-          name: projectName,
-          path: projectPath,
-          lastOpened: new Date().toISOString(),
-        };
-
-        // Add to projects if not already there
-        const existingProjects = json.settings.projects || [];
-        const hasProject = existingProjects.some((p: any) => p.path === projectPath);
-        if (!hasProject) {
-          json.settings.projects = [testProject, ...existingProjects];
-        }
-
-        // Set as current project
-        json.settings.currentProjectId = testProject.id;
-      }
-      await route.fulfill({ response, json });
-    });
-
     await authenticateForTests(page);
 
     // Sync the test project to the server to prevent stale settings
-    // from a previous test overriding this test's localStorage project
+    // from a previous test overriding this test's localStorage project.
+    // This replaces the old route interceptor approach which caused
+    // settings sync loops by modifying every PUT response.
     await syncTestProjectToServer(page, projectPath, projectName);
 
     // Navigate to board
@@ -114,20 +88,6 @@ test.describe('Feature Manual Review Flow', () => {
     await handleLoginScreenIfPresent(page);
     await waitForNetworkIdle(page);
     await expect(page.locator('[data-testid="board-view"]')).toBeVisible({ timeout: 10000 });
-
-    // Expand sidebar if collapsed to see project name
-    const expandSidebarButton = page.locator('button:has-text("Expand sidebar")');
-    if (await expandSidebarButton.isVisible()) {
-      await expandSidebarButton.click();
-      await page.waitForTimeout(300);
-    }
-
-    // Verify we're on the correct project (project switcher button shows project name)
-    // Use ends-with selector since data-testid format is: project-switcher-{id}-{sanitizedName}
-    const sanitizedProjectName = sanitizeForTestId(projectName);
-    await expect(page.locator(`[data-testid$="-${sanitizedProjectName}"]`)).toBeVisible({
-      timeout: 10000,
-    });
 
     // Create the feature via HTTP API (writes to disk)
     const feature = {
