@@ -1240,6 +1240,7 @@ async function handleTool(name: string, args: Record<string, unknown>): Promise<
       return apiCall('/features/list', {
         projectPath: args.projectPath,
         status: args.status,
+        compact: true, // Use compact mode to reduce response size
       });
 
     case 'get_feature':
