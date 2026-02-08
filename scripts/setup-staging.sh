@@ -270,10 +270,14 @@ show_status() {
 # ─── Main ────────────────────────────────────────────────────────────────────
 
 # Source env file if it exists (for port vars)
+# Temporarily disable nounset (-u) because .env may reference unset vars
+# (e.g., AUTOMAKER_API_KEY=${AUTOMAKER_API_KEY} passthrough pattern)
 if [ -f "$ENV_FILE" ]; then
+  set +u
   set -a
   source "$ENV_FILE" 2>/dev/null || true
   set +a
+  set -u
 fi
 
 case "${1:-}" in
