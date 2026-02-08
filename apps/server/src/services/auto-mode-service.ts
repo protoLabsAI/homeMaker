@@ -1300,7 +1300,14 @@ export class AutoModeService {
     }
   ): Promise<void> {
     if (this.runningFeatures.has(featureId)) {
-      throw new Error('already running');
+      const existing = this.runningFeatures.get(featureId);
+      const runtime = existing ? Math.floor((Date.now() - existing.startTime) / 1000) : 0;
+      logger.warn(
+        `Feature ${featureId} is already running (runtime: ${runtime}s). Skipping duplicate execution.`
+      );
+      throw new Error(
+        `Feature ${featureId} is already running (${runtime}s). If this is stale, restart the server or stop the feature first.`
+      );
     }
 
     // Add to running features immediately to prevent race conditions
@@ -2173,7 +2180,14 @@ Complete the pipeline step instructions above. Review the previous work and appl
    */
   async resumeFeature(projectPath: string, featureId: string, useWorktrees = false): Promise<void> {
     if (this.runningFeatures.has(featureId)) {
-      throw new Error('already running');
+      const existing = this.runningFeatures.get(featureId);
+      const runtime = existing ? Math.floor((Date.now() - existing.startTime) / 1000) : 0;
+      logger.warn(
+        `Feature ${featureId} is already running (runtime: ${runtime}s). Skipping duplicate resume.`
+      );
+      throw new Error(
+        `Feature ${featureId} is already running (${runtime}s). If this is stale, restart the server or stop the feature first.`
+      );
     }
 
     // Load feature to check status
@@ -5508,11 +5522,27 @@ After generating the revised spec, output:
   }
 
   /**
+   * Clean up stale running features from previous server sessions.
+   * This prevents "already running" errors on restart.
+   */
+  private cleanupStaleRunningFeatures(): void {
+    if (this.runningFeatures.size > 0) {
+      logger.warn(
+        `Clearing ${this.runningFeatures.size} stale running feature(s) from previous session`
+      );
+      this.runningFeatures.clear();
+    }
+  }
+
+  /**
    * Check for and resume interrupted features after server restart
    * This should be called during server initialization
    */
   async resumeInterruptedFeatures(projectPath: string): Promise<void> {
     logger.info('Checking for interrupted features to resume...');
+
+    // Clean up any stale running features from previous session
+    this.cleanupStaleRunningFeatures();
 
     // Load all features and find those that were interrupted
     const featuresDir = getFeaturesDir(projectPath);

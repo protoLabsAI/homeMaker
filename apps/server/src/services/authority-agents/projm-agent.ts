@@ -72,13 +72,33 @@ export class ProjMAuthorityAgent {
     // Listen for PM approval events (features moving to 'approved')
     this.events.subscribe((type, payload) => {
       if (type === 'authority:pm-review-approved') {
+        console.log(`[ProjMAgent] ✨ RECEIVED EVENT: authority:pm-review-approved`, payload);
         const data = payload as {
           projectPath: string;
           featureId: string;
           milestones?: Array<{ title: string; description: string }>;
           complexity?: string;
         };
-        if (this.state.isInitialized(data.projectPath)) {
+
+        // Auto-initialize if not already initialized
+        if (!this.state.isInitialized(data.projectPath)) {
+          console.log(`[ProjMAgent] Project NOT initialized, auto-initializing...`);
+          logger.info(
+            `[ProjMAgent] Auto-initializing for event on uninitialized project: ${data.projectPath}`
+          );
+          void (async () => {
+            try {
+              await this.initialize(data.projectPath);
+              logger.info(`[ProjMAgent] Auto-initialization successful, processing event`);
+              await this.handleApprovedIdea(data);
+            } catch (error) {
+              logger.error(
+                `[ProjMAgent] Auto-initialization failed for ${data.projectPath}:`,
+                error
+              );
+            }
+          })();
+        } else {
           void this.handleApprovedIdea(data);
         }
       }
@@ -86,7 +106,23 @@ export class ProjMAuthorityAgent {
       // Also listen for legacy pm-epic-created and pm-research-completed for backward compat
       if (type === 'authority:pm-epic-created') {
         const data = payload as { projectPath: string; featureId?: string; epicId?: string };
-        if (this.state.isInitialized(data.projectPath)) {
+
+        if (!this.state.isInitialized(data.projectPath)) {
+          logger.warn(
+            `[ProjMAgent] Received pm-epic-created event for uninitialized project: ${data.projectPath}`
+          );
+          void (async () => {
+            try {
+              await this.initialize(data.projectPath);
+              await this.scanForPlannedFeatures(data.projectPath);
+            } catch (error) {
+              logger.error(
+                `[ProjMAgent] Auto-initialization failed for ${data.projectPath}:`,
+                error
+              );
+            }
+          })();
+        } else {
           void this.scanForPlannedFeatures(data.projectPath);
         }
       }
@@ -144,11 +180,26 @@ export class ProjMAuthorityAgent {
     return withProcessingGuard(this.state, featureId, async () => {
       try {
         const agent = this.state.getAgent(projectPath);
-        if (!agent) return;
+        if (!agent) {
+          console.log(`[ProjMAgent] ❌ FAILED: No agent found for ${projectPath}`);
+          logger.error(
+            `No agent registered for project ${projectPath}. Cannot process approved idea.`
+          );
+          return;
+        }
+
+        console.log(`[ProjMAgent] ✅ Agent found:`, agent.id);
 
         const feature = await this.featureLoader.get(projectPath, featureId);
-        if (!feature || feature.workItemState !== 'approved') return;
+        if (!feature || feature.workItemState !== 'approved') {
+          console.log(`[ProjMAgent] ❌ Feature not approved or not found:`, {
+            featureId,
+            workItemState: feature?.workItemState,
+          });
+          return;
+        }
 
+        console.log(`[ProjMAgent] Processing approved idea: "${feature.title}"`);
         logger.info(`Creating project for approved idea: "${feature.title}"`);
 
         // Submit proposal to create project

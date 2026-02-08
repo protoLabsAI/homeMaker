@@ -206,14 +206,15 @@ export function createGitHubWebhookHandler(events: EventEmitter, settingsService
         return;
       }
 
-      // Only transition if currently in review status
-      if (currentFeature.status !== 'review') {
+      // Only transition if not already done (handles manual status changes and force-merges)
+      if (currentFeature.status === 'done') {
         logger.info(
-          `Feature "${feature.title}" is in "${currentFeature.status}" status, not "review". Skipping transition.`
+          `Feature "${feature.title}" is already in "done" status. PR #${prNumber} merge confirmed.`
         );
         res.json({
           success: true,
-          message: `Feature not in review status (current: ${currentFeature.status})`,
+          message: `Feature already marked as done`,
+          featureId: feature.featureId,
         });
         return;
       }
@@ -224,7 +225,7 @@ export function createGitHubWebhookHandler(events: EventEmitter, settingsService
       });
 
       logger.info(
-        `Feature "${feature.title}" moved from "review" to "done" after PR #${prNumber} was merged`
+        `Feature "${feature.title}" moved from "${currentFeature.status}" to "done" after PR #${prNumber} was merged`
       );
 
       // Emit event for UI notification

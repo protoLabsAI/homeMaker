@@ -97,11 +97,48 @@ export function createSubmitPrdHandler(
 
       // Initialize all authority agents for this project
       // This is CRITICAL - agents must be initialized before emitting events
-      logger.info(`Initializing authority agents for project: ${projectPath}`);
-      if (agents?.pm) await agents.pm.initialize(projectPath);
-      if (agents?.projm) await agents.projm.initialize(projectPath);
-      if (agents?.em) await agents.em.initialize(projectPath);
-      if (agents?.statusMonitor) await agents.statusMonitor.initialize(projectPath);
+      console.log(
+        `[CoSRoutes:SubmitPRD] START - Initializing authority agents for project: ${projectPath}`
+      );
+      logger.info(
+        `[CoSRoutes:SubmitPRD] Initializing authority agents for project: ${projectPath}`
+      );
+
+      if (agents?.pm) {
+        try {
+          await agents.pm.initialize(projectPath);
+          logger.info(`[CoSRoutes:SubmitPRD] PM agent initialized successfully`);
+        } catch (error) {
+          logger.error(`[CoSRoutes:SubmitPRD] PM agent initialization failed:`, error);
+        }
+      }
+
+      if (agents?.projm) {
+        try {
+          await agents.projm.initialize(projectPath);
+          logger.info(`[CoSRoutes:SubmitPRD] ProjM agent initialized successfully`);
+        } catch (error) {
+          logger.error(`[CoSRoutes:SubmitPRD] ProjM agent initialization failed:`, error);
+        }
+      }
+
+      if (agents?.em) {
+        try {
+          await agents.em.initialize(projectPath);
+          logger.info(`[CoSRoutes:SubmitPRD] EM agent initialized successfully`);
+        } catch (error) {
+          logger.error(`[CoSRoutes:SubmitPRD] EM agent initialization failed:`, error);
+        }
+      }
+
+      if (agents?.statusMonitor) {
+        try {
+          await agents.statusMonitor.initialize(projectPath);
+          logger.info(`[CoSRoutes:SubmitPRD] Status Monitor initialized successfully`);
+        } catch (error) {
+          logger.error(`[CoSRoutes:SubmitPRD] Status Monitor initialization failed:`, error);
+        }
+      }
 
       // Create feature as an epic with approved state
       const feature = await featureLoader.create(projectPath, {

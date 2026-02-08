@@ -39,7 +39,7 @@ export function createFeaturesRoutes(
   router.post(
     '/update',
     validatePathParams('projectPath'),
-    createUpdateHandler(featureLoader, settingsService, authorityService)
+    createUpdateHandler(featureLoader, settingsService, authorityService, healthService)
   );
   router.post(
     '/bulk-update',

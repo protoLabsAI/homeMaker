@@ -108,7 +108,21 @@ export class PMAuthorityAgent {
     this.events.subscribe((type, payload) => {
       if (type === 'authority:idea-injected') {
         const idea = payload as IdeaInjectedPayload;
-        if (this.state.isInitialized(idea.projectPath)) {
+
+        if (!this.state.isInitialized(idea.projectPath)) {
+          logger.info(
+            `[PMAgent] Auto-initializing for event on uninitialized project: ${idea.projectPath}`
+          );
+          void (async () => {
+            try {
+              await this.initialize(idea.projectPath);
+              logger.info(`[PMAgent] Auto-initialization successful, processing event`);
+              this.handleIdeaInjected(idea);
+            } catch (error) {
+              logger.error(`[PMAgent] Auto-initialization failed for ${idea.projectPath}:`, error);
+            }
+          })();
+        } else {
           this.handleIdeaInjected(idea);
         }
       }
@@ -120,7 +134,24 @@ export class PMAuthorityAgent {
           featureId: string;
           updatedDescription?: string;
         };
-        if (this.state.isInitialized(data.projectPath)) {
+
+        if (!this.state.isInitialized(data.projectPath)) {
+          logger.warn(
+            `[PMAgent] Received cto-approved-idea event for uninitialized project: ${data.projectPath}`
+          );
+          void (async () => {
+            try {
+              await this.initialize(data.projectPath);
+              await this.handleCTOApproval(
+                data.projectPath,
+                data.featureId,
+                data.updatedDescription
+              );
+            } catch (error) {
+              logger.error(`[PMAgent] Auto-initialization failed for ${data.projectPath}:`, error);
+            }
+          })();
+        } else {
           void this.handleCTOApproval(data.projectPath, data.featureId, data.updatedDescription);
         }
       }

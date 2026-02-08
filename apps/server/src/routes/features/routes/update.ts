@@ -13,6 +13,7 @@ import { FeatureLoader } from '../../../services/feature-loader.js';
 import type { Feature, FeatureStatus, ActionProposal, RiskLevel } from '@automaker/types';
 import type { AuthorityService } from '../../../services/authority-service.js';
 import type { SettingsService } from '../../../services/settings-service.js';
+import type { FeatureHealthService } from '../../../services/feature-health-service.js';
 import { getErrorMessage, logError } from '../common.js';
 import { createLogger } from '@automaker/utils';
 
@@ -24,7 +25,8 @@ const SYNC_TRIGGER_STATUSES: FeatureStatus[] = ['verified', 'completed'];
 export function createUpdateHandler(
   featureLoader: FeatureLoader,
   settingsService?: SettingsService,
-  authorityService?: AuthorityService
+  authorityService?: AuthorityService,
+  healthService?: FeatureHealthService
 ) {
   return async (req: Request, res: Response): Promise<void> => {
     try {
@@ -143,6 +145,21 @@ export function createUpdateHandler(
         } catch (syncError) {
           // Log the sync error but don't fail the update operation
           logger.error(`Failed to sync feature to app_spec.txt:`, syncError);
+        }
+      }
+
+      // Trigger immediate board health audit when status changes (especially to 'done')
+      // This ensures that if a feature status is changed manually, we reconcile any
+      // webhook mismatches or merged PRs that may not have been caught previously
+      if (newStatus && previousStatus !== newStatus && healthService) {
+        try {
+          await healthService.audit(projectPath);
+          logger.debug(
+            `Triggered board health audit after status change: ${previousStatus} -> ${newStatus}`
+          );
+        } catch (auditError) {
+          // Log the audit error but don't fail the update operation
+          logger.error(`Failed to run board health audit after status change:`, auditError);
         }
       }
 

@@ -180,8 +180,11 @@ export type EventType =
   | 'pr:feedback-received'
   | 'pr:changes-requested'
   | 'pr:approved'
+  | 'pr:ci-failure'
   | 'feature:reassigned-for-fixes'
   | 'feature:worktree-cleaned'
+  // World state monitor events
+  | 'world-state:reconciliation'
   // Chief of Staff (CoS) events
   | 'cos:prd-submitted';
 

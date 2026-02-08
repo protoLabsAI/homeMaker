@@ -100,11 +100,45 @@ export class EMAuthorityAgent {
   private listenForPRFeedback(): void {
     this.events.subscribe((type, payload) => {
       if (type === 'pr:changes-requested') {
-        void this.handleChangesRequested(payload as Record<string, unknown>);
+        const data = payload as Record<string, unknown>;
+        const projectPath = data.projectPath as string;
+
+        if (projectPath && !this.state.isInitialized(projectPath)) {
+          logger.info(
+            `[EMAgent] Auto-initializing for PR event on uninitialized project: ${projectPath}`
+          );
+          void (async () => {
+            try {
+              await this.initialize(projectPath);
+              await this.handleChangesRequested(data);
+            } catch (error) {
+              logger.error(`[EMAgent] Auto-initialization failed for ${projectPath}:`, error);
+            }
+          })();
+        } else {
+          void this.handleChangesRequested(data);
+        }
       }
 
       if (type === 'pr:approved') {
-        void this.handlePRApproved(payload as Record<string, unknown>);
+        const data = payload as Record<string, unknown>;
+        const projectPath = data.projectPath as string;
+
+        if (projectPath && !this.state.isInitialized(projectPath)) {
+          logger.info(
+            `[EMAgent] Auto-initializing for PR event on uninitialized project: ${projectPath}`
+          );
+          void (async () => {
+            try {
+              await this.initialize(projectPath);
+              await this.handlePRApproved(data);
+            } catch (error) {
+              logger.error(`[EMAgent] Auto-initialization failed for ${projectPath}:`, error);
+            }
+          })();
+        } else {
+          void this.handlePRApproved(data);
+        }
       }
     });
   }
