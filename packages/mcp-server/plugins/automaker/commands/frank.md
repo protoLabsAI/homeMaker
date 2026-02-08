@@ -491,7 +491,7 @@ mcp__automaker_staging__stop_auto_mode({ projectPath: '/home/automaker/automaker
 
 ```bash
 AUTOMAKER_API_URL=http://100.101.189.45:3008
-AUTOMAKER_STAGING_API_KEY=automaker-staging-key-2026
+AUTOMAKER_API_KEY=automaker-staging-key-2026
 # Discord channels (via MCP tools, not webhooks)
 DISCORD_INFRA_CHANNEL=1469109809939742814
 DISCORD_ALERTS_CHANNEL=1469109811915522301

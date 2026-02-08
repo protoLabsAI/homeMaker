@@ -9,7 +9,7 @@ Secrets are currently scattered across multiple locations:
 - Root `.env` file (plaintext, gitignored)
 - `docker-compose.override.yml` (hardcoded values)
 - `plugin.json` (hardcoded API keys)
-- MCP server code (hardcoded fallback: `automaker-dev-key-2026`)
+- MCP server config (env var passthrough from shell)
 
 This causes friction when onboarding team members and creates security risks from duplicated credentials.
 

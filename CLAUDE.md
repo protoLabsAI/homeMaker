@@ -212,8 +212,8 @@ Automaker includes an MCP server and Claude Code plugin for programmatic control
 ### Quick Setup
 
 ```bash
-# 1. Ensure AUTOMAKER_API_KEY is set in .env
-echo "AUTOMAKER_API_KEY=automaker-dev-key-2026" >> .env
+# 1. Ensure AUTOMAKER_API_KEY is set in your environment
+# (sourced from ~/.secrets/secrets.env via ~/.zshrc)
 
 # 2. Build the MCP server
 npm run build:packages
