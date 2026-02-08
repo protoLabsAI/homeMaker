@@ -124,6 +124,24 @@
 | EM Agent PR Handling     | Done   | `d2ff2c35` |
 | GitHub Webhook Expansion | Done   | `d2ff2c35` |
 
+### Code Quality: Agent Utilities Refactoring - DONE
+
+| Feature                 | Status | PR   | Merged     |
+| ----------------------- | ------ | ---- | ---------- |
+| Agent Utilities Library | Done   | #131 | `a8bf5899` |
+| PM Agent Refactored     | Done   | #132 | `92d65eef` |
+| ProjM Agent Refactored  | Done   | #133 | `7eb2d34f` |
+| EM Agent Refactored     | Done   | #134 | `342b1e06` |
+| Status Agent Refactored | Done   | #135 | `26814e74` |
+
+**Impact:**
+
+- Eliminated ~290-320 lines of boilerplate code across 4 agents
+- Introduced shared utilities: `createAgentState()`, `initializeAgent()`, `withProcessingGuard()`, `registerEventListener()`
+- All 4 agents now use consistent patterns for state management, initialization, and processing guards
+- Added 22 comprehensive tests for agent-utils library
+- Zero breaking changes - pure refactoring for maintainability
+
 **Deliverables:**
 
 - `apps/server/src/services/pr-feedback-service.ts` - Polls GitHub for PR review status every 60s
