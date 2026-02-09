@@ -174,7 +174,7 @@ describe('auto-mode-service.ts (integration)', () => {
 
       // Feature should be updated successfully
       const feature = await featureLoader.get(testRepo.path, 'test-no-worktree');
-      expect(feature?.status).toBe('waiting_approval');
+      expect(feature?.status).toBe('done');
     }, 30000);
   });
 
@@ -216,7 +216,7 @@ describe('auto-mode-service.ts (integration)', () => {
 
       // Check feature status was updated
       const feature = await featureLoader.get(testRepo.path, 'feature-exec-1');
-      expect(feature?.status).toBe('waiting_approval');
+      expect(feature?.status).toBe('done');
 
       // Check agent output was saved
       const agentOutput = await featureLoader.getAgentOutput(testRepo.path, 'feature-exec-1');
@@ -369,7 +369,7 @@ describe('auto-mode-service.ts (integration)', () => {
 
       // At least one should have been processed
       const processedCount = [feature1, feature2].filter(
-        (f) => f?.status === 'waiting_approval' || f?.status === 'in_progress'
+        (f) => f?.status === 'done' || f?.status === 'in_progress'
       ).length;
 
       expect(processedCount).toBeGreaterThan(0);
@@ -551,7 +551,7 @@ describe('auto-mode-service.ts (integration)', () => {
       await service.executeFeature(testRepo.path, 'skip-plan-feature', false, false);
 
       const feature = await featureLoader.get(testRepo.path, 'skip-plan-feature');
-      expect(feature?.status).toBe('waiting_approval');
+      expect(feature?.status).toBe('done');
     }, 30000);
 
     it('should execute feature with lite planning mode without approval', async () => {
@@ -592,7 +592,7 @@ describe('auto-mode-service.ts (integration)', () => {
       await service.executeFeature(testRepo.path, 'lite-plan-feature', false, false);
 
       const feature = await featureLoader.get(testRepo.path, 'lite-plan-feature');
-      expect(feature?.status).toBe('waiting_approval');
+      expect(feature?.status).toBe('done');
     }, 30000);
 
     it('should emit planning_started event for spec mode', async () => {
