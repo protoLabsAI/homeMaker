@@ -18,6 +18,10 @@ import {
   Play,
   Ban,
   TestTube,
+  Clock,
+  Loader2,
+  FileText,
+  XCircle,
 } from 'lucide-react';
 import { getBlockingDependencies } from '@automaker/dependency-resolver';
 import { useShallow } from 'zustand/react/shallow';
@@ -44,17 +48,42 @@ function getWorkItemStateBadge(state: WorkItemState): {
         label: 'Idea',
         className: 'bg-purple-500/15 text-purple-400 border-purple-500/30',
       };
+    case 'pending_pm_review':
+      return {
+        icon: Clock,
+        label: 'Pending PM Review',
+        className: 'bg-amber-500/15 text-amber-400 border-amber-500/30',
+      };
     case 'pm_review':
       return {
         icon: Search,
         label: 'PM Review',
         className: 'bg-blue-500/15 text-blue-400 border-blue-500/30',
       };
+    case 'pm_processing':
+      return {
+        icon: Loader2,
+        label: 'PM Processing',
+        className: 'bg-blue-500/15 text-blue-400 border-blue-500/30 animate-spin',
+      };
+    case 'prd_ready':
+      return {
+        icon: FileText,
+        label: 'PRD Ready',
+        className:
+          'bg-emerald-500/15 text-emerald-400 border-emerald-500/30 cursor-pointer hover:bg-emerald-500/25',
+      };
     case 'pm_changes_requested':
       return {
         icon: FileEdit,
         label: 'PM Changes Requested',
         className: 'bg-orange-500/15 text-orange-400 border-orange-500/30',
+      };
+    case 'rejected':
+      return {
+        icon: XCircle,
+        label: 'Rejected',
+        className: 'bg-red-500/15 text-red-400 border-red-500/30',
       };
     case 'approved':
       return {
@@ -109,13 +138,14 @@ function getWorkItemStateBadge(state: WorkItemState): {
 
 interface CardBadgesProps {
   feature: Feature;
+  onPRDClick?: () => void;
 }
 
 /**
  * CardBadges - Shows error and epic badges below the card header
  * Note: Blocked/Lock badges are now shown in PriorityBadges for visual consistency
  */
-export const CardBadges = memo(function CardBadges({ feature }: CardBadgesProps) {
+export const CardBadges = memo(function CardBadges({ feature, onPRDClick }: CardBadgesProps) {
   const hasEpic = !!feature.epicId;
   const hasError = !!feature.error;
   const hasAssignee = !!feature.assignee;
@@ -153,13 +183,24 @@ export const CardBadges = memo(function CardBadges({ feature }: CardBadgesProps)
                   workItemStateBadge.className
                 )}
                 data-testid={`work-item-state-badge-${feature.id}`}
+                onClick={
+                  feature.workItemState === 'prd_ready' && onPRDClick
+                    ? (e) => {
+                        e.stopPropagation();
+                        onPRDClick();
+                      }
+                    : undefined
+                }
               >
                 <workItemStateBadge.icon className="w-3 h-3" />
                 {workItemStateBadge.label}
               </div>
             </TooltipTrigger>
             <TooltipContent side="bottom" className="text-xs">
-              <p>Authority System: {workItemStateBadge.label}</p>
+              <p>
+                Authority System: {workItemStateBadge.label}
+                {feature.workItemState === 'prd_ready' && ' (click to review)'}
+              </p>
             </TooltipContent>
           </Tooltip>
         </TooltipProvider>

@@ -21,6 +21,8 @@ import { createIdeasDeleteHandler } from './routes/ideas-delete.js';
 import { createAnalyzeHandler, createGetAnalysisHandler } from './routes/analyze.js';
 import { createConvertHandler } from './routes/convert.js';
 import { createAddSuggestionHandler } from './routes/add-suggestion.js';
+import { createSubmitToPMHandler } from './routes/submit-to-pm.js';
+import { createApprovePRDHandler } from './routes/approve-prd.js';
 import { createPromptsHandler, createPromptsByCategoryHandler } from './routes/prompts.js';
 import { createSuggestionsGenerateHandler } from './routes/suggestions-generate.js';
 
@@ -92,6 +94,20 @@ export function createIdeationRoutes(
     '/add-suggestion',
     validatePathParams('projectPath'),
     createAddSuggestionHandler(ideationService, featureLoader)
+  );
+
+  // Submit suggestion to PM Agent for PRD generation
+  router.post(
+    '/submit-to-pm',
+    validatePathParams('projectPath'),
+    createSubmitToPMHandler(events, ideationService, featureLoader)
+  );
+
+  // Approve or reject PM-generated PRD
+  router.post(
+    '/approve-prd',
+    validatePathParams('projectPath'),
+    createApprovePRDHandler(events, featureLoader)
   );
 
   // Guided prompts (no validation needed - static data)

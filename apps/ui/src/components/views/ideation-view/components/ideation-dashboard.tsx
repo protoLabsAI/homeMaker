@@ -4,7 +4,7 @@
  */
 
 import { useState, useMemo, useEffect, useCallback } from 'react';
-import { AlertCircle, Plus, X, Sparkles, Lightbulb, Trash2 } from 'lucide-react';
+import { AlertCircle, Plus, X, Sparkles, Lightbulb, Trash2, Bot } from 'lucide-react';
 import { Spinner } from '@/components/ui/spinner';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -55,12 +55,14 @@ function SuggestionCard({
   job,
   onAccept,
   onRemove,
+  onSubmitToPM,
   isAdding,
 }: {
   suggestion: AnalysisSuggestion;
   job: GenerationJob;
   onAccept: () => void;
   onRemove: () => void;
+  onSubmitToPM: () => void;
   isAdding: boolean;
 }) {
   return (
@@ -117,6 +119,16 @@ function SuggestionCard({
                   Accept
                 </>
               )}
+            </Button>
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={onSubmitToPM}
+              disabled={isAdding}
+              className="w-full gap-1.5 h-8"
+            >
+              <Bot className="w-4 h-4" />
+              Submit to PM
             </Button>
             <Button
               size="sm"
@@ -340,6 +352,32 @@ export function IdeationDashboard({
     }
   };
 
+  const handleSubmitToPM = async (suggestion: AnalysisSuggestion, jobId: string) => {
+    if (!currentProject?.path) {
+      toast.error('No project selected');
+      return;
+    }
+
+    setAddingId(suggestion.id);
+
+    try {
+      const api = getElectronAPI();
+      const result = await api.ideation?.submitToPM(currentProject.path, suggestion);
+
+      if (result?.success) {
+        toast.success('Submitted to PM Agent for PRD generation');
+        removeSuggestionFromJob(jobId, suggestion.id);
+      } else {
+        toast.error(result?.error || 'Failed to submit to PM Agent');
+      }
+    } catch (error) {
+      console.error('Submit to PM error:', error);
+      toast.error((error as Error).message);
+    } finally {
+      setAddingId(null);
+    }
+  };
+
   const handleRemove = (suggestionId: string, jobId: string) => {
     removeSuggestionFromJob(jobId, suggestionId);
     toast.info('Idea removed');
@@ -454,6 +492,7 @@ export function IdeationDashboard({
                 suggestion={suggestion}
                 job={job}
                 onAccept={() => handleAccept(suggestion, job.id)}
+                onSubmitToPM={() => handleSubmitToPM(suggestion, job.id)}
                 onRemove={() => handleRemove(suggestion.id, job.id)}
                 isAdding={addingId === suggestion.id}
               />

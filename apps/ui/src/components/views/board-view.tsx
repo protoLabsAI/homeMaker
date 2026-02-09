@@ -61,6 +61,7 @@ import { DeleteWorktreeDialog } from './board-view/dialogs/delete-worktree-dialo
 import { CommitWorktreeDialog } from './board-view/dialogs/commit-worktree-dialog';
 import { CreatePRDialog } from './board-view/dialogs/create-pr-dialog';
 import { CreateBranchDialog } from './board-view/dialogs/create-branch-dialog';
+import { PRDReviewModal } from './prd-review-modal';
 import { WorktreePanel } from './board-view/worktree-panel';
 import type { PRInfo, WorktreeInfo, MergeConflictInfo } from './board-view/worktree-panel/types';
 import { COLUMNS, getColumnsWithPipeline } from './board-view/constants';
@@ -171,6 +172,9 @@ export function BoardView() {
   const [showBoardBackgroundModal, setShowBoardBackgroundModal] = useState(false);
   const [showCompletedModal, setShowCompletedModal] = useState(false);
   const [deleteCompletedFeature, setDeleteCompletedFeature] = useState<Feature | null>(null);
+  // PRD Review Modal state
+  const [prdModalOpen, setPrdModalOpen] = useState(false);
+  const [prdFeature, setPrdFeature] = useState<Feature | null>(null);
   // State for viewing plan in read-only mode
   const [viewPlanFeature, setViewPlanFeature] = useState<Feature | null>(null);
 
@@ -327,6 +331,56 @@ export function BoardView() {
 
     loadPipelineConfig();
   }, [currentProject?.path, setPipelineConfig]);
+
+  // Subscribe to ideation → PM flow events
+  useEffect(() => {
+    if (!currentProject?.path) return;
+
+    const api = getHttpApiClient();
+
+    const unsubscribers = [
+      // PRD generated - show notification with action to review
+      api['subscribeToEvent']('ideation:prd-generated', (payload: any) => {
+        if (payload.projectPath !== currentProject.path) return;
+
+        toast.success(`PRD ready for review: ${payload.title || 'Untitled'}`, {
+          action: {
+            label: 'Review',
+            onClick: () => {
+              // Find the feature and open PRD modal
+              const feature = hookFeatures.find((f) => f.id === payload.featureId);
+              if (feature) {
+                setPrdFeature(feature);
+                setPrdModalOpen(true);
+              }
+            },
+          },
+          duration: 10000, // Show for 10 seconds
+        });
+
+        // Reload features to update UI with new state
+        loadFeatures();
+      }),
+
+      // PRD approved - show success notification
+      api['subscribeToEvent']('ideation:prd-approved', (payload: any) => {
+        if (payload.projectPath !== currentProject.path) return;
+        toast.success('PRD approved - breaking down into epics...');
+        loadFeatures();
+      }),
+
+      // PRD rejected - show info notification
+      api['subscribeToEvent']('ideation:prd-rejected', (payload: any) => {
+        if (payload.projectPath !== currentProject.path) return;
+        toast.info('PRD rejected');
+        loadFeatures();
+      }),
+    ];
+
+    return () => {
+      unsubscribers.forEach((unsub) => unsub());
+    };
+  }, [currentProject?.path, hookFeatures, loadFeatures]);
 
   // Window state hook for compact dialog mode
   const { isMaximized } = useWindowState();
@@ -1471,6 +1525,10 @@ export function BoardView() {
                 setSpawnParentFeature(feature);
                 setShowAddDialog(true);
               }}
+              onPRDClick={(feature) => {
+                setPrdFeature(feature);
+                setPrdModalOpen(true);
+              }}
               featuresWithContext={featuresWithContext}
               runningAutoTasks={runningAutoTasks}
               onArchiveAllVerified={() => setShowArchiveAllVerifiedDialog(true)}
@@ -1665,6 +1723,24 @@ export function BoardView() {
         isMaximized={isMaximized}
         promptHistory={followUpPromptHistory}
         onHistoryAdd={addToPromptHistory}
+      />
+
+      {/* PRD Review Modal */}
+      <PRDReviewModal
+        open={prdModalOpen}
+        onOpenChange={setPrdModalOpen}
+        feature={prdFeature}
+        projectPath={currentProject.path}
+        onApprove={async () => {
+          if (!prdFeature) return;
+          const api = getElectronAPI();
+          await api.ideation.approvePRD(currentProject.path, prdFeature.id, 'approve');
+        }}
+        onReject={async () => {
+          if (!prdFeature) return;
+          const api = getElectronAPI();
+          await api.ideation.approvePRD(currentProject.path, prdFeature.id, 'reject');
+        }}
       />
 
       {/* Backlog Plan Dialog */}

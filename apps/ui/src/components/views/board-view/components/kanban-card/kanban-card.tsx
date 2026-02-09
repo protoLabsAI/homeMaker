@@ -53,6 +53,7 @@ interface KanbanCardProps {
   onViewPlan?: () => void;
   onApprovePlan?: () => void;
   onSpawnTask?: () => void;
+  onPRDClick?: () => void;
   hasContext?: boolean;
   isCurrentAutoTask?: boolean;
   shortcutKey?: string;
@@ -87,6 +88,7 @@ export const KanbanCard = memo(function KanbanCard({
   onViewPlan,
   onApprovePlan,
   onSpawnTask,
+  onPRDClick,
   hasContext,
   isCurrentAutoTask,
   shortcutKey,
@@ -221,7 +223,7 @@ export const KanbanCard = memo(function KanbanCard({
       )}
 
       {/* Status Badges Row */}
-      <CardBadges feature={feature} />
+      <CardBadges feature={feature} onPRDClick={onPRDClick} />
 
       {/* Category row with selection checkbox */}
       <div className="px-3 pt-3 flex items-center gap-2">

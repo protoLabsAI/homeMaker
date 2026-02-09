@@ -155,6 +155,65 @@ export class PMAuthorityAgent {
           void this.handleCTOApproval(data.projectPath, data.featureId, data.updatedDescription);
         }
       }
+
+      // User submitted suggestion from Ideation View to PM
+      if (type === 'ideation:submit-to-pm') {
+        const data = payload as {
+          projectPath: string;
+          featureId: string;
+          suggestion: {
+            id: string;
+            title: string;
+            description: string;
+            category: string;
+            rationale?: string;
+            relatedFiles?: string[];
+          };
+        };
+
+        if (!this.state.isInitialized(data.projectPath)) {
+          logger.info(
+            `[PMAgent] Auto-initializing for ideation submission on project: ${data.projectPath}`
+          );
+          void (async () => {
+            try {
+              await this.initialize(data.projectPath);
+              await this.handleIdeationSubmission(data);
+            } catch (error) {
+              logger.error(
+                `[PMAgent] Auto-initialization failed for ideation submission on ${data.projectPath}:`,
+                error
+              );
+            }
+          })();
+        } else {
+          void this.handleIdeationSubmission(data);
+        }
+      }
+
+      // User approved PRD from Ideation View
+      if (type === 'ideation:prd-approved') {
+        const data = payload as {
+          projectPath: string;
+          featureId: string;
+        };
+
+        if (!this.state.isInitialized(data.projectPath)) {
+          logger.warn(
+            `[PMAgent] Received prd-approved event for uninitialized project: ${data.projectPath}`
+          );
+          void (async () => {
+            try {
+              await this.initialize(data.projectPath);
+              await this.handleUserApproval(data);
+            } catch (error) {
+              logger.error(`[PMAgent] Auto-initialization failed for ${data.projectPath}:`, error);
+            }
+          })();
+        } else {
+          void this.handleUserApproval(data);
+        }
+      }
     });
   }
 
@@ -881,6 +940,312 @@ Provide your review as JSON.`;
         }
       } catch (error) {
         logger.error(`Failed to handle CTO approval for ${featureId}:`, error);
+      }
+    });
+  }
+
+  /**
+   * Handle ideation submission: user submitted suggestion from Ideation View
+   * Flow: pending_pm_review → pm_processing → generate PRD → prd_ready (wait for user approval)
+   */
+  private async handleIdeationSubmission(data: {
+    projectPath: string;
+    featureId: string;
+    suggestion: {
+      id: string;
+      title: string;
+      description: string;
+      category: string;
+      rationale?: string;
+      relatedFiles?: string[];
+    };
+  }): Promise<void> {
+    return withProcessingGuard(this.state, data.featureId, async () => {
+      try {
+        const agent = this.state.getAgent(data.projectPath);
+        if (!agent) {
+          logger.error(`PM agent not initialized for project: ${data.projectPath}`);
+          return;
+        }
+
+        const feature = await this.featureLoader.get(data.projectPath, data.featureId);
+        if (!feature) {
+          logger.warn(`Feature ${data.featureId} not found, skipping`);
+          return;
+        }
+
+        if (feature.workItemState !== 'pending_pm_review') {
+          logger.debug(
+            `Feature ${data.featureId} is not in 'pending_pm_review' state (${feature.workItemState}), skipping`
+          );
+          return;
+        }
+
+        logger.info(`Processing ideation submission: "${feature.title}" (${data.featureId})`);
+
+        // Step 1: Transition to pm_processing
+        await this.featureLoader.update(data.projectPath, data.featureId, {
+          workItemState: 'pm_processing',
+        });
+
+        this.events.emit('authority:pm-review-started', {
+          projectPath: data.projectPath,
+          featureId: data.featureId,
+          agentId: agent.id,
+        });
+
+        // Step 2: Generate PRD directly (skip research - suggestion already has context)
+        logger.info(`Generating PRD from ideation suggestion: "${feature.title}"`);
+        const prdResult = await this.generatePRDFromSuggestion(
+          feature,
+          data.suggestion,
+          data.projectPath
+        );
+
+        // Step 3: Update feature with PRD and transition to prd_ready (WAIT for user approval)
+        await this.featureLoader.update(data.projectPath, data.featureId, {
+          workItemState: 'prd_ready',
+          description: prdResult.prd,
+          complexity: prdResult.complexity,
+          prdMetadata: {
+            generatedAt: new Date().toISOString(),
+            model: PM_PRD_MODEL,
+            originalSuggestion: data.suggestion,
+          },
+        });
+
+        // Step 4: Emit event to notify user PRD is ready for review
+        this.events.emit('ideation:prd-generated', {
+          projectPath: data.projectPath,
+          featureId: data.featureId,
+          title: feature.title,
+          prd: prdResult.prd,
+          complexity: prdResult.complexity,
+          milestones: prdResult.milestones,
+          metadata: {
+            generatedAt: new Date().toISOString(),
+            model: PM_PRD_MODEL,
+          },
+        });
+
+        logger.info(
+          `PRD ready for review: "${feature.title}" - awaiting user approval before decomposition`
+        );
+      } catch (error) {
+        logger.error(`Failed to process ideation submission ${data.featureId}:`, error);
+        // Reset to pending_pm_review so it can be retried
+        try {
+          await this.featureLoader.update(data.projectPath, data.featureId, {
+            workItemState: 'pending_pm_review',
+          });
+        } catch (resetError) {
+          logger.error(`Failed to reset state for ${data.featureId}:`, resetError);
+        }
+      }
+    });
+  }
+
+  /**
+   * Generate PRD from ideation suggestion (skip research phase - suggestion already has context)
+   */
+  private async generatePRDFromSuggestion(
+    feature: Feature,
+    suggestion: {
+      title: string;
+      description: string;
+      category: string;
+      rationale?: string;
+      relatedFiles?: string[];
+    },
+    projectPath: string
+  ): Promise<{
+    prd: string;
+    complexity: PMReviewResult['complexity'];
+    milestones: Array<{ title: string; description: string }>;
+  }> {
+    const title = suggestion.title;
+    const description = suggestion.description;
+    const rationale = suggestion.rationale || '';
+    const relatedFiles = suggestion.relatedFiles || [];
+
+    // Load project-specific context rules
+    let contextRules = '';
+    try {
+      const ctx = await loadContextFiles({ projectPath, includeMemory: false });
+      contextRules = ctx.formattedPrompt;
+    } catch {
+      logger.debug('No context files loaded for PRD generation');
+    }
+
+    const systemPrompt = `You are a senior Product Manager creating a SPARC PRD (Product Requirements Document) from an ideation suggestion.
+${contextRules ? `\n## Project-Specific Rules\n${contextRules}\n` : ''}
+SPARC Framework:
+- **Situation**: Current state of the system. What exists today?
+- **Problem**: What's missing or broken? Why does this matter?
+- **Approach**: How will we solve it? Technical approach, key decisions, architecture.
+- **Results**: What does success look like? Acceptance criteria, measurable outcomes.
+- **Constraints**: Limitations, dependencies, risks, non-goals.
+
+You MUST respond with valid JSON matching this schema:
+{
+  "prd": "The full SPARC PRD as markdown text",
+  "complexity": "small" | "medium" | "large" | "architectural",
+  "milestones": [
+    { "title": "Milestone name", "description": "What this milestone covers" }
+  ]
+}
+
+Guidelines:
+- Write the PRD in markdown format with clear SPARC sections
+- Use the suggestion's context (description, rationale, related files) to inform the PRD
+- Define clear acceptance criteria in the Results section
+- Break into logical milestones for iterative delivery
+- Be specific and actionable — engineers should be able to implement from this PRD
+- Complexity: small (< 1 file), medium (2-5 files), large (5-15 files), architectural (system-wide)`;
+
+    const relatedFilesContext =
+      relatedFiles.length > 0
+        ? `\n\n**Related Files:**\n${relatedFiles.map((f) => `- ${f}`).join('\n')}`
+        : '';
+
+    const prompt = `Create a SPARC PRD for this ideation suggestion:
+
+**Title:** ${title}
+
+**Description:**
+${description}
+
+**Category:** ${suggestion.category}
+
+${rationale ? `**Rationale:**\n${rationale}` : ''}${relatedFilesContext}
+
+Generate a comprehensive SPARC PRD as JSON.`;
+
+    try {
+      const result = await simpleQuery({
+        prompt,
+        systemPrompt,
+        model: PM_PRD_MODEL,
+        cwd: projectPath,
+        maxTurns: 1,
+        allowedTools: [],
+      });
+
+      const jsonMatch = result.text.match(/\{[\s\S]*\}/);
+      if (!jsonMatch) {
+        logger.warn('PRD generation did not return valid JSON, using fallback');
+        return this.fallbackPRD(title, description, '');
+      }
+
+      const parsed = JSON.parse(jsonMatch[0]) as {
+        prd: string;
+        complexity: PMReviewResult['complexity'];
+        milestones: Array<{ title: string; description: string }>;
+      };
+
+      if (!parsed.prd || !parsed.complexity) {
+        logger.warn('PRD generation missing required fields, using fallback');
+        return this.fallbackPRD(title, description, '');
+      }
+
+      if (!VALID_COMPLEXITIES.has(parsed.complexity)) {
+        logger.warn(`Invalid complexity "${parsed.complexity}", defaulting to medium`);
+        parsed.complexity = 'medium';
+      }
+
+      if (!parsed.milestones || parsed.milestones.length === 0) {
+        parsed.milestones = [{ title, description: description.slice(0, 200) }];
+      }
+
+      return parsed;
+    } catch (error) {
+      logger.error('SPARC PRD generation failed, using fallback:', error);
+      return this.fallbackPRD(title, description, '');
+    }
+  }
+
+  /**
+   * Handle user approval: user approved PRD from Ideation View
+   * Submit proposal to transition prd_ready → approved (triggers ProjM decomposition)
+   */
+  private async handleUserApproval(data: {
+    projectPath: string;
+    featureId: string;
+  }): Promise<void> {
+    return withProcessingGuard(this.state, data.featureId, async () => {
+      try {
+        const agent = this.state.getAgent(data.projectPath);
+        if (!agent) {
+          logger.error(`PM agent not initialized for project: ${data.projectPath}`);
+          return;
+        }
+
+        const feature = await this.featureLoader.get(data.projectPath, data.featureId);
+        if (!feature) {
+          logger.warn(`Feature ${data.featureId} not found, skipping`);
+          return;
+        }
+
+        if (feature.workItemState !== 'prd_ready') {
+          logger.debug(
+            `Feature ${data.featureId} is not in 'prd_ready' state (${feature.workItemState}), skipping`
+          );
+          return;
+        }
+
+        logger.info(`User approved PRD for: "${feature.title}" (${data.featureId})`);
+
+        // Submit proposal to transition prd_ready → approved
+        const approvedDecision = await this.authorityService.submitProposal(
+          {
+            who: agent.id,
+            what: 'transition_status',
+            target: data.featureId,
+            justification: `User approved PRD from Ideation View for: "${feature.title}"`,
+            risk: 'low',
+            statusTransition: { from: 'prd_ready', to: 'approved' },
+          },
+          data.projectPath
+        );
+
+        if (approvedDecision.verdict === 'deny') {
+          logger.warn(
+            `Approved transition denied for ${data.featureId}: ${approvedDecision.reason}`
+          );
+          return;
+        }
+
+        if (approvedDecision.verdict === 'require_approval') {
+          logger.info(`Approved transition requires approval for ${data.featureId}`);
+          return;
+        }
+
+        // Transition to approved
+        await this.featureLoader.update(data.projectPath, data.featureId, {
+          workItemState: 'approved',
+        });
+
+        // Emit event to trigger ProjM decomposition
+        this.events.emit('authority:pm-review-approved', {
+          projectPath: data.projectPath,
+          featureId: data.featureId,
+          agentId: agent.id,
+          feedback: 'User approved PRD from Ideation View',
+          prd: feature.description,
+          complexity: feature.complexity,
+          milestones: feature.prdMetadata?.originalSuggestion
+            ? [
+                {
+                  title: feature.title || 'Untitled',
+                  description: feature.description?.slice(0, 200) || '',
+                },
+              ]
+            : [],
+        });
+
+        logger.info(`PRD approved by user: "${feature.title}" → ready for ProjM decomposition`);
+      } catch (error) {
+        logger.error(`Failed to handle user approval for ${data.featureId}:`, error);
       }
     });
   }

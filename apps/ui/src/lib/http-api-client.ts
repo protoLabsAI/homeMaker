@@ -2512,6 +2512,20 @@ export class HttpApiClient implements ElectronAPI {
     ): Promise<{ success: boolean; featureId?: string; error?: string }> =>
       this.post('/api/ideation/add-suggestion', { projectPath, suggestion }),
 
+    submitToPM: (
+      projectPath: string,
+      suggestion: AnalysisSuggestion
+    ): Promise<{ success: boolean; featureId?: string; error?: string }> =>
+      this.post('/api/ideation/submit-to-pm', { projectPath, suggestion }),
+
+    approvePRD: (
+      projectPath: string,
+      featureId: string,
+      action: 'approve' | 'reject' | 'discuss',
+      feedback?: string
+    ): Promise<{ success: boolean; message?: string; error?: string }> =>
+      this.post('/api/ideation/approve-prd', { projectPath, featureId, action, feedback }),
+
     getPrompts: () => this.get('/api/ideation/prompts'),
 
     onStream: (callback: (event: any) => void): (() => void) => {

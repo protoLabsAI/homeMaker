@@ -156,6 +156,22 @@ export interface Feature {
    */
   workItemState?: WorkItemState;
   /**
+   * PRD metadata for ideation-to-PM flow.
+   * Populated when a suggestion is submitted to PM Agent for PRD generation.
+   */
+  prdMetadata?: {
+    generatedAt: string;
+    model: string;
+    originalSuggestion?: {
+      id: string;
+      title: string;
+      description: string;
+      category: string;
+      rationale?: string;
+      relatedFiles?: string[];
+    };
+  };
+  /**
    * PR tracking for the EM feedback loop.
    * Populated by auto-mode after git workflow creates a PR.
    */
