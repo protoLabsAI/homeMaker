@@ -1,5 +1,5 @@
 // @ts-nocheck
-import { memo, useEffect, useState } from 'react';
+import { memo } from 'react';
 import { cn } from '@/lib/utils';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -13,16 +13,7 @@ import {
   Clock,
 } from 'lucide-react';
 import type { EventType } from '@automaker/types';
-
-interface AuthorityEvent {
-  id: string;
-  type: EventType;
-  timestamp: number;
-  message: string;
-  agent?: string;
-  featureId?: string;
-  severity?: 'info' | 'success' | 'warning' | 'error';
-}
+import { useAuthorityEvents, type AuthorityEvent } from '@/hooks/use-authority-events';
 
 /**
  * Get icon for authority event type
@@ -77,19 +68,7 @@ function formatRelativeTime(timestamp: number): string {
  * PR feedback, and other authority system lifecycle events.
  */
 export const AuthorityEventFeed = memo(function AuthorityEventFeed() {
-  const [events, setEvents] = useState<AuthorityEvent[]>([]);
-  const [isConnected, setIsConnected] = useState(false);
-
-  useEffect(() => {
-    // TODO: Connect to WebSocket and listen for authority events
-    // For now, show placeholder message
-    setIsConnected(false);
-
-    // Cleanup on unmount
-    return () => {
-      // TODO: Disconnect WebSocket
-    };
-  }, []);
+  const { events, isConnected } = useAuthorityEvents(50);
 
   return (
     <Card className="h-full border-border/50">
