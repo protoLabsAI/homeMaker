@@ -3,15 +3,109 @@ import { memo, useEffect, useMemo, useState } from 'react';
 import { Feature, useAppStore } from '@/store/app-store';
 import { cn } from '@/lib/utils';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
-import { AlertCircle, Lock, Hand, Sparkles, User, Calendar, DollarSign } from 'lucide-react';
+import {
+  AlertCircle,
+  Lock,
+  Hand,
+  Sparkles,
+  User,
+  Calendar,
+  DollarSign,
+  Lightbulb,
+  Search,
+  FileEdit,
+  CheckCircle2,
+  Play,
+  Ban,
+  TestTube,
+} from 'lucide-react';
 import { getBlockingDependencies } from '@automaker/dependency-resolver';
 import { useShallow } from 'zustand/react/shallow';
 import { EpicBadge } from './epic-badge';
 import { formatCostUsd } from '@/lib/format';
+import type { WorkItemState } from '@automaker/types';
 
 /** Uniform badge style for all card badges */
 const uniformBadgeClass =
   'inline-flex items-center justify-center w-6 h-6 rounded-md border-[1.5px]';
+
+/**
+ * Get badge style and label for workItemState
+ */
+function getWorkItemStateBadge(state: WorkItemState): {
+  icon: typeof Lightbulb;
+  label: string;
+  className: string;
+} {
+  switch (state) {
+    case 'idea':
+      return {
+        icon: Lightbulb,
+        label: 'Idea',
+        className: 'bg-purple-500/15 text-purple-400 border-purple-500/30',
+      };
+    case 'pm_review':
+      return {
+        icon: Search,
+        label: 'PM Review',
+        className: 'bg-blue-500/15 text-blue-400 border-blue-500/30',
+      };
+    case 'pm_changes_requested':
+      return {
+        icon: FileEdit,
+        label: 'PM Changes Requested',
+        className: 'bg-orange-500/15 text-orange-400 border-orange-500/30',
+      };
+    case 'approved':
+      return {
+        icon: CheckCircle2,
+        label: 'Approved',
+        className: 'bg-green-500/15 text-green-400 border-green-500/30',
+      };
+    case 'research':
+      return {
+        icon: Search,
+        label: 'Research',
+        className: 'bg-cyan-500/15 text-cyan-400 border-cyan-500/30',
+      };
+    case 'planned':
+      return {
+        icon: FileEdit,
+        label: 'Planned',
+        className: 'bg-indigo-500/15 text-indigo-400 border-indigo-500/30',
+      };
+    case 'ready':
+      return {
+        icon: CheckCircle2,
+        label: 'Ready',
+        className: 'bg-emerald-500/15 text-emerald-400 border-emerald-500/30',
+      };
+    case 'in_progress':
+      return {
+        icon: Play,
+        label: 'In Progress',
+        className: 'bg-blue-500/15 text-blue-400 border-blue-500/30',
+      };
+    case 'blocked':
+      return {
+        icon: Ban,
+        label: 'Blocked',
+        className: 'bg-red-500/15 text-red-400 border-red-500/30',
+      };
+    case 'testing':
+      return {
+        icon: TestTube,
+        label: 'Testing',
+        className: 'bg-yellow-500/15 text-yellow-400 border-yellow-500/30',
+      };
+    case 'done':
+      return {
+        icon: CheckCircle2,
+        label: 'Done',
+        className: 'bg-green-500/15 text-green-400 border-green-500/30',
+      };
+  }
+}
 
 interface CardBadgesProps {
   feature: Feature;
@@ -26,21 +120,50 @@ export const CardBadges = memo(function CardBadges({ feature }: CardBadgesProps)
   const hasError = !!feature.error;
   const hasAssignee = !!feature.assignee;
   const hasDueDate = !!feature.dueDate;
+  const hasWorkItemState = !!feature.workItemState;
   // costUsd is typed as unknown on the Feature interface; narrow with typeof guard
   const costUsd = typeof feature.costUsd === 'number' ? feature.costUsd : undefined;
   const hasCost = costUsd != null && costUsd > 0;
 
-  if (!hasError && !hasEpic && !hasAssignee && !hasDueDate && !hasCost) {
+  if (!hasError && !hasEpic && !hasAssignee && !hasDueDate && !hasCost && !hasWorkItemState) {
     return null;
   }
 
   // Check if due date is past
   const isDueDatePast = hasDueDate && feature.dueDate! < new Date().toISOString().slice(0, 10);
 
+  // Get workItemState badge config
+  const workItemStateBadge = hasWorkItemState
+    ? getWorkItemStateBadge(feature.workItemState!)
+    : null;
+
   return (
     <div className="flex flex-wrap items-center gap-1.5 px-3 pt-1.5 min-h-[24px]">
       {/* Epic badge - shows parent epic for child features */}
       {hasEpic && <EpicBadge feature={feature} />}
+
+      {/* Work Item State badge - authority system lifecycle */}
+      {hasWorkItemState && workItemStateBadge && (
+        <TooltipProvider delayDuration={200}>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <div
+                className={cn(
+                  'inline-flex items-center gap-1 px-1.5 h-5 rounded text-[10px] font-medium border',
+                  workItemStateBadge.className
+                )}
+                data-testid={`work-item-state-badge-${feature.id}`}
+              >
+                <workItemStateBadge.icon className="w-3 h-3" />
+                {workItemStateBadge.label}
+              </div>
+            </TooltipTrigger>
+            <TooltipContent side="bottom" className="text-xs">
+              <p>Authority System: {workItemStateBadge.label}</p>
+            </TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
+      )}
 
       {/* Assignee badge */}
       {hasAssignee && (
