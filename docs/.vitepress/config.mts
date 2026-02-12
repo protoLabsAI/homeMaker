@@ -38,8 +38,12 @@ export default defineConfig({
   // Ignore archived docs — they clutter nav but stay accessible via direct URL
   srcExclude: ['archived/**'],
 
-  // Allow dead links to: files outside docs/, archived pages (srcExcluded), README
-  ignoreDeadLinks: [/^\.\.\//,  /\/archived\//,  /^\.\/archived\//],
+  // Allow dead links to: files outside docs/, archived pages (srcExcluded)
+  ignoreDeadLinks: [
+    /^\.\.\//,
+    /\/archived\//,
+    /^\.\/archived\//,
+  ],
 
   themeConfig: {
     logo: '/logo.svg',
