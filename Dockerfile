@@ -55,7 +55,7 @@ COPY libs ./libs
 COPY apps/server ./apps/server
 
 # Build packages in dependency order, then build server
-RUN npm run build:packages && npm run build --workspace=apps/server
+RUN npm run build:libs && npm run build --workspace=apps/server
 
 # =============================================================================
 # SERVER PRODUCTION STAGE
@@ -211,7 +211,7 @@ COPY apps/ui ./apps/ui
 ARG VITE_SERVER_URL=""
 ENV VITE_SKIP_ELECTRON=true
 ENV VITE_SERVER_URL=${VITE_SERVER_URL}
-RUN npm run build:packages && npm run build --workspace=apps/ui
+RUN npm run build:libs && npm run build --workspace=apps/ui
 
 # =============================================================================
 # UI PRODUCTION STAGE
