@@ -37,14 +37,14 @@ The `/ava` skill runs these checks in order:
 4. **Discord Check** — Reads `#ava-josh` for messages from Josh, responds
 5. **Report** — Posts brief status to `#dev` channel
 
-## Staging Setup (<your-staging-ip>)
+## Staging Setup
 
 The staging server runs on CI/CD with auto-deploy on push to main. To add Ava monitoring:
 
 ### 1. Ensure Claude Code is installed on staging
 
 ```bash
-ssh ava  # or ssh user@<your-staging-ip>
+ssh ava  # or ssh user@YOUR_STAGING_IP
 which claude || npm install -g @anthropic-ai/claude-code
 ```
 
