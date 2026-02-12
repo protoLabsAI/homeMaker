@@ -371,7 +371,7 @@ logger.info('Security Review Team initialized');
 
 ## Example: Security Review Team
 
-Full implementation: [View Source](../../apps/server/src/services/security-agents/)
+Full implementation: see `apps/server/src/services/security-agents/` in the repo
 
 **Trigger:** PR created
 **Coordination:** Event bus + shared JSON state

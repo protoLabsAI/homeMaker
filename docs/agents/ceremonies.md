@@ -212,6 +212,6 @@ Auto-generate or update docs when features complete or milestones finish:
 
 ## Related Documentation
 
-- [Discord Communication Guide](../discord.md) — Channel structure and integration
+- [Discord Communication Guide](/integrations/discord) — Channel structure and integration
 - [Architecture Overview](./architecture.md) — How ceremonies fit into the agent system
 - [MCP Integration](./mcp-integration.md) — Programmatic ceremony control (future)

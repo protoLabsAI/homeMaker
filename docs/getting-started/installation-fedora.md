@@ -398,7 +398,7 @@ sudo dnf remove automaker
 ### Resources
 
 - [Main README](../README.md) - Project overview
-- [CONTRIBUTING.md](../CONTRIBUTING.md) - Contributing guide
+- [CONTRIBUTING.md](https://github.com/proto-labs-ai/automaker/blob/main/CONTRIBUTING.md) - Contributing guide
 - [GitHub Issues](https://github.com/AutoMaker-Org/automaker/issues) - Bug reports & feature requests
 - [Discussions](https://github.com/AutoMaker-Org/automaker/discussions) - Questions & community
 
@@ -477,7 +477,7 @@ chmod 700 ~/.config/automaker/
 
 ## Contributing
 
-Found an issue or want to improve Fedora support? See [CONTRIBUTING.md](../CONTRIBUTING.md).
+Found an issue or want to improve Fedora support? See [CONTRIBUTING.md](https://github.com/proto-labs-ai/automaker/blob/main/CONTRIBUTING.md).
 
 ---
 

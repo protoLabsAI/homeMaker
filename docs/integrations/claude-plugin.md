@@ -1396,5 +1396,4 @@ Epics provide visual grouping on the Kanban board and help track milestone progr
 ## Related Documentation
 
 - [Automaker README](../README.md) - Main project documentation
-- [MCP Server README](../packages/mcp-server/README.md) - MCP server technical details
-- [Context Files Guide](context-files-pattern.md) - Best practices for context files
+- [Context System](/agents/context-system) - Best practices for context files

@@ -38,11 +38,8 @@ export default defineConfig({
   // Ignore archived docs — they clutter nav but stay accessible via direct URL
   srcExclude: ['archived/**'],
 
-  // Only allow dead links to files outside docs/ (CLAUDE.md, CONTRIBUTING, etc.)
-  ignoreDeadLinks: [
-    /^\.\.\//,
-    /^\/(?!getting-started|agents|infra|server|authority|dev|protolabs|integrations)/,
-  ],
+  // Allow dead links to: files outside docs/, archived pages (srcExcluded), README
+  ignoreDeadLinks: [/^\.\.\//,  /\/archived\//,  /^\.\/archived\//],
 
   themeConfig: {
     logo: '/logo.svg',

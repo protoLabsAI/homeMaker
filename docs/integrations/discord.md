@@ -36,7 +36,7 @@ Day-to-day team communication.
 
 ### ENGINEERING
 
-Domain-specific technical discussion. Each channel maps to a team role in the [agent hierarchy](../docs/infra/architecture.md).
+Domain-specific technical discussion. Each channel maps to a team role in the [agent hierarchy](/infra/architecture).
 
 | Channel      | ID                  | Purpose                                               | Team Role  |
 | ------------ | ------------------- | ----------------------------------------------------- | ---------- |
@@ -315,6 +315,5 @@ When a channel is no longer needed:
 
 ## Related Documentation
 
-- [Team Hierarchy Vision](../.automaker/context/team-hierarchy-vision.md) - Multi-agent hierarchy architecture
 - [Infrastructure](/infra/) - Deployment and system architecture
 - [Claude Plugin](./claude-plugin) - MCP tools and plugin setup
