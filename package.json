@@ -52,6 +52,9 @@
     "test:unit:watch": "vitest",
     "test:all": "vitest run",
     "lint:lockfile": "node scripts/lint-lockfile.mjs",
+    "docs:dev": "vitepress dev docs",
+    "docs:build": "vitepress build docs",
+    "docs:preview": "vitepress preview docs",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "rebuild": "rm -rf node_modules apps/*/node_modules libs/*/node_modules && npm install",
@@ -75,6 +78,7 @@
     "husky": "9.1.7",
     "lint-staged": "16.2.7",
     "prettier": "3.7.4",
+    "vitepress": "^1.6.4",
     "vitest": "4.0.16"
   },
   "optionalDependencies": {

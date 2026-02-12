@@ -92,6 +92,8 @@ Agency setup and onboarding in [`docs/protolabs/`](./protolabs/):
 | [Folder Pattern](./folder-pattern.md)               | Directory structure conventions             |
 | [Ava Headless](./ava-headless-quickstart.md)        | Autonomous Ava setup (local/staging/Docker) |
 | [CI/CD Setup](./ci-cd-setup-guide.md)               | CI/CD pipeline setup for new projects       |
+| [Docs Site](./dev/docs-site.md)                     | VitePress docs site setup and deployment    |
+| [Docs Site Decision](./dev/docs-site-decision.md)   | ADR: Why VitePress was chosen               |
 
 ## Platform-Specific
 

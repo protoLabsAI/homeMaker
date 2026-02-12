@@ -167,6 +167,9 @@ build_images() {
   info "Building UI image..."
   docker compose -f "$COMPOSE_FILE" --env-file "$ENV_FILE" build ui
 
+  info "Building docs image..."
+  docker compose -f "$COMPOSE_FILE" --env-file "$ENV_FILE" build docs
+
   ok "Images built successfully"
 }
 
@@ -174,7 +177,7 @@ build_images() {
 
 stop_existing() {
   # Stop any existing automaker containers regardless of which compose started them
-  if docker ps -q --filter "name=automaker-server" --filter "name=automaker-ui" | grep -q .; then
+  if docker ps -q --filter "name=automaker-server" --filter "name=automaker-ui" --filter "name=automaker-docs" | grep -q .; then
     info "Stopping existing Automaker containers..."
 
     # Try the base compose first (handles the override pattern)
@@ -184,7 +187,7 @@ stop_existing() {
     docker compose -f "$COMPOSE_FILE" --env-file "$ENV_FILE" down 2>/dev/null || true
 
     # Force-remove if still running
-    docker rm -f automaker-server automaker-ui 2>/dev/null || true
+    docker rm -f automaker-server automaker-ui automaker-docs 2>/dev/null || true
 
     ok "Existing containers stopped"
   fi
@@ -274,8 +277,10 @@ show_status() {
   # Endpoints
   local api_port="${API_PORT:-3008}"
   local ui_port="${UI_PORT:-3007}"
+  local docs_port="${DOCS_PORT:-3009}"
   echo -e "  UI:     ${GREEN}http://localhost:${ui_port}${NC}"
   echo -e "  API:    ${GREEN}http://localhost:${api_port}${NC}"
+  echo -e "  Docs:   ${GREEN}http://localhost:${docs_port}${NC}"
   echo -e "  Health: ${GREEN}http://localhost:${api_port}/api/health${NC}"
   echo ""
 }

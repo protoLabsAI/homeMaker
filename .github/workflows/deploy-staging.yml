@@ -31,19 +31,38 @@ jobs:
 
       - name: Verify deployment
         run: |
+          # Check server health
           retries=0
           while [ $retries -lt 15 ]; do
             if curl -sf http://localhost:3008/api/health > /dev/null; then
-              echo "Staging is healthy"
+              echo "Server is healthy"
               curl -sf http://localhost:3008/api/health
-              exit 0
+              break
             fi
             retries=$((retries + 1))
             sleep 2
           done
-          echo "Health check failed after 30s"
-          docker compose -f docker-compose.staging.yml logs --tail=50 server
-          exit 1
+          if [ $retries -eq 15 ]; then
+            echo "Server health check failed after 30s"
+            docker compose -f docker-compose.staging.yml logs --tail=50 server
+            exit 1
+          fi
+
+          # Check docs health
+          retries=0
+          while [ $retries -lt 10 ]; do
+            if curl -sf http://localhost:3009/ > /dev/null; then
+              echo "Docs site is healthy"
+              break
+            fi
+            retries=$((retries + 1))
+            sleep 2
+          done
+          if [ $retries -eq 10 ]; then
+            echo "Docs health check failed after 20s"
+            docker compose -f docker-compose.staging.yml logs --tail=20 docs
+            # Non-fatal — docs failure shouldn't block the deploy
+          fi
 
       - name: Smoke tests
         run: |
@@ -64,8 +83,10 @@ jobs:
           COMMIT=$(git rev-parse --short HEAD)
           STATUS="${{ job.status }}"
 
+          DOCS_STATUS=$(curl -sf http://localhost:3009/ > /dev/null 2>&1 && echo "docs ok" || echo "docs down")
+
           if [ "$STATUS" = "success" ]; then
-            MSG="Staging deployed: \`${COMMIT}\` (v${VERSION}) - all healthy"
+            MSG="Staging deployed: \`${COMMIT}\` (v${VERSION}) - all healthy (${DOCS_STATUS})"
           else
             MSG="Staging deploy failed: \`${COMMIT}\` - check GitHub Actions"
           fi
