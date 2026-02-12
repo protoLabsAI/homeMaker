@@ -76,19 +76,20 @@ DevOps documentation in [`docs/infra/`](./infra/):
 
 ## Development
 
-| Document                                                | Description                              |
-| ------------------------------------------------------- | ---------------------------------------- |
-| [UI Architecture](./dev/ui-architecture.md)             | Frontend structure and patterns          |
-| [Shared Packages](./dev/shared-packages.md)             | Monorepo package architecture            |
-| [Feature Status System](./dev/feature-status-system.md) | 6-status feature lifecycle               |
-| [Adding Team Members](./dev/adding-team-members.md)     | Onboarding new team members              |
-| [Clean Code](./dev/clean-code.md)                       | Code quality standards and patterns      |
-| [Folder Pattern](./dev/folder-pattern.md)               | Directory structure conventions          |
-| [Add Cursor Model](./dev/add-new-cursor-model.md)       | Adding new Cursor model support          |
-| [Release](./dev/release.md)                             | Release process and Electron builds      |
-| [Terminal](./dev/terminal.md)                           | Terminal feature documentation           |
-| [Docs Site](./dev/docs-site.md)                         | VitePress docs site setup and deployment |
-| [Docs Site Decision](./dev/docs-site-decision.md)       | ADR: Why VitePress was chosen            |
+| Document                                                | Description                               |
+| ------------------------------------------------------- | ----------------------------------------- |
+| [UI Architecture](./dev/ui-architecture.md)             | Frontend structure and patterns           |
+| [Shared Packages](./dev/shared-packages.md)             | Monorepo package architecture             |
+| [Feature Status System](./dev/feature-status-system.md) | 6-status feature lifecycle                |
+| [Adding Team Members](./dev/adding-team-members.md)     | Onboarding new team members               |
+| [Clean Code](./dev/clean-code.md)                       | Code quality standards and patterns       |
+| [Folder Pattern](./dev/folder-pattern.md)               | Directory structure conventions           |
+| [Add Cursor Model](./dev/add-new-cursor-model.md)       | Adding new Cursor model support           |
+| [Release](./dev/release.md)                             | Release process and Electron builds       |
+| [Terminal](./dev/terminal.md)                           | Terminal feature documentation            |
+| [Docs Site](./dev/docs-site.md)                         | VitePress docs site setup and deployment  |
+| [Docs Site Decision](./dev/docs-site-decision.md)       | ADR: Why VitePress was chosen             |
+| [Docs Standard](./dev/docs-standard.md)                 | IA rules, content guidelines, maintenance |
 
 ## ProtoLabs
 

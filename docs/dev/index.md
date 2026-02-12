@@ -22,5 +22,6 @@ Guides for contributing to and extending Automaker.
 
 ## Docs Site
 
+- **[Docs Standard](./docs-standard)** — IA rules, content guidelines, maintenance procedures
 - **[Docs Site](./docs-site)** — VitePress setup and deployment
 - **[Docs Site Decision](./docs-site-decision)** — ADR: Why VitePress was chosen
