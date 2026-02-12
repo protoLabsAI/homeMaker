@@ -18,19 +18,19 @@ jobs:
     steps:
       - name: Pull latest code
         run: |
-          cd /home/josh/dev/automaker
+          cd /home/josh/dev/ava
           git fetch origin main
           git reset --hard origin/main
 
       - name: Rebuild and restart staging
         run: |
-          cd /home/josh/dev/automaker
+          cd /home/josh/dev/ava
           ./scripts/setup-staging.sh --build
           ./scripts/setup-staging.sh --start
 
       - name: Verify deployment
         run: |
-          cd /home/josh/dev/automaker
+          cd /home/josh/dev/ava
           retries=0
           while [ $retries -lt 15 ]; do
             if curl -sf http://localhost:3008/api/health > /dev/null; then
@@ -47,7 +47,7 @@ jobs:
 
       - name: Smoke tests
         run: |
-          cd /home/josh/dev/automaker
+          cd /home/josh/dev/ava
           # Source API key from .env (same machine as staging server)
           export AUTOMAKER_API_KEY=$(grep -oP 'AUTOMAKER_API_KEY=\K.*' .env || echo "")
           ./scripts/smoke-test.sh http://localhost:3008
@@ -63,7 +63,7 @@ jobs:
       - name: Notify Discord
         if: always()
         run: |
-          cd /home/josh/dev/automaker
+          cd /home/josh/dev/ava
           VERSION=$(curl -sf http://localhost:3008/api/health | python3 -c "import sys,json; print(json.load(sys.stdin).get('version','unknown'))" 2>/dev/null || echo "unknown")
           COMMIT=$(git rev-parse --short HEAD)
           STATUS="${{ job.status }}"

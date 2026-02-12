@@ -150,7 +150,7 @@ Check for known vulnerabilities:
 
 ```bash
 # npm audit (from project directory)
-cd /home/josh/dev/automaker && npm audit --audit-level=moderate 2>/dev/null | tail -5 || echo "npm audit: N/A"
+cd /home/josh/dev/ava && npm audit --audit-level=moderate 2>/dev/null | tail -5 || echo "npm audit: N/A"
 ```
 
 ## Output Format

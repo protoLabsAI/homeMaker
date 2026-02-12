@@ -437,7 +437,7 @@ small (haiku) → medium (sonnet) → large (sonnet) → architectural (opus)
 
 ```bash
 # Start heads down mode for current project
-/headsdown /home/josh/dev/automaker
+/headsdown /home/josh/dev/ava
 
 # Or with auto-detection
 /headsdown .
