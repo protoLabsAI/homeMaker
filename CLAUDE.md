@@ -183,6 +183,30 @@ Use `resolveModelString()` from `@automaker/model-resolver` to convert model ali
 - `sonnet` → `claude-sonnet-4-5-20250929`
 - `opus` → `claude-opus-4-5-20251101`
 
+### Crew Loop System
+
+Scheduled health checks and automated escalation for crew members (Ava, Frank, GTM). Lightweight in-process checks run on cron schedules — full agent escalation only when problems are detected.
+
+```
+SchedulerService (cron tick)
+  --> CrewLoopService.runCheck(memberId)
+    --> member.check(context) — lightweight, no API calls
+      --> IF needsEscalation: DynamicAgentExecutor.execute(template, prompt)
+      --> ELSE: log "ok", emit event, done
+```
+
+**Current crew members:**
+
+| Member | Schedule       | Checks                                                               | Escalation           |
+| ------ | -------------- | -------------------------------------------------------------------- | -------------------- |
+| Ava    | `*/10 * * * *` | Board health, stuck agents (>2h), stale PRs (>24h), blocked features | Warning+ findings    |
+| Frank  | `*/10 * * * *` | V8 heap, RSS memory, agent capacity, health monitor                  | Critical issues only |
+| GTM    | `0 */6 * * *`  | Recently completed features (placeholder)                            | Disabled by default  |
+
+**Adding a new crew member** = one file implementing `CrewMemberDefinition` in `apps/server/src/services/crew-members/`, then register with `crewLoopService.registerMember(def)` in `index.ts`. See `docs/dev/crew-loops.md` for full details.
+
+**API:** `GET /api/crew/status`, `POST /api/crew/:id/{trigger,enable,disable,schedule}`
+
 ### Feature Status System
 
 Automaker uses a canonical **6-status system** for all features:

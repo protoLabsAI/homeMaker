@@ -648,9 +648,11 @@ Staging auto-deploys from `main` via a GitHub Actions self-hosted runner.
 
 1. Code merges to `main`
 2. `.github/workflows/deploy-staging.yml` triggers on the self-hosted runner
-3. Runner pulls latest code, rebuilds images, restarts containers
-4. Health check verifies deployment
-5. Discord notification posted to `#deployments`
+3. Workflow clones/pulls into a **persistent deploy directory** (`/home/josh/staging-deploy/automaker`) — not the runner's `_work/` workspace (which gets cleaned by cron)
+4. `.env` is copied from `/home/josh/dev/ava/.env` (persistent credentials)
+5. `setup-staging.sh --build` builds all Docker images, `--start` restarts containers
+6. Health check verifies deployment, smoke tests run
+7. Discord notification posted to `#deployments`
 
 ### Setup
 
@@ -680,19 +682,17 @@ Set the `DISCORD_DEPLOY_WEBHOOK` secret in GitHub repo settings to receive deplo
 
 ## CD Pipeline Troubleshooting
 
-### Path Mismatch (All Steps Fail Immediately)
+### Workspace Deleted Mid-Build
 
 **Symptoms:**
 
-- Every deploy-staging run fails in <20 seconds
-- Logs show: `cd: /path/to/automaker: No such file or directory`
-- Discord notifications never arrive
+- Docker build starts but fails with `Couldn't find env file` or `No such file or directory`
+- Server image builds fine but UI image fails
+- Cleanup steps show "working directory does not exist"
 
-**Cause:** The deploy workflow and all self-hosted runner workflows hardcode the repo path. If the repo directory is renamed or moved, every step fails on `cd`.
+**Cause:** The self-hosted runner's workspace cleanup cron (every 5min) deletes the `_work/` directory during long Docker builds. Multiple workflows sharing the same runner can also interfere via `actions/checkout` with `clean: true`.
 
-**Fix:** Update `defaults.run.working-directory` in `.github/workflows/deploy-staging.yml` to match the actual repo location. Also update `automaker.service` and `docs/infra/systemd.md` if using systemd.
-
-**Prevention:** The workflow uses `defaults.run.working-directory` at the job level so the path is defined once, not repeated per step.
+**Fix:** The deploy workflow now uses a persistent directory (`/home/josh/staging-deploy/automaker`) instead of the runner workspace. Env vars are sourced into the shell via `set -a` so docker compose doesn't need `--env-file`.
 
 ### Docker Build Fails on `build:packages`
 
