@@ -482,7 +482,7 @@ export class AvaGatewayService {
   /**
    * Generate board summary for heartbeat evaluation
    */
-  private async generateBoardSummary(projectPath: string): Promise<BoardSummary> {
+  async generateBoardSummary(projectPath: string): Promise<BoardSummary> {
     const features = await this.featureLoader.getAll(projectPath);
 
     const byStatus: Record<string, number> = {};

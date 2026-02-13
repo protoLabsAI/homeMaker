@@ -163,6 +163,9 @@ import { MAX_SYSTEM_CONCURRENCY } from '@automaker/types';
 import { TriageService } from './services/triage-service.js';
 import { IssueCreationService } from './services/issue-creation-service.js';
 import { createIssuesRoutes } from './routes/issues/index.js';
+import { CrewLoopService } from './services/crew-loop-service.js';
+import { avaCrewMember, frankCrewMember, gtmCrewMember } from './services/crew-members/index.js';
+import { createCrewRoutes } from './routes/crew/index.js';
 
 const PORT = parseInt(process.env.PORT || '3008', 10);
 const HOST = process.env.HOST || '0.0.0.0';
@@ -519,6 +522,13 @@ const linearAgentRouter = new LinearAgentRouter(
 );
 linearAgentRouter.start();
 
+// Initialize Graphite sync scheduler (now registered as maintenance:graphite-sync task)
+const graphiteSyncScheduler = new GraphiteSyncScheduler(
+  settingsService,
+  graphiteService,
+  REPO_ROOT
+);
+
 // Initialize Scheduler Service with event emitter and data directory
 const schedulerService = getSchedulerService();
 schedulerService.initialize(events, DATA_DIR);
@@ -531,10 +541,10 @@ void schedulerService
       events,
       autoModeService,
       featureHealthService,
-      avaGatewayService,
       integrityWatchdogService,
       featureLoader,
-      settingsService
+      settingsService,
+      graphiteSyncScheduler
     );
   })
   .catch((err) => {
@@ -544,91 +554,35 @@ void schedulerService
 // Initialize Health Monitor Service event emitter
 healthMonitorService.setEventEmitter(events);
 
-// Frank Auto-Triage: Spawn Frank agent on critical health events
-let lastFrankSpawnTime = 0;
-const FRANK_COOLDOWN_MS = 10 * 60 * 1000; // 10 minutes
-
-events.subscribe((type, payload) => {
-  if (type === 'health:check-completed') {
-    const result = payload as {
-      status: 'healthy' | 'degraded' | 'critical';
-      issues: Array<{ type: string; severity: string; message: string }>;
-      metrics: Record<string, unknown>;
-    };
-
-    if (result.status === 'critical') {
-      const now = Date.now();
-      const timeSinceLastSpawn = now - lastFrankSpawnTime;
-
-      // Check cooldown to prevent spawning more than once per 10 minutes
-      if (timeSinceLastSpawn < FRANK_COOLDOWN_MS) {
-        const remainingMinutes = Math.ceil((FRANK_COOLDOWN_MS - timeSinceLastSpawn) / 60000);
-        logger.info(
-          `[FRANK-TRIAGE] Critical health detected but Frank is on cooldown (${remainingMinutes} minutes remaining)`
-        );
-        return;
-      }
-
-      lastFrankSpawnTime = now;
-
-      // Build diagnostic prompt with issue details
-      const issueDetails = result.issues
-        .map((issue) => `- [${issue.severity.toUpperCase()}] ${issue.type}: ${issue.message}`)
-        .join('\n');
-
-      const prompt = `Server health is critical. Issues detected:
-
-${issueDetails}
-
-Metrics: ${JSON.stringify(result.metrics, null, 2)}
-
-Please:
-1. Read server logs with get_server_logs to diagnose the root cause
-2. Check system health using get_detailed_health and health_check MCP tools
-3. Post your findings and recommended actions to Discord #infra
-
-This is an automated triage request triggered by critical health status.`;
-
-      logger.info('[FRANK-TRIAGE] Spawning Frank agent for critical health triage');
-
-      // Spawn Frank agent asynchronously (don't block the event loop)
-      void (async () => {
-        try {
-          const frankConfig = agentFactoryService.createFromTemplate('frank', REPO_ROOT, {
-            tools: [
-              'Read',
-              'Glob',
-              'Grep',
-              'Bash',
-              'mcp__plugin_automaker_automaker__get_server_logs',
-              'mcp__plugin_automaker_automaker__get_detailed_health',
-              'mcp__plugin_automaker_automaker__health_check',
-              'mcp__plugin_automaker_discord__discord_send',
-            ],
-          });
-
-          logger.info('[FRANK-TRIAGE] Executing Frank agent with diagnostic prompt');
-
-          const result = await dynamicAgentExecutor.execute(frankConfig, {
-            prompt,
-            additionalSystemPrompt:
-              'You are Frank, responding to an automated critical health alert. Focus on diagnosing the issue and reporting findings to the team.',
-          });
-
-          if (result.success) {
-            logger.info(
-              `[FRANK-TRIAGE] Frank completed diagnostic triage in ${result.durationMs}ms`
-            );
-          } else {
-            logger.error(`[FRANK-TRIAGE] Frank triage failed: ${result.error}`);
-          }
-        } catch (error) {
-          logger.error('[FRANK-TRIAGE] Failed to spawn Frank agent:', error);
-        }
-      })();
-    }
+// Initialize Crew Loop Service — unified scheduling for Ava, Frank, GTM, etc.
+const crewCheckContext = {
+  projectPaths: [] as string[],
+  events,
+  featureLoader,
+  featureHealthService,
+  healthMonitorService,
+  autoModeService,
+  settingsService,
+};
+const crewLoopService = new CrewLoopService(
+  events,
+  schedulerService,
+  agentFactoryService,
+  dynamicAgentExecutor,
+  crewCheckContext,
+  REPO_ROOT
+);
+void (async () => {
+  try {
+    await crewLoopService.registerMember(avaCrewMember);
+    await crewLoopService.registerMember(frankCrewMember);
+    await crewLoopService.registerMember(gtmCrewMember);
+    await crewLoopService.registerAllWithScheduler();
+    logger.info('Crew loop service initialized with all members');
+  } catch (err) {
+    logger.error('Crew loop service initialization failed:', err);
   }
-});
+})();
 
 // Initialize Ava Gateway Service for heartbeat monitoring
 void avaGatewayService
@@ -833,8 +787,7 @@ specGenerationMonitor.startMonitoring();
     logger.error('Failed to bootstrap Codex model cache:', err);
   });
 
-  // Start health monitoring after all services are fully initialized
-  healthMonitorService.startMonitoring();
+  // Health monitoring timer replaced by Frank crew loop (on-demand checks)
 })();
 
 // Run stale validation cleanup every hour to prevent memory leaks from crashed validations
@@ -845,59 +798,6 @@ setInterval(() => {
     logger.info(`Cleaned up ${cleaned} stale validation entries`);
   }
 }, VALIDATION_CLEANUP_INTERVAL_MS);
-
-// Initialize Graphite sync scheduler for nightly branch syncing
-const graphiteSyncScheduler = new GraphiteSyncScheduler(
-  settingsService,
-  graphiteService,
-  REPO_ROOT
-);
-
-// Schedule periodic Graphite sync at 2am daily (0 2 * * *)
-// This keeps all feature branches in sync with their parent branches
-const GRAPHITE_SYNC_INTERVAL_MS = 24 * 60 * 60 * 1000; // Daily
-const GRAPHITE_SYNC_INITIAL_DELAY_MS = calculateNextSyncDelay();
-
-// Run first sync after initial delay, then every 24 hours
-const graphiteSyncHandle = setTimeout(() => {
-  logger.info('Running scheduled Graphite sync (first run after startup)');
-  void graphiteSyncScheduler.runSync().catch((err) => {
-    logger.error('Scheduled Graphite sync failed:', err);
-  });
-
-  // Reschedule for every 24 hours after the first run
-  setInterval(() => {
-    logger.info('Running scheduled Graphite sync (nightly)');
-    void graphiteSyncScheduler.runSync().catch((err) => {
-      logger.error('Scheduled Graphite sync failed:', err);
-    });
-  }, GRAPHITE_SYNC_INTERVAL_MS);
-}, GRAPHITE_SYNC_INITIAL_DELAY_MS);
-
-logger.info(
-  `Graphite sync scheduler initialized (next run in ${(GRAPHITE_SYNC_INITIAL_DELAY_MS / 1000 / 60).toFixed(1)} minutes)`
-);
-
-/**
- * Calculate milliseconds until next 2am UTC
- * This implements the cron schedule "0 2 * * *" (2am daily)
- */
-function calculateNextSyncDelay(): number {
-  const now = new Date();
-  const next = new Date(now);
-
-  // Set to 2am UTC
-  next.setUTCHours(2, 0, 0, 0);
-
-  // If 2am has already passed today, schedule for tomorrow
-  if (next <= now) {
-    next.setUTCDate(next.getUTCDate() + 1);
-  }
-
-  const delayMs = next.getTime() - now.getTime();
-  logger.debug(`Next Graphite sync scheduled for ${next.toISOString()}`);
-  return delayMs;
-}
 
 // Require Content-Type: application/json for all API POST/PUT/PATCH requests
 // This helps prevent CSRF and content-type confusion attacks
@@ -1019,6 +919,7 @@ app.use(
 );
 app.use('/api/ceremonies', createCeremoniesRoutes(events, featureLoader, projectService));
 app.use('/api/issues', createIssuesRoutes(events));
+app.use('/api/crew', createCrewRoutes(crewLoopService));
 
 // Create HTTP server
 const server = createServer(app);

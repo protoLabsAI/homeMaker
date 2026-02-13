@@ -1472,6 +1472,13 @@ export interface GlobalSettings {
    * @see DiscordSettings
    */
   discord?: DiscordSettings;
+
+  /**
+   * Crew loop settings for unified team member scheduling.
+   * Controls Ava, Frank, GTM, and future crew member check/escalation loops.
+   * @see CrewLoopSettings
+   */
+  crewLoops?: CrewLoopSettings;
 }
 
 /**
@@ -2043,6 +2050,45 @@ export const DEFAULT_DISCORD_INTEGRATION: DiscordIntegrationConfig = {
     chukz: { agentType: 'ava', enabled: true },
     abdelly: { agentType: 'jon', enabled: true },
   },
+};
+
+// ============================================================================
+// Crew Loop Settings - Unified crew member scheduling and escalation
+// ============================================================================
+
+/**
+ * CrewMemberConfig - Per-member runtime configuration overrides
+ *
+ * Stored in global settings to allow enable/disable and schedule overrides
+ * without modifying code. Each crew member has a default configuration
+ * defined in its CrewMemberDefinition; these settings override those defaults.
+ */
+export interface CrewMemberConfig {
+  /** Whether this crew member is enabled */
+  enabled: boolean;
+  /** Cron schedule override (undefined = use member's defaultSchedule) */
+  schedule?: string;
+}
+
+/**
+ * CrewLoopSettings - Global configuration for the crew loop system
+ *
+ * Controls whether the crew loop system is active and provides
+ * per-member configuration overrides.
+ */
+export interface CrewLoopSettings {
+  /** Whether the crew loop system is enabled globally */
+  enabled: boolean;
+  /** Per-member configuration overrides (key = member id) */
+  members: Record<string, CrewMemberConfig>;
+}
+
+/**
+ * DEFAULT_CREW_LOOP_SETTINGS - Crew loops enabled by default with no member overrides
+ */
+export const DEFAULT_CREW_LOOP_SETTINGS: CrewLoopSettings = {
+  enabled: true,
+  members: {},
 };
 
 /** Default project settings (empty - all settings are optional and fall back to global) */

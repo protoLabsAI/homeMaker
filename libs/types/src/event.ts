@@ -216,7 +216,12 @@ export type EventType =
   // Issue management events (failure-to-issue pipeline)
   | 'feature:permanently-blocked'
   | 'issue:created'
-  | 'issue:triage-completed';
+  | 'issue:triage-completed'
+  // Crew loop events (unified crew member scheduling)
+  | 'crew:check-started'
+  | 'crew:check-completed'
+  | 'crew:escalation-started'
+  | 'crew:escalation-completed';
 
 export type EventCallback = (type: EventType, payload: unknown) => void;
 

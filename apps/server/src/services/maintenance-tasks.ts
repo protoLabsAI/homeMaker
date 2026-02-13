@@ -18,10 +18,10 @@ import type { SchedulerService } from './scheduler-service.js';
 import type { EventEmitter } from '../lib/events.js';
 import type { AutoModeService } from './auto-mode-service.js';
 import type { FeatureHealthService } from './feature-health-service.js';
-import type { AvaGatewayService } from './ava-gateway-service.js';
 import type { DataIntegrityWatchdogService } from './data-integrity-watchdog-service.js';
 import type { FeatureLoader } from './feature-loader.js';
 import type { SettingsService } from './settings-service.js';
+import type { GraphiteSyncScheduler } from './graphite-sync-scheduler.js';
 import { mergeEligibilityService } from './merge-eligibility-service.js';
 import { githubMergeService } from './github-merge-service.js';
 import { graphiteService } from './graphite-service.js';
@@ -90,10 +90,10 @@ export async function registerMaintenanceTasks(
   events: EventEmitter,
   autoModeService: AutoModeService,
   featureHealthService?: FeatureHealthService,
-  avaGatewayService?: AvaGatewayService,
   integrityWatchdogService?: DataIntegrityWatchdogService,
   featureLoader?: FeatureLoader,
-  settingsService?: SettingsService
+  settingsService?: SettingsService,
+  graphiteSyncScheduler?: GraphiteSyncScheduler
 ): Promise<void> {
   logger.info('Registering maintenance tasks...');
 
@@ -107,19 +107,6 @@ export async function registerMaintenanceTasks(
       '*/5 * * * *', // Every 5 minutes
       async () => {
         await checkDataIntegrity(integrityWatchdogService, events, autoModeService);
-      }
-    );
-    taskCount++;
-  }
-
-  // Every 30 minutes: Ava Gateway heartbeat check
-  if (avaGatewayService) {
-    await scheduler.registerTask(
-      'maintenance:ava-heartbeat',
-      'Ava Gateway Heartbeat',
-      '*/30 * * * *', // Every 30 minutes
-      async () => {
-        await runAvaHeartbeat(avaGatewayService, events);
       }
     );
     taskCount++;
@@ -209,6 +196,20 @@ export async function registerMaintenanceTasks(
     );
   }
 
+  // Daily at 2am: Graphite sync (replaces standalone setTimeout/setInterval scheduler)
+  if (graphiteSyncScheduler) {
+    await scheduler.registerTask(
+      'maintenance:graphite-sync',
+      'Graphite Branch Sync',
+      '0 2 * * *', // Daily at 2:00 AM
+      async () => {
+        await graphiteSyncScheduler.runSync();
+      }
+    );
+    taskCount++;
+    logger.info('Registered Graphite sync maintenance task');
+  }
+
   logger.info(`Registered ${taskCount} maintenance tasks`);
 }
 
@@ -225,36 +226,6 @@ function getKnownProjectPaths(autoModeService: AutoModeService): string[] {
   }
 
   return Array.from(paths);
-}
-
-/**
- * Run Ava Gateway heartbeat check to evaluate board health.
- * Invokes Ava agent to analyze board state and identify issues.
- */
-async function runAvaHeartbeat(
-  avaGatewayService: AvaGatewayService,
-  events: EventEmitter
-): Promise<void> {
-  logger.info('Running Ava Gateway heartbeat...');
-
-  try {
-    const result = await avaGatewayService.runHeartbeat();
-
-    if (result.status === 'alert' && result.alerts) {
-      logger.info(`Ava heartbeat: ${result.alerts.length} alert(s) raised`);
-      events.emit('scheduler:task_completed' as Parameters<typeof events.emit>[0], {
-        taskId: 'maintenance:ava-heartbeat',
-        message: `Ava identified ${result.alerts.length} alert(s) requiring attention`,
-        alertCount: result.alerts.length,
-        alerts: result.alerts,
-      });
-    } else {
-      logger.info('Ava heartbeat: all systems nominal');
-    }
-  } catch (error) {
-    logger.error('Ava heartbeat check failed:', error);
-    // Don't throw - allow scheduler to continue
-  }
 }
 
 /**

@@ -213,6 +213,9 @@ export type {
   DiscordIntegrationConfig,
   ProjectIntegrations,
   IntegrationEventMapping,
+  // Crew loop types
+  CrewMemberConfig,
+  CrewLoopSettings,
   // Claude-compatible provider types (new)
   ApiKeySource,
   ClaudeCompatibleProviderType,
@@ -248,6 +251,8 @@ export {
   DEFAULT_DISCORD_SETTINGS,
   // Ceremony defaults
   DEFAULT_CEREMONY_SETTINGS,
+  // Crew loop defaults
+  DEFAULT_CREW_LOOP_SETTINGS,
   // Integration config defaults
   DEFAULT_LINEAR_INTEGRATION,
   DEFAULT_DISCORD_INTEGRATION,
