@@ -161,6 +161,12 @@ build_images() {
   info "Building images..."
   cd "$PROJECT_ROOT"
 
+  # Verify env file exists before each build (guards against workspace race conditions)
+  if [ ! -f "$ENV_FILE" ]; then
+    err "Missing $ENV_FILE — cannot build"
+    exit 1
+  fi
+
   info "Building server image..."
   docker compose -f "$COMPOSE_FILE" --env-file "$ENV_FILE" build server
 

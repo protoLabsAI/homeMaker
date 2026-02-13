@@ -31,11 +31,16 @@ jobs:
             cp "$ENV_SOURCE" .env
             echo "Copied .env from $ENV_SOURCE"
           else
-            echo "WARNING: No .env found at $ENV_SOURCE — build may fail"
+            echo "ERROR: No .env found at $ENV_SOURCE"
+            exit 1
           fi
 
       - name: Rebuild and restart staging
+        env:
+          ENV_SOURCE: /home/josh/dev/ava/.env
         run: |
+          # Re-copy .env if workspace cleanup removed it between steps
+          [ -f .env ] || cp "$ENV_SOURCE" .env
           ./scripts/setup-staging.sh --build
           ./scripts/setup-staging.sh --start
 
