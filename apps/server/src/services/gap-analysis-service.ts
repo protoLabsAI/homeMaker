@@ -237,7 +237,7 @@ export function analyzeGaps(
       severity: 'critical',
       title: 'No branch protection',
       current: 'Main branch unprotected',
-      target: 'Squash-only merges, required status checks',
+      target: 'Squash-only merges, required status checks, no bypass, thread resolution required',
       effort: 'small',
       featureDescription:
         'Configure branch protection for the main branch. Require pull requests with squash-only merges, required status checks (build, test, format, audit), required_review_thread_resolution (CodeRabbit threads must be resolved before merge), and dismiss stale reviews. Use gh CLI or rulesets API to apply settings.',
