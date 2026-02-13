@@ -92,7 +92,7 @@ Templates use `{{variable}}` interpolation.
 - TypeScript strict mode + composite configs
 - Testing framework (Vitest)
 - CI pipeline (GitHub Actions with build+test+format+audit)
-- Branch protection (squash-only, required checks)
+- Branch protection (squash-only, required checks, `required_review_thread_resolution: true`)
 - Package manager (pnpm)
 
 ### Recommended (full automation)
@@ -107,7 +107,7 @@ Templates use `{{variable}}` interpolation.
 - VitePress docs site (`docs/` directory with auto-generated sidebar)
 - Beads task tracker
 - Discord channels
-- CodeRabbit
+- CodeRabbit (strict profile — never use chill)
 - Umami analytics (privacy-friendly traffic tracking)
 
 ### Optional
