@@ -22,6 +22,7 @@ import { AgentStateDisplay } from './agent-state-display';
 import { WorkflowSelector } from './workflow-selector';
 import { useAppStore } from '@/store/app-store';
 import { ModelSelector, getStoredModel, storeModel, type ModelTier } from './model-selector';
+import { useLangGraphInterrupt } from './use-langgraph-interrupt';
 
 const CopilotAvailableContext = createContext(false);
 
@@ -76,6 +77,16 @@ function ProjectContextInjector() {
         : null,
   });
 
+  return null;
+}
+
+/**
+ * Registers HITL interrupt handlers with CopilotKit.
+ * Must be rendered inside CopilotKitProvider context.
+ * The hook registers tools — rendering is handled by CopilotKit's tool call system.
+ */
+function InterruptHandler() {
+  useLangGraphInterrupt();
   return null;
 }
 
@@ -182,6 +193,7 @@ export function CopilotKitProvider({ children }: { children: ReactNode }) {
             credentials="include"
           >
             <ProjectContextInjector />
+            <InterruptHandler />
             {children}
           </CKProvider>
         </ModelContext.Provider>
