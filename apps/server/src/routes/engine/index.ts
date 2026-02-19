@@ -16,6 +16,8 @@ import type { PRFeedbackService } from '../../services/pr-feedback-service.js';
 import type { ProjectService } from '../../services/project-service.js';
 import type { EventStreamBuffer } from '../../lib/event-stream-buffer.js';
 import type { ContentFlowService } from '../../services/content-flow-service.js';
+import type { SignalIntakeService } from '../../services/signal-intake-service.js';
+import type { GitWorkflowService } from '../../services/git-workflow-service.js';
 import { getAllGraphs, getGraph } from '../../lib/graph-registry.js';
 
 const logger = createLogger('EngineRoutes');
@@ -24,6 +26,8 @@ export function createEngineRoutes(
   autoModeService: AutoModeService,
   leadEngineerService: LeadEngineerService | undefined,
   prFeedbackService: PRFeedbackService,
+  signalIntakeService: SignalIntakeService,
+  gitWorkflowService: GitWorkflowService,
   eventStreamBuffer?: EventStreamBuffer,
   projectService?: ProjectService,
   contentFlowService?: ContentFlowService
@@ -52,6 +56,9 @@ export function createEngineRoutes(
         (pr) => pr.reviewState === 'changes_requested'
       ).length;
 
+      // Git workflow status
+      const gitWorkflowStatus = gitWorkflowService.getStatus();
+
       // Project lifecycle (optional — requires projectPath)
       let projectLifecycle: {
         totalProjects: number;
@@ -78,11 +85,15 @@ export function createEngineRoutes(
         }
       }
 
+      // Signal intake status
+      const signalIntakeStatus = signalIntakeService.getStatus();
+
       res.json({
         success: true,
         signalIntake: {
-          active: true,
-          description: 'Classifies incoming signals (GitHub, Linear, Discord, MCP)',
+          active: signalIntakeStatus.active,
+          signalCounts: signalIntakeStatus.signalCounts,
+          lastSignalAt: signalIntakeStatus.lastSignalAt,
         },
         autoMode: {
           running: autoModeStatus.isRunning,
@@ -102,7 +113,8 @@ export function createEngineRoutes(
           })),
         },
         gitWorkflow: {
-          description: 'Handles commit, push, PR creation, and merge after agent completion',
+          activeWorkflows: gitWorkflowStatus.activeWorkflows,
+          recentOperations: gitWorkflowStatus.recentOperations,
         },
         prFeedback: {
           trackedPRs: trackedPRs.length,
