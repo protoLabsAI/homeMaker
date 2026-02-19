@@ -1,7 +1,6 @@
 export { SortableProjectItem } from './sortable-project-item';
 export { ThemeMenuItem } from './theme-menu-item';
 export { BugReportButton } from './bug-report-button';
-export { CollapseToggleButton } from './collapse-toggle-button';
 export { AutomakerLogo } from './automaker-logo';
 export { SidebarHeader } from './sidebar-header';
 export { ProjectActions } from './project-actions';
@@ -11,3 +10,4 @@ export { SidebarFooter } from './sidebar-footer';
 export { ThemeToggleButton } from './theme-toggle-button';
 export { MobileSidebarToggle } from './mobile-sidebar-toggle';
 export { QuickActionsBar } from './quick-actions-bar';
+export { AvaPresenceButton } from './ava-presence-button';
