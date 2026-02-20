@@ -27,6 +27,8 @@ class DialogAwarePointerSensor extends PointerSensor {
   ];
 }
 import { useAppStore, Feature } from '@/store/app-store';
+import { useWorktreeStore } from '@/store/worktree-store';
+import { usePipelineStore } from '@/store/pipeline-store';
 import { useTerminalStore } from '@/store/terminal-store';
 import { useWorktreeStore } from '@/store/worktree-store';
 import { getElectronAPI } from '@/lib/electron';
@@ -106,7 +108,6 @@ export function BoardView() {
     updateFeature,
     planUseSelectedWorktreeBranch,
     addFeatureUseSelectedWorktreeBranch,
-    setPipelineConfig,
   } = useAppStore(
     useShallow((state) => ({
       currentProject: state.currentProject,
@@ -118,7 +119,6 @@ export function BoardView() {
       updateFeature: state.updateFeature,
       planUseSelectedWorktreeBranch: state.planUseSelectedWorktreeBranch,
       addFeatureUseSelectedWorktreeBranch: state.addFeatureUseSelectedWorktreeBranch,
-      setPipelineConfig: state.setPipelineConfig,
     }))
   );
 
