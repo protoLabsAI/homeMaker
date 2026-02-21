@@ -11,20 +11,12 @@
  */
 
 import { randomUUID } from 'node:crypto';
-import type {
-  EventBus,
-  EventCallback,
-  EventType,
-  Feature,
-  PipelineGateConfig,
-} from '@automaker/types';
+import type { EventBus, EventCallback, EventType } from '@automaker/types';
 import {
   DEFAULT_PIPELINE_GATES,
   GTM_SKIP_PHASES,
   PIPELINE_PHASES,
   type GateMode,
-  type PhaseGateResult,
-  type PhaseTransition,
   type PipelineBranch,
   type PipelinePhase,
   type PipelineState,
@@ -214,6 +206,7 @@ export class PipelineOrchestrator {
       phase: 'TRIAGE',
       branch,
       timestamp: now,
+      pipelineState,
     });
 
     this.events.emit('pipeline:trace-linked', {
@@ -269,6 +262,7 @@ export class PipelineOrchestrator {
       branch,
       durationMs,
       timestamp: new Date().toISOString(),
+      pipelineState,
     });
 
     // Determine next phase
@@ -316,6 +310,7 @@ export class PipelineOrchestrator {
         branch,
         gateMode,
         timestamp: now,
+        pipelineState,
       });
 
       logger.info(
@@ -358,6 +353,7 @@ export class PipelineOrchestrator {
       resolvedBy,
       action,
       timestamp: now,
+      pipelineState,
     });
 
     if (action === 'reject') {
@@ -631,6 +627,7 @@ export class PipelineOrchestrator {
       phase,
       branch: pipelineState.branch,
       timestamp: now,
+      pipelineState,
     });
 
     logger.info(`Feature ${featureId} entered phase ${phase} (${pipelineState.branch})`, {
