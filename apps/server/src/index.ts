@@ -311,6 +311,10 @@ app.use(
     skip: (req) => !requestLoggingEnabled || req.url === '/api/health',
   })
 );
+
+// Prometheus metrics middleware (must be before routes)
+import { prometheusMiddleware } from './lib/prometheus.js';
+app.use(prometheusMiddleware);
 // CORS configuration
 // When using credentials (cookies), origin cannot be '*'
 // We dynamically allow the requesting origin for local development
@@ -1350,6 +1354,10 @@ initOTEL().catch((err) => logger.warn('OTEL init failed (non-fatal):', err));
 app.use('/api/health', createHealthRoutes());
 app.use('/api/auth', createAuthRoutes());
 app.use('/api/setup', createSetupRoutes(settingsService));
+
+// Mount Prometheus metrics endpoint (unauthenticated for Prometheus scraping)
+import { createPrometheusRoute } from './routes/metrics/prometheus.js';
+app.use('/api/metrics', createPrometheusRoute());
 
 // Mount webhooks at root level (unauthenticated - uses signature verification)
 app.use('/webhooks', createWebhooksRoutes(events, settingsService));
