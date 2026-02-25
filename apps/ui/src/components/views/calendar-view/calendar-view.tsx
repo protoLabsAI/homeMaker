@@ -3,6 +3,7 @@
  *
  * Monthly calendar grid with event dots using react-day-picker.
  * Shows colored dots for events on each day, with a popover for event details.
+ * Supports creating, editing, and deleting custom events.
  */
 
 import { useState, useMemo, useCallback } from 'react';
@@ -10,11 +11,15 @@ import { DayPicker, getDefaultClassNames } from 'react-day-picker';
 import 'react-day-picker/style.css';
 import { useAppStore } from '@/store/app-store';
 import { useCalendarEvents } from './use-calendar-events';
+import { CreateEventDialog } from './create-event-dialog';
+import { EventDetailPanel } from './event-detail-panel';
 import { Popover, PopoverContent, PopoverTrigger } from '@protolabs-ai/ui/atoms';
 import { SkeletonPulse, Spinner } from '@protolabs-ai/ui/atoms';
-import { Calendar, ChevronLeft, ChevronRight, ExternalLink } from 'lucide-react';
+import { Calendar, ChevronLeft, ChevronRight, ExternalLink, Plus } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { toast } from 'sonner';
 import type { CalendarEvent, CalendarEventType } from '@protolabs-ai/types';
+import type { CreateEventInput, UpdateEventInput } from './use-calendar-events';
 
 // ============================================================================
 // Constants
@@ -120,17 +125,20 @@ function EventDot({ event }: EventDotProps) {
 interface DayEventsPopoverContentProps {
   dateStr: string;
   events: CalendarEvent[];
+  onEventClick: (event: CalendarEvent) => void;
 }
 
-function DayEventsPopoverContent({ dateStr, events }: DayEventsPopoverContentProps) {
+function DayEventsPopoverContent({ dateStr, events, onEventClick }: DayEventsPopoverContentProps) {
   return (
     <div className="space-y-1">
       <p className="text-xs font-medium text-muted-foreground mb-2">{formatDateLabel(dateStr)}</p>
       <div className="space-y-1.5 max-h-48 overflow-y-auto">
         {events.map((event) => (
-          <div
+          <button
             key={event.id}
-            className="flex items-start gap-2 rounded-md p-1.5 hover:bg-accent/50"
+            type="button"
+            onClick={() => onEventClick(event)}
+            className="flex items-start gap-2 rounded-md p-1.5 hover:bg-accent/50 w-full text-left transition-colors cursor-pointer"
           >
             <span
               className={cn(
@@ -170,7 +178,7 @@ function DayEventsPopoverContent({ dateStr, events }: DayEventsPopoverContentPro
                 </p>
               )}
             </div>
-          </div>
+          </button>
         ))}
       </div>
     </div>
@@ -220,11 +228,18 @@ export function CalendarView() {
   );
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
 
-  const { events, isLoading, error } = useCalendarEvents({
-    projectPath,
-    month: displayMonth.getMonth(),
-    year: displayMonth.getFullYear(),
-  });
+  // Dialog state
+  const [showCreateDialog, setShowCreateDialog] = useState(false);
+  const [createDefaultDate, setCreateDefaultDate] = useState<string | undefined>(undefined);
+  const [detailEvent, setDetailEvent] = useState<CalendarEvent | null>(null);
+  const [showDetailPanel, setShowDetailPanel] = useState(false);
+
+  const { events, isLoading, isMutating, error, createEvent, updateEvent, deleteEvent } =
+    useCalendarEvents({
+      projectPath,
+      month: displayMonth.getMonth(),
+      year: displayMonth.getFullYear(),
+    });
 
   const eventsByDate = useMemo(() => groupEventsByDate(events), [events]);
   const defaultClassNames = useMemo(() => getDefaultClassNames(), []);
@@ -255,6 +270,57 @@ export function CalendarView() {
     setSelectedDate((prev) => (prev === key ? null : key));
   }, []);
 
+  const handleNewEvent = useCallback(() => {
+    const today = new Date();
+    setCreateDefaultDate(today.toISOString().split('T')[0]);
+    setShowCreateDialog(true);
+  }, []);
+
+  const handleEventClick = useCallback((event: CalendarEvent) => {
+    setDetailEvent(event);
+    setShowDetailPanel(true);
+    setSelectedDate(null);
+  }, []);
+
+  const handleCreateEvent = useCallback(
+    async (input: CreateEventInput) => {
+      try {
+        await createEvent(input);
+        setShowCreateDialog(false);
+        toast.success('Event created');
+      } catch (err) {
+        toast.error(err instanceof Error ? err.message : 'Failed to create event');
+      }
+    },
+    [createEvent]
+  );
+
+  const handleUpdateEvent = useCallback(
+    async (id: string, updates: UpdateEventInput) => {
+      try {
+        await updateEvent(id, updates);
+        toast.success('Event updated');
+      } catch (err) {
+        toast.error(err instanceof Error ? err.message : 'Failed to update event');
+      }
+    },
+    [updateEvent]
+  );
+
+  const handleDeleteEvent = useCallback(
+    async (id: string) => {
+      try {
+        await deleteEvent(id);
+        setShowDetailPanel(false);
+        setDetailEvent(null);
+        toast.success('Event deleted');
+      } catch (err) {
+        toast.error(err instanceof Error ? err.message : 'Failed to delete event');
+      }
+    },
+    [deleteEvent]
+  );
+
   // No project selected state
   if (!projectPath) {
     return (
@@ -279,6 +345,14 @@ export function CalendarView() {
           )}
         </div>
         <div className="flex items-center gap-1">
+          <button
+            onClick={handleNewEvent}
+            className="rounded-md px-2.5 py-1.5 text-xs font-medium text-muted-foreground hover:bg-accent hover:text-foreground transition-colors flex items-center gap-1"
+            data-testid="new-event-button"
+          >
+            <Plus className="h-3.5 w-3.5" />
+            New Event
+          </button>
           <button
             onClick={handleToday}
             className="rounded-md px-2.5 py-1.5 text-xs font-medium text-muted-foreground hover:bg-accent hover:text-foreground transition-colors"
@@ -396,7 +470,11 @@ export function CalendarView() {
                           sideOffset={4}
                           onOpenAutoFocus={(e) => e.preventDefault()}
                         >
-                          <DayEventsPopoverContent dateStr={dateStr} events={dayEvents} />
+                          <DayEventsPopoverContent
+                            dateStr={dateStr}
+                            events={dayEvents}
+                            onEventClick={handleEventClick}
+                          />
                         </PopoverContent>
                       </Popover>
                     );
@@ -409,6 +487,25 @@ export function CalendarView() {
           </div>
         )}
       </div>
+
+      {/* Create event dialog */}
+      <CreateEventDialog
+        open={showCreateDialog}
+        onOpenChange={setShowCreateDialog}
+        onSubmit={handleCreateEvent}
+        defaultDate={createDefaultDate}
+        isMutating={isMutating}
+      />
+
+      {/* Event detail/edit panel */}
+      <EventDetailPanel
+        event={detailEvent}
+        open={showDetailPanel}
+        onOpenChange={setShowDetailPanel}
+        onUpdate={handleUpdateEvent}
+        onDelete={handleDeleteEvent}
+        isMutating={isMutating}
+      />
     </div>
   );
 }
