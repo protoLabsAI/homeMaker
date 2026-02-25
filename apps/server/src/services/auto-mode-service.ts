@@ -14,6 +14,7 @@ import { ProviderFactory } from '../providers/provider-factory.js';
 import { simpleQuery } from '../providers/simple-query-service.js';
 import { StreamObserver } from './stream-observer-service.js';
 import { getWorkflowSettings } from '../lib/settings-helpers.js';
+import { setFeatureContext } from '@protolabs-ai/error-tracking';
 
 /**
  * Error thrown when stream observer detects an agent loop.
@@ -1778,6 +1779,9 @@ export class AutoModeService {
       if (!feature) {
         throw new Error(`Feature ${featureId} not found`);
       }
+
+      // Set feature context for Sentry error tracking
+      setFeatureContext(feature);
 
       // Guard: refuse to execute features in terminal states.
       // This prevents zombie loops where done/verified features keep getting restarted
