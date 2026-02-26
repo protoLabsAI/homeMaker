@@ -54,7 +54,6 @@ import { createHITLFormRoutes } from '../routes/hitl-forms/index.js';
 import { createActionableItemsRoutes } from '../routes/actionable-items/index.js';
 import { createEventHistoryRoutes } from '../routes/event-history/index.js';
 import { createBriefingRoutes } from '../routes/briefing/index.js';
-import { createRalphRoutes } from '../routes/ralph/index.js';
 import { createSkillsRoutes } from '../routes/skills/index.js';
 import { createSchedulerRoutes } from '../routes/scheduler/index.js';
 import { createIntegrationRoutes } from '../routes/integrations/index.js';
@@ -118,7 +117,6 @@ export function registerRoutes(app: Express, services: ServiceContainer): void {
     notificationService,
     hitlFormService,
     actionableItemService,
-    ralphLoopService,
     eventHistoryService,
     briefingCursorService,
     projectService,
@@ -207,7 +205,7 @@ export function registerRoutes(app: Express, services: ServiceContainer): void {
   // Alerts webhook routes (unauthenticated - Grafana webhooks)
   app.use('/webhooks/alerts', createAlertsRoutes(settingsService, discordBotService));
   // Linear agent routes (OAuth + webhook)
-  app.use('/api/linear', createLinearRoutes(settingsService, events, featureLoader));
+  app.use('/api/linear', createLinearRoutes(settingsService, events, featureLoader, repoRoot));
   // Google Calendar OAuth + sync (unauthenticated — browser-initiated redirect flow)
   app.use(
     '/api/google-calendar',
@@ -317,7 +315,6 @@ export function registerRoutes(app: Express, services: ServiceContainer): void {
     '/api/actionable-items',
     createActionableItemsRoutes(actionableItemService, settingsService)
   );
-  app.use('/api/ralph', createRalphRoutes(ralphLoopService));
   app.use('/api/skills', createSkillsRoutes());
   app.use('/api/event-history', createEventHistoryRoutes(eventHistoryService, settingsService));
   app.use(

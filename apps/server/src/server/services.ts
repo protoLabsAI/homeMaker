@@ -27,7 +27,6 @@ import { getActionableItemService } from '../services/actionable-item-service.js
 import { ActionableItemBridgeService } from '../services/actionable-item-bridge-service.js';
 import { getEventHistoryService } from '../services/event-history-service.js';
 import { getBriefingCursorService } from '../services/briefing-cursor-service.js';
-import { RalphLoopService } from '../services/ralph-loop-service.js';
 import { getSchedulerService } from '../services/scheduler-service.js';
 import { getHealthMonitorService } from '../services/health-monitor-service.js';
 import { GraphiteSyncScheduler } from '../services/graphite-sync-scheduler.js';
@@ -83,6 +82,7 @@ import { DocsUpdateDetector } from '../services/docs-update-detector.js';
 import { HeadsdownService } from '../services/headsdown-service.js';
 import { PRDService } from '../services/prd-service.js';
 import { AgentDiscordRouter } from '../services/agent-discord-router.js';
+import { FactStoreService } from '../services/fact-store-service.js';
 
 // Services originally loaded via top-level dynamic imports — now static for proper typing
 import { ProjectLifecycleService } from '../services/project-lifecycle-service.js';
@@ -165,9 +165,6 @@ export interface ServiceContainer {
   // Ava Gateway
   avaGatewayService: ReturnType<typeof getAvaGatewayService>;
 
-  // Ralph
-  ralphLoopService: RalphLoopService;
-
   // Integration registry
   integrationRegistryService: IntegrationRegistryService;
 
@@ -218,6 +215,7 @@ export interface ServiceContainer {
   // Lead Engineer
   leadEngineerService: LeadEngineerService;
   pipelineCheckpointService: PipelineCheckpointService;
+  factStoreService: FactStoreService;
 
   // PR & worktree lifecycle
   approvalBridge: LinearApprovalBridge;
@@ -326,8 +324,6 @@ export async function createServices(dataDir: string, repoRoot: string): Promise
     settingsService,
     healthMonitorService
   );
-  const ralphLoopService = new RalphLoopService(events, autoModeService, settingsService);
-
   // Role Registry (shared agent template registry)
   const roleRegistryService = new RoleRegistryService(events);
   try {
@@ -490,6 +486,9 @@ export async function createServices(dataDir: string, repoRoot: string): Promise
   // Completion Detector Service — cascades feature done → epic → milestone → project
   const completionDetectorService = new CompletionDetectorService();
 
+  // Fact Store Service — extracts and persists structured facts from agent output
+  const factStoreService = new FactStoreService();
+
   // Lead Engineer Service — production-phase nerve center
   const leadEngineerService = new LeadEngineerService(
     events,
@@ -633,6 +632,7 @@ export async function createServices(dataDir: string, repoRoot: string): Promise
 
   // Initialize Linear Sync Service — bidirectional sync between features/projects and Linear
   linearSyncService.initialize(events, settingsService, featureLoader, projectService);
+  linearSyncService.setHITLFormService(hitlFormService);
   linearSyncService.start();
 
   // Initialize Ceremony Service
@@ -686,7 +686,6 @@ export async function createServices(dataDir: string, repoRoot: string): Promise
     knowledgeStoreService,
     escalationRouter,
     avaGatewayService,
-    ralphLoopService,
     integrationRegistryService,
     antagonisticReviewService,
     devServerService,
@@ -716,6 +715,7 @@ export async function createServices(dataDir: string, repoRoot: string): Promise
     ceremonyService,
     leadEngineerService,
     pipelineCheckpointService,
+    factStoreService,
     approvalBridge,
     intakeBridge,
     prFeedbackService,

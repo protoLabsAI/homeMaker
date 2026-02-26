@@ -3653,3 +3653,20 @@ usageStats:
 - **Problem solved:** When Cindi score is low, human needs to see the feedback in next phase (EXECUTE), but phases are decoupled
 - **Why this works:** StateContext is the shared mutable state across transitions; passing feedback via context avoids creating new return type for ReviewProcessor and keeps each processor focused on its output
 - **Trade-offs:** Implicit data flow via context (easier short-term) vs explicit contracts; less coupling vs harder to trace data flow
+
+#### [Gotcha] TypeScript Package ID deduplication causes false 'member not found' errors in git worktrees with shared node_modules. When a transitive dependency (e.g., @protolabs-ai/utils) imports an older version of a local workspace package (@protolabs-ai/types@0.4.0), TypeScript deduplicates by Package ID and reuses the first loaded instance, hiding new exports added in the worktree. (2026-02-26)
+- **Situation:** Worktree shares node_modules with main branch. Main branch has types@0.4.0 without TrajectoryFact; worktree added TrajectoryFact but TypeScript still reported 'member not found'.
+- **Root cause:** TypeScript's deduplication strategy assumes the same Package ID always refers to the same exports, which breaks when a workspace package is modified in a worktree but the main branch's cached node_modules version is stale.
+- **How to avoid:** Shared node_modules saves ~30% disk space and faster installs, but requires careful coordination: rebuilding main branch's dist/ (gitignored) to sync TypeScript's package cache across worktrees.
+
+#### [Pattern] Use `void` + `.catch()` for fire-and-forget async operations in critical paths (e.g., agent execution completion). Do not `await` or return the Promise, to prevent blocking the caller. (2026-02-26)
+- **Problem solved:** FactStoreService.extractAndSave() is called after successful agent completion. Blocking the caller would delay returning the agent result to the user.
+- **Why this works:** Fire-and-forget async allows the async operation to run in the background without blocking synchronous request completion. `.catch()` prevents unhandled rejection errors from crashing the process.
+- **Trade-offs:** Non-blocking improves UX latency, but error handling is implicit and silent—errors are logged but never returned to caller. Requires robust error logging inside the async function.
+
+### Use the main branch's gitignored dist/ as the source of truth for TypeScript compilation in worktrees, rather than creating worktree-specific builds. Copy only .ts source files to main branch, rebuild dist/, then revert source to HEAD. (2026-02-26)
+- **Context:** Need to fix TypeScript's Package ID deduplication issue without modifying tracked main branch files or creating worktree-specific node_modules.
+- **Why:** Gitignored dist/ is not tracked, so rebuilding it doesn't contaminate the main branch's git state. This allows the main branch's dist/ to reflect the worktree's new types, fixing TypeScript's package cache for both copies simultaneously.
+- **Rejected:** Creating worktree-specific node_modules would be cleaner but uses significantly more disk space. Committing dist/ to main branch would pollute git history with build artifacts.
+- **Trade-offs:** Rebuilding dist/ must happen every time the worktree modifies exported types, adding a synchronization step. But it avoids disk bloat and keeps git clean.
+- **Breaking if changed:** If dist/ is gitignored and not rebuilt, the main branch's TypeScript checks will fail for new exports. If dist/ is committed to git, merging the feature branch becomes conflict-prone.
