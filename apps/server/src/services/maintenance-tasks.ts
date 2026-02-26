@@ -1511,7 +1511,7 @@ export async function scanWorktreesForCrashRecovery(
 // ============================================================================
 
 const LINEAR_GRAPHQL_URL = 'https://api.linear.app/graphql';
-const LINEAR_DEFAULT_RETENTION_DAYS = 14;
+const LINEAR_DEFAULT_RETENTION_DAYS = 3;
 
 async function linearGql(
   token: string,

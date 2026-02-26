@@ -129,7 +129,7 @@ export interface LinearIntegrationConfig {
   intakeTriggerStates?: string[];
 
   // Closed issue cleanup
-  /** Automatically delete completed/cancelled issues older than this many days (default: 14). Set 0 to disable. */
+  /** Automatically delete completed/cancelled issues older than this many days (default: 3). Set 0 to disable. */
   closedIssueRetentionDays?: number;
 
   // API key fallback (personal API token, no OAuth required)
