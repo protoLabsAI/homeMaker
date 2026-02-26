@@ -6,8 +6,8 @@ importance: 0.7
 relatedFiles: []
 usageStats:
   loaded: 5
-  referenced: 0
-  successfulFeatures: 0
+  referenced: 1
+  successfulFeatures: 1
 ---
 # gotcha
 
