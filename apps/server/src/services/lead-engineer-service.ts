@@ -31,7 +31,10 @@ import { WorldStateBuilder } from './lead-engineer-world-state.js';
 import { ActionExecutor } from './lead-engineer-action-executor.js';
 import { CeremonyOrchestrator } from './lead-engineer-ceremonies.js';
 import { LeadEngineerSessionStore } from './lead-engineer-session-store.js';
+import { GtmExecuteProcessor } from './lead-engineer-gtm-execute-processor.js';
 import type { FeatureProcessingState, StateContext } from './lead-engineer-types.js';
+import type { AgentFactoryService } from './agent-factory-service.js';
+import { GtmReviewProcessor } from './lead-engineer-gtm-review-processor.js';
 
 export type { FeatureProcessingState, StateContext };
 export type { ProcessorServiceContext } from './lead-engineer-types.js';
@@ -58,6 +61,7 @@ export class LeadEngineerService {
   private contextFidelityService?: ContextFidelityService;
   private knowledgeStoreService?: KnowledgeStoreService;
   private trajectoryStoreService?: TrajectoryStoreService;
+  private agentFactoryService?: AgentFactoryService;
 
   private worldStateBuilder: WorldStateBuilder;
   private sessionStore: LeadEngineerSessionStore;
@@ -101,6 +105,9 @@ export class LeadEngineerService {
   }
   setPRFeedbackService(s: PRFeedbackService): void {
     this.prFeedbackService = s;
+  }
+  setAgentFactory(s: AgentFactoryService): void {
+    this.agentFactoryService = s;
   }
 
   async initialize(): Promise<void> {
@@ -299,13 +306,28 @@ export class LeadEngineerService {
         this.settingsService,
         '[LeadEngineer]'
       );
+      const isContentFeature = feature.featureType === 'content';
       const stateMachine = new FeatureStateMachine(serviceContext, {
         checkpointService: workflowSettings.pipeline.checkpointEnabled
           ? this.checkpointService
           : undefined,
         events: this.events,
-        goalGatesEnabled: workflowSettings.pipeline.goalGatesEnabled,
+        // Content features bypass PR-centric goal gates (no PR is created)
+        goalGatesEnabled: isContentFeature ? false : workflowSettings.pipeline.goalGatesEnabled,
       });
+      if (isContentFeature) {
+        stateMachine.registerProcessor('EXECUTE', new GtmExecuteProcessor());
+        logger.info(`[LeadEngineer] Content feature ${featureId} routed to GtmExecuteProcessor`);
+      }
+
+      // Route content features to GtmReviewProcessor instead of standard ReviewProcessor
+      if (feature.featureType === 'content' && this.agentFactoryService) {
+        stateMachine.registerProcessor(
+          'REVIEW',
+          new GtmReviewProcessor(serviceContext, this.agentFactoryService)
+        );
+        logger.info(`[LeadEngineer] Content feature routed to GtmReviewProcessor`, { featureId });
+      }
       const result = await stateMachine.processFeature(
         feature,
         projectPath,
