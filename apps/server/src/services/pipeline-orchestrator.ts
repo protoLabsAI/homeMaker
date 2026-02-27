@@ -323,6 +323,11 @@ export class PipelineOrchestrator {
         pipelineState,
       });
 
+      // Emit feature:verify-pending when VERIFY gate holds so consumers can act on it
+      if (nextPhase === 'VERIFY') {
+        this.events.emit('feature:verify-pending', { featureId, projectPath });
+      }
+
       logger.info(
         `Pipeline held at gate before ${nextPhase} for feature ${featureId} (mode: ${gateMode})`
       );
@@ -535,11 +540,9 @@ export class PipelineOrchestrator {
   }
 
   private async handleGtmSignal(payload: Record<string, unknown>): Promise<void> {
-    const featureId = payload.featureId as string | undefined;
-    const projectPath = payload.projectPath as string | undefined;
+    const featureId = payload.featureId as string;
+    const projectPath = payload.projectPath as string;
     const title = payload.title as string | undefined;
-
-    if (!featureId || !projectPath) return;
 
     const feature = await this.featureLoader.get(projectPath, featureId);
     if (feature && !feature.pipelineState) {
@@ -758,8 +761,9 @@ export class PipelineOrchestrator {
     // For SPEC_REVIEW, always hold (requires human review of PRD/draft)
     if (phase === 'SPEC_REVIEW') return 'hold';
 
-    // For VERIFY, check if there are known issues
-    // (Future: inspect CI results, CodeRabbit feedback, etc.)
+    // For VERIFY, always hold in review mode — requires human approval before advancing
+    if (phase === 'VERIFY') return 'hold';
+
     // Default to proceed for review gates on other phases
     return 'proceed';
   }
