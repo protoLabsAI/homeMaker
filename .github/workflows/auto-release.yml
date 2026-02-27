@@ -81,7 +81,8 @@ jobs:
       - name: Create GitHub Release
         run: |
           gh release create "v${{ steps.version.outputs.version }}" \
+            --title "v${{ steps.version.outputs.version }} Alpha" \
             --generate-notes \
-            --latest
+            --prerelease
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
