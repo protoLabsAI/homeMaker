@@ -141,6 +141,8 @@ export interface Credentials {
     google: string;
     /** OpenAI API key (for compatibility or alternative providers) */
     openai: string;
+    /** Groq API key for fast LLM inference */
+    groq?: string;
   };
   /** Webhook secrets for external integrations */
   webhookSecrets?: {
@@ -194,6 +196,8 @@ export interface FeatureFlags {
   designs: boolean;
   /** Docs view in project sidebar */
   docs: boolean;
+  /** File Editor view in project sidebar (tabbed code editor) */
+  fileEditor: boolean;
 }
 
 /** Default feature flags — all off by default, opt-in per environment */
@@ -201,6 +205,7 @@ export const DEFAULT_FEATURE_FLAGS: FeatureFlags = {
   calendar: false,
   designs: false,
   docs: false,
+  fileEditor: false,
 };
 
 export interface GlobalSettings {
@@ -246,8 +251,6 @@ export interface GlobalSettings {
   // UI State Preferences
   /** Whether sidebar is currently open */
   sidebarOpen: boolean;
-  /** Whether chat history panel is open */
-  chatHistoryOpen: boolean;
 
   // Feature Generation Defaults
   /** Max features to generate concurrently */
@@ -643,7 +646,6 @@ export const DEFAULT_GLOBAL_SETTINGS: GlobalSettings = {
   skipClaudeSetup: false,
   theme: 'dark',
   sidebarOpen: true,
-  chatHistoryOpen: false,
   maxConcurrency: DEFAULT_MAX_CONCURRENCY,
   defaultSkipTests: true,
   enableDependencyBlocking: true,
