@@ -61,7 +61,7 @@ function AgentNodeComponent({ data }: NodeProps & { data: AgentNodeData }) {
   }, [data.activeTool, lastActiveTool]);
 
   // Check if the last tool execution was a failure
-  const lastExecution = data.toolExecutions?.[data.toolExecutions.length - 1];
+  const lastExecution = data.toolExecutions?.at(-1);
   const isFailure = lastExecution?.success === false;
 
   // Display tool badge if active or fading out
