@@ -64,7 +64,9 @@ header: "Name"
 question: "What should I call you?"
 options:
   - label: "Use my system username"
-    description: "Pull from your OS account"
+    description: "Pull from your OS account via whoami"
+  - label: "I'll type my name"
+    description: "Enter a custom name below"
 ```
 
 If they pick "Use my system username", run `whoami` via Bash to get it. Otherwise they'll type a name via "Other".
@@ -75,8 +77,8 @@ If they pick "Use my system username", run `whoami` via Bash to get it. Otherwis
 header: "Role"
 question: "What best describes your work?"
 options:
-  - label: "Frontend dev"
-    description: "React, UI, components, styling"
+  - label: "Founder / CTO"
+    description: "Building and leading a product team"
   - label: "Backend dev"
     description: "APIs, databases, infrastructure"
   - label: "Fullstack dev"
