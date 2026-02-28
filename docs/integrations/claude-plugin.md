@@ -67,20 +67,26 @@ claude
 > /board
 ```
 
-That's it! You now have access to 120+ MCP tools and slash commands for managing your Kanban board directly from Claude Code.
+That's it! You now have access to ~170 MCP tools and slash commands for managing your Kanban board directly from Claude Code.
 
 ### What You Can Do
 
-| Command            | Description                          |
-| ------------------ | ------------------------------------ |
-| `/board`           | View and manage your Kanban board    |
-| `/auto-mode start` | Start autonomous feature processing  |
-| `/orchestrate`     | Manage feature dependencies          |
-| `/context`         | Manage AI agent context files        |
-| `/groom`           | Review and organize the board        |
-| `/pr-review`       | Review and manage open pull requests |
-| `/plan-project`    | Full project orchestration pipeline  |
-| `/cleanup`         | Codebase maintenance and hygiene     |
+| Command               | Description                                      |
+| --------------------- | ------------------------------------------------ |
+| `/board`              | View and manage your Kanban board                |
+| `/auto-mode`          | Start/stop autonomous feature processing         |
+| `/orchestrate`        | Manage feature dependencies                      |
+| `/context`            | Manage AI agent context files                    |
+| `/plan-project`       | Full project orchestration pipeline              |
+| `/ship`               | Stage, commit, push, create PR, auto-merge       |
+| `/headsdown`          | Deep work mode — process features autonomously   |
+| `/linear`             | Manage Linear projects, issues, and cycles       |
+| `/create-project`     | Project orchestration from research to features  |
+| `/calendar-assistant` | Calendar and scheduling operations               |
+| `/due-diligence`      | Validate approaches with evidence-based research |
+| `/deep-research`      | Research codebase before planning                |
+| `/sparc-prd`          | Create a SPARC-style PRD                         |
+| `/improve-prompts`    | Analyze and improve LLM prompts                  |
 
 See [Plugin Commands](./plugin-commands.md) for full command reference and examples.
 
@@ -193,14 +199,16 @@ You should see your Kanban board or a message to start the protoLabs server.
 Configure these in the plugin's `.env` file (`~/.claude/plugins/automaker/.env`).
 Copy `.env.example` in that directory to get started.
 
-| Variable            | Description                                                   | Default                 |
-| ------------------- | ------------------------------------------------------------- | ----------------------- |
-| `AUTOMAKER_ROOT`    | Absolute path to your local protomaker repo clone             | (required)              |
-| `AUTOMAKER_API_KEY` | API key matching the one the protoLabs server is started with | (required)              |
-| `AUTOMAKER_API_URL` | protoLabs API base URL                                        | `http://localhost:3008` |
-| `GH_TOKEN`          | GitHub token for PR operations (`gh auth token` to get it)    | (optional)              |
-| `DISCORD_BOT_TOKEN` | Discord bot token for Discord MCP tools                       | (optional)              |
-| `LINEAR_API_KEY`    | Linear API key for Linear MCP tools                           | (optional)              |
+| Variable             | Description                                                   | Default                 |
+| -------------------- | ------------------------------------------------------------- | ----------------------- |
+| `AUTOMAKER_ROOT`     | Absolute path to your local protomaker repo clone             | (required)              |
+| `AUTOMAKER_API_KEY`  | API key matching the one the protoLabs server is started with | (required)              |
+| `AUTOMAKER_API_URL`  | protoLabs API base URL                                        | `http://localhost:3008` |
+| `GH_TOKEN`           | GitHub token for PR operations (`gh auth token` to get it)    | (optional)              |
+| `DISCORD_BOT_TOKEN`  | Discord bot token for Discord MCP tools                       | (optional)              |
+| `LINEAR_API_KEY`     | Linear API key for Linear MCP tools                           | (optional)              |
+| `CONTEXT7_API_KEY`   | Context7 API key for documentation lookup                     | (optional)              |
+| `ENABLE_TOOL_SEARCH` | Tool search mode (`auto:N` to limit active tools)             | `auto:10`               |
 
 `AUTOMAKER_ROOT` is the most common cause of a new install failing silently. Without it, the plugin cannot locate the MCP server executable and no tools will be available.
 
@@ -211,39 +219,24 @@ The plugin configuration is in `packages/mcp-server/plugins/automaker/.claude-pl
 ```json
 {
   "name": "automaker",
-  "description": "protoLabs - AI Development Studio",
-  "version": "1.0.0",
+  "description": "Automaker - AI Development Studio. Manage Kanban boards, AI agents, and feature orchestration.",
+  "version": "1.1.1",
   "mcpServers": {
     "automaker": {
-      "command": "node",
-      "args": ["packages/mcp-server/dist/index.js"],
+      "command": "bash",
+      "args": ["${AUTOMAKER_ROOT}/packages/mcp-server/plugins/automaker/hooks/start-mcp.sh"],
       "env": {
         "AUTOMAKER_API_URL": "http://localhost:3008",
-        "AUTOMAKER_API_KEY": "your-api-key"
+        "AUTOMAKER_API_KEY": "${AUTOMAKER_API_KEY}",
+        "GH_TOKEN": "${GH_TOKEN}",
+        "ENABLE_TOOL_SEARCH": "auto:10"
       }
     }
   }
 }
 ```
 
-### Manual MCP Configuration
-
-If you prefer to configure MCP directly, add to `~/.claude/claude_desktop_config.json`:
-
-```json
-{
-  "mcpServers": {
-    "automaker": {
-      "command": "node",
-      "args": ["/path/to/protomaker/packages/mcp-server/dist/index.js"],
-      "env": {
-        "AUTOMAKER_API_URL": "http://localhost:3008",
-        "AUTOMAKER_API_KEY": "your-api-key"
-      }
-    }
-  }
-}
-```
+The MCP server is launched via `start-mcp.sh` which handles path resolution and env loading automatically.
 
 ## Docker Deployment
 
@@ -300,30 +293,15 @@ ALLOWED_ROOT_DIRECTORY=/home/youruser/dev
 VITE_HOSTNAME=localhost
 ```
 
-### Step 3: Update Plugin Configuration
+### Step 3: Update Plugin Environment
 
-Edit `packages/mcp-server/plugins/automaker/.claude-plugin/plugin.json` to use absolute paths:
+Set `AUTOMAKER_ROOT` in the plugin `.env` to point at your protomaker clone. The `start-mcp.sh` launcher handles path resolution from there:
 
-```json
-{
-  "name": "automaker",
-  "description": "protoLabs - AI Development Studio",
-  "version": "1.0.2",
-  "mcpServers": {
-    "automaker": {
-      "command": "node",
-      "args": ["/absolute/path/to/protomaker/packages/mcp-server/dist/index.js"],
-      "env": {
-        "AUTOMAKER_API_URL": "http://localhost:3008",
-        "AUTOMAKER_API_KEY": "your-secure-api-key",
-        "GH_TOKEN": "${GH_TOKEN}"
-      }
-    }
-  }
-}
+```bash
+PLUGIN_DIR=~/.claude/plugins/automaker
+echo "AUTOMAKER_ROOT=/absolute/path/to/protomaker" > "$PLUGIN_DIR/.env"
+echo "AUTOMAKER_API_KEY=your-secure-api-key" >> "$PLUGIN_DIR/.env"
 ```
-
-**Note:** The `args` path must be absolute, not relative.
 
 ### Step 4: Build and Start
 
@@ -468,22 +446,6 @@ git clone https://github.com/SaseQ/discord-mcp /tmp/discord-mcp
 cd /tmp/discord-mcp
 docker build --platform linux/amd64 -t discord-mcp:amd64 .
 ```
-
-## Known Issues
-
-### Recently Fixed
-
-1. **`start_agent` now uses worktrees by default** — Agents work in isolated git worktrees
-2. **`list_running_agents` endpoint** — MCP tool correctly calls `/running-agents`
-3. **Auto-create worktrees for agents** — Worktrees auto-created in `{projectPath}/.worktrees/{branch-name}`
-
-### Planned Improvements
-
-1. Auto branchName generation (server-side in `FeatureLoader.create()`)
-2. Epic UI support (progress bars, swimlanes, epic filtering)
-3. Batch feature operations
-4. Feature search/filter
-5. Enhanced error messages
 
 ## Related Documentation
 

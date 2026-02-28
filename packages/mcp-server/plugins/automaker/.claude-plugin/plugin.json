@@ -1,7 +1,7 @@
 {
   "name": "automaker",
   "description": "Automaker - AI Development Studio. Manage Kanban boards, AI agents, and feature orchestration.",
-  "version": "1.1.1",
+  "version": "0.15.3",
   "author": {
     "name": "Proto Labs AI"
   },
@@ -78,6 +78,10 @@
           {
             "type": "command",
             "command": "bash \"${CLAUDE_PLUGIN_ROOT}/hooks/auto-update-plugin.sh\""
+          },
+          {
+            "type": "command",
+            "command": "node \"${CLAUDE_PLUGIN_ROOT}/hooks/scripts/post-edit-typecheck.js\""
           }
         ]
       },
@@ -107,6 +111,14 @@
           {
             "type": "command",
             "command": "bash \"${CLAUDE_PLUGIN_ROOT}/hooks/session-end-save.sh\""
+          }
+        ]
+      },
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"${CLAUDE_PLUGIN_ROOT}/hooks/scripts/evaluate-session.js\""
           }
         ]
       }

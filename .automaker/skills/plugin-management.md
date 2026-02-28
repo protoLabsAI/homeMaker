@@ -90,9 +90,13 @@ grep "tool_name" packages/mcp-server/dist/index.js
 ## Plugin .env
 
 `packages/mcp-server/plugins/automaker/.env` — MCP plugin env vars:
-- `AUTOMAKER_ROOT` — path to project
-- `AUTOMAKER_API_KEY` — server auth key
-- `DISCORD_BOT_TOKEN` — Discord bot (used by MCP)
+- `AUTOMAKER_ROOT` — absolute path to the automaker repo clone (required, used by start-mcp.sh to locate the MCP server binary)
+- `AUTOMAKER_API_KEY` — server auth key (must match the server's key)
+- `AUTOMAKER_API_URL` — API base URL (default: `http://localhost:3008`)
+- `GH_TOKEN` — GitHub token for PR operations
+- `DISCORD_BOT_TOKEN` — Discord bot token (used by MCP)
 - `LINEAR_API_KEY` — Linear API access
+- `CONTEXT7_API_KEY` — Context7 API key for documentation lookup
+- `ENABLE_TOOL_SEARCH` — tool search mode (default: `auto:10`)
 
 This is separate from the project root `.env` which the server uses.

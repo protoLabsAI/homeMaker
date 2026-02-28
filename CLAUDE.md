@@ -430,7 +430,7 @@ claude plugin install automaker
 
 ### Available MCP Tools
 
-The MCP server exposes 135 tools organized by category:
+The MCP server exposes ~159 tools organized by category:
 
 **Feature Management:** `list_features`, `get_feature`, `create_feature`, `update_feature`, `delete_feature`, `move_feature`
 
@@ -448,7 +448,7 @@ The MCP server exposes 135 tools organized by category:
 
 **Agent Templates:** `list_agent_templates`, `get_agent_template`, `register_agent_template`, `update_agent_template`, `unregister_agent_template`, `execute_dynamic_agent`, `get_role_registry_status`
 
-**GitHub Operations:** `merge_pr`, `check_pr_status`, `resolve_review_threads`
+**GitHub Operations:** `merge_pr`, `check_pr_status`, `resolve_pr_threads`
 
 **Observability:** `langfuse_list_traces`, `langfuse_get_trace`, `langfuse_get_costs`, `langfuse_list_prompts`, `langfuse_score_trace`, `langfuse_add_to_dataset`
 
