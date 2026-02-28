@@ -1,5 +1,18 @@
 # @protolabs-ai/observability
 
+## 0.10.0
+
+### Minor Changes
+
+- ### Features
+  - createFlowModel adapter — unified LangGraph flow model creation (#1401)
+
+### Patch Changes
+
+- Updated dependencies
+  - @protolabs-ai/types@0.10.0
+  - @protolabs-ai/utils@0.10.0
+
 ## 0.9.0
 
 ### Minor Changes

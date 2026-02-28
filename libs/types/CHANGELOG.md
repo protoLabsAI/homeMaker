@@ -1,5 +1,12 @@
 # @protolabs-ai/types
 
+## 0.10.0
+
+### Minor Changes
+
+- ### Features
+  - createFlowModel adapter — unified LangGraph flow model creation (#1401)
+
 ## 0.9.0
 
 ### Minor Changes
