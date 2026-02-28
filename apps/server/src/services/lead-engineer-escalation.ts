@@ -84,7 +84,7 @@ export class EscalateProcessor implements StateProcessor {
     const maxRetriesHit = ctx.retryCount >= failureAnalysis.maxRetries;
     const needsHumanInput = !failureAnalysis.isRetryable || maxRetriesHit;
 
-    // Check featureFlags.pipeline to see if HITL is enabled
+    // Check feature flag: HITL forms only created when pipeline flag is enabled
     let hitlEnabled = false;
     if (this.serviceContext.settingsService) {
       try {
@@ -96,12 +96,14 @@ export class EscalateProcessor implements StateProcessor {
     }
 
     if (needsHumanInput && hitlEnabled && this.serviceContext.hitlFormService) {
-      // Deduplicate: skip if a pending form already exists for this feature
-      const existingForms = this.serviceContext.hitlFormService.listPending();
-      const existingForm = existingForms.find((f) => f.featureId === ctx.feature.id);
+      // Deduplication: skip if a pending form already exists for this feature
+      const existingForm = this.serviceContext.hitlFormService.getByFeatureId(
+        ctx.feature.id,
+        ctx.projectPath
+      );
       if (existingForm) {
         logger.info(
-          `[ESCALATE] Form ${existingForm.id} already exists for feature ${ctx.feature.id}, skipping`
+          `[ESCALATE] HITL form ${existingForm.id} already pending for feature ${ctx.feature.id}, skipping`
         );
       } else {
         try {
@@ -175,6 +177,10 @@ export class EscalateProcessor implements StateProcessor {
           logger.error(`[ESCALATE] Failed to create HITL form for feature ${ctx.feature.id}:`, err);
         }
       }
+    } else if (needsHumanInput && !hitlEnabled) {
+      logger.info(
+        `[ESCALATE] HITL forms disabled (featureFlags.pipeline=false), skipping form for feature ${ctx.feature.id}`
+      );
     }
 
     logger.warn(`[ESCALATE] Feature ${ctx.feature.id} moved to blocked`, {

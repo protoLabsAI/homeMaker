@@ -263,6 +263,20 @@ import { createLogger } from '../lib/logger'; // Wrong
 
 ## Key Patterns
 
+### Feature Flag Checklist
+
+Feature flags are boolean toggles that gate in-development functionality per installation. The single source of truth is `DEFAULT_FEATURE_FLAGS` in `libs/types/src/global-settings.ts`. See `docs/dev/feature-flags.md` for full detail.
+
+**`FeatureFlags` vs `WorkflowSettings`**: `FeatureFlags` are global per-install product on/off toggles stored in `data/settings.json`. `WorkflowSettings` are per-project pipeline tuning parameters (model tier, retry counts) stored in `.automaker/settings.json`. Do not conflate them.
+
+When adding a new feature flag, follow these 5 steps in order:
+
+1. Add the field to `FeatureFlags` interface in `libs/types/src/global-settings.ts` and set its default to `false` in `DEFAULT_FEATURE_FLAGS`.
+2. TypeScript will immediately error in `developer-section.tsx` — add a label and description entry to `FEATURE_FLAG_LABELS` there. The `Record<keyof FeatureFlags, ...>` type makes this a compile-time requirement.
+3. Do NOT add hardcoded defaults elsewhere. `DEFAULT_FEATURE_FLAGS` is the only source. The spread pattern in `use-settings-sync.ts` automatically propagates new flags to existing installs.
+4. Add a server-side guard wherever the feature has side effects: `const enabled = featureFlags?.yourFlag ?? false` via `settingsService.getGlobalSettings()`. Always treat `settingsService` as optional — default to `false` when absent.
+5. Add unit tests covering behavior when the flag is `false` (default) and when `true`.
+
 ### Event-Driven Architecture
 
 All server operations emit events that stream to the frontend via WebSocket. Events are created using `createEventEmitter()` from `lib/events.ts`.
