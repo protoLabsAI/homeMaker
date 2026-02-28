@@ -13,6 +13,7 @@ export interface StarterTemplate {
   features: string[];
   category: 'fullstack' | 'frontend' | 'backend' | 'ai' | 'other';
   author: string;
+  isLegacy?: boolean;
 }
 
 export const starterTemplates: StarterTemplate[] = [
@@ -73,6 +74,7 @@ export const starterTemplates: StarterTemplate[] = [
     ],
     category: 'fullstack',
     author: 'webdevcody',
+    isLegacy: true,
   },
   {
     id: 'agentic-jumpstart',
@@ -90,6 +92,7 @@ export const starterTemplates: StarterTemplate[] = [
     ],
     category: 'ai',
     author: 'webdevcody',
+    isLegacy: true,
   },
   {
     id: 'full-stack-campus',
@@ -119,6 +122,7 @@ export const starterTemplates: StarterTemplate[] = [
     ],
     category: 'fullstack',
     author: 'webdevcody',
+    isLegacy: true,
   },
 ];
 
