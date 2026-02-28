@@ -271,8 +271,6 @@ export type {
   PRMergeStrategy,
   GitWorkflowSettings,
   GitWorkflowResult,
-  // Graphite CLI types
-  GraphiteSettings,
   // Discord integration types
   DiscordSettings,
   DiscordUserDMConfig,
@@ -280,6 +278,7 @@ export type {
   CeremonySettings,
   // Project integration types
   ReactionAbility,
+  DiscordChannelSignalConfig,
   LinearIntegrationConfig,
   DiscordIntegrationConfig,
   GoogleIntegrationConfig,
@@ -329,8 +328,6 @@ export {
   EVENT_HOOK_TRIGGER_LABELS,
   // Git workflow defaults
   DEFAULT_GIT_WORKFLOW_SETTINGS,
-  // Graphite CLI defaults
-  DEFAULT_GRAPHITE_SETTINGS,
   // Discord integration defaults
   DEFAULT_DISCORD_SETTINGS,
   // Ceremony defaults
