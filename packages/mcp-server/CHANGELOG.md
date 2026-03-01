@@ -1,5 +1,36 @@
 # @protolabs-ai/mcp-server
 
+## 0.21.0
+
+### Minor Changes
+
+- ### Features
+  - add otlp http exporter + auto-instrumentation to server (#1553)
+  - headless claude subprocess tool + maintenance langgraph flow (#1551)
+  - DynamicStructuredTool wrappers and tool registry for 4 service families (#1549)
+  - migrate hardcoded maintenance tasks to automation records (#1547)
+  - automation registry REST API and scheduler wiring (#1546)
+
+  ### Bug Fixes
+  - handle single numbered items and strip prefixes in parseSteps fallback (#1562)
+  - format pre-pushed agent commits to fix prettier CI failures (#1559)
+  - add session resume rule — check worktree state before starting
+
+  ### Refactors
+  - centralize featureFlags.pipeline gate in HITLFormService.create() (#1567)
+  - fix(intake): Linear issue creation bypasses intake state gate — routes t (#1569)
+  - Fix orphaned features on worktree delete (#1568)
+  - Chain of Thought Reasoning Component (#1561)
+  - Register ceremonies as Automations + inbox event routing (#1560)
+  - AutomationService + flow node OTel instrumentation (#1555)
+  - Matt Review: M1 Phase 1 Brand + Styling Pass (#1550)
+  - Conversation Container + Prompt Input Upgrade (#1548)
+
+### Patch Changes
+
+- Updated dependencies
+  - @protolabs-ai/tools@0.21.0
+
 ## 0.20.1
 
 ### Patch Changes
