@@ -280,5 +280,34 @@ export const withSystemClient = <TBase extends Constructor<BaseHttpClient>>(Base
         updates: Record<string, unknown>
       ): Promise<{ success: boolean; error?: string }> =>
         this.post('/api/projects/update', { projectPath, projectSlug, updates }),
+      initiate: (
+        projectPath: string,
+        title: string,
+        ideaDescription: string
+      ): Promise<{
+        success: boolean;
+        linearProjectId?: string;
+        linearProjectUrl?: string;
+        duplicates?: Array<{ id: string; name: string; url: string }>;
+        localSlug?: string;
+        hasDuplicates?: boolean;
+        error?: string;
+      }> => this.post('/api/projects/lifecycle/initiate', { projectPath, title, ideaDescription }),
+      createProject: (
+        projectPath: string,
+        project: { slug: string; title: string; goal: string }
+      ): Promise<{ success: boolean; error?: string }> =>
+        this.post('/api/projects/create', { projectPath, ...project }),
+      launch: (
+        projectPath: string,
+        projectSlug: string,
+        maxConcurrency?: number
+      ): Promise<{
+        success: boolean;
+        autoModeStarted?: boolean;
+        featuresInBacklog?: number;
+        error?: string;
+      }> =>
+        this.post('/api/projects/lifecycle/launch', { projectPath, projectSlug, maxConcurrency }),
     };
   };

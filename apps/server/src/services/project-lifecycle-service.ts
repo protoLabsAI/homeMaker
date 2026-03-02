@@ -46,76 +46,89 @@ export class ProjectLifecycleService {
     title: string,
     ideaDescription: string
   ): Promise<LifecycleInitiateResult> {
-    const client = this.getLinearClient(projectPath);
-    const teamId = await client.getTeamId();
+    const localSlug = slugify(title);
+    let linearProjectId: string | undefined;
+    let linearProjectUrl: string | undefined;
 
-    // Search for duplicates
-    const existingProjects = await client.searchProjects(title);
+    // Try Linear integration (best-effort — works without Linear configured)
+    try {
+      const client = this.getLinearClient(projectPath);
+      const teamId = await client.getTeamId();
 
-    const duplicates = existingProjects.map((p) => ({
-      id: p.id,
-      name: p.name,
-      url: p.url,
-    }));
+      // Search for duplicates
+      const existingProjects = await client.searchProjects(title);
+      const duplicates = existingProjects.map((p) => ({
+        id: p.id,
+        name: p.name,
+        url: p.url,
+      }));
 
-    if (duplicates.length > 0) {
-      this.events.emit('project:lifecycle:initiated', {
-        projectPath,
-        title,
-        hasDuplicates: true,
-        duplicateCount: duplicates.length,
+      if (duplicates.length > 0) {
+        this.events.emit('project:lifecycle:initiated', {
+          projectPath,
+          title,
+          hasDuplicates: true,
+          duplicateCount: duplicates.length,
+        });
+
+        return {
+          duplicates,
+          localSlug,
+          hasDuplicates: true,
+        };
+      }
+
+      // Create Linear project
+      // Linear `description` has a 255-char limit; long content goes in `content`
+      const result = await client.createProject({
+        name: title,
+        description:
+          ideaDescription.length > 255
+            ? ideaDescription.substring(0, 252) + '...'
+            : ideaDescription,
+        content: ideaDescription.length > 255 ? ideaDescription : undefined,
+        teamIds: [teamId],
       });
 
-      return {
-        linearProjectId: '',
-        linearProjectUrl: '',
-        duplicates,
-        localSlug: slugify(title),
-        hasDuplicates: true,
-      };
+      // Set status to planned
+      await client.updateProject(result.projectId, { status: 'planned' });
+
+      linearProjectId = result.projectId;
+      linearProjectUrl = result.url || undefined;
+    } catch (error) {
+      logger.warn('Linear integration unavailable, creating local-only project:', error);
     }
 
-    // Create Linear project
-    // Linear `description` has a 255-char limit; long content goes in `content`
-    const result = await client.createProject({
-      name: title,
-      description:
-        ideaDescription.length > 255 ? ideaDescription.substring(0, 252) + '...' : ideaDescription,
-      content: ideaDescription.length > 255 ? ideaDescription : undefined,
-      teamIds: [teamId],
-    });
-
-    // Set status to planned
-    await client.updateProject(result.projectId, { status: 'planned' });
-
-    const localSlug = slugify(title);
-
-    // Create local project cache
+    // Create local project
     await this.projectService.createProject(projectPath, {
       slug: localSlug,
       title,
       goal: ideaDescription,
     });
 
-    // Update local project with Linear IDs
-    await this.projectService.updateProject(projectPath, localSlug, {
-      linearProjectId: result.projectId,
-      linearProjectUrl: result.url,
-    });
+    // Update local project with Linear IDs if available
+    if (linearProjectId) {
+      await this.projectService.updateProject(projectPath, localSlug, {
+        linearProjectId,
+        linearProjectUrl,
+      });
+    }
 
     this.events.emit('project:lifecycle:initiated', {
       projectPath,
       slug: localSlug,
-      linearProjectId: result.projectId,
+      linearProjectId,
       title,
       hasDuplicates: false,
     });
 
-    logger.info(`Initiated project: ${title} → Linear ${result.projectId}`);
+    logger.info(
+      `Initiated project: ${title}${linearProjectId ? ` → Linear ${linearProjectId}` : ' (local-only)'}`
+    );
 
     return {
-      linearProjectId: result.projectId,
-      linearProjectUrl: result.url || '',
+      linearProjectId,
+      linearProjectUrl,
       duplicates: [],
       localSlug,
       hasDuplicates: false,
@@ -319,12 +332,10 @@ export class ProjectLifecycleService {
     } else if (hasPrd && !hasMilestones) {
       phase = 'idea-approved';
       nextActions.push('approve_project_prd');
-    } else if (project.linearProjectId) {
+    } else {
+      // Project exists but has no PRD yet — suggest generating one
       phase = 'idea';
       nextActions.push('generate_project_prd');
-    } else {
-      phase = 'idea';
-      nextActions.push('initiate_project');
     }
 
     return {

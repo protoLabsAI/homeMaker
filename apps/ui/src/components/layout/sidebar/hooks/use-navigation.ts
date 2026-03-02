@@ -16,6 +16,7 @@ import {
   Palette,
   CalendarDays,
   FolderOpen,
+  FolderKanban,
   MessageCircle,
 } from 'lucide-react';
 import type { NavSection, NavItem } from '../types';
@@ -59,6 +60,7 @@ interface UseNavigationProps {
   hideDesigns: boolean;
   hideDocs: boolean;
   hideFileEditor: boolean;
+  hideProjects: boolean;
   hideSystemView: boolean;
   currentProject: Project | null;
   projects: Project[];
@@ -88,6 +90,7 @@ export function useNavigation({
   hideDesigns,
   hideDocs,
   hideFileEditor,
+  hideProjects,
   hideSystemView,
   currentProject,
   projects,
@@ -149,6 +152,11 @@ export function useNavigation({
         shortcut: shortcuts.memory,
       },
       {
+        id: 'projects',
+        label: 'Projects',
+        icon: FolderKanban,
+      },
+      {
         id: 'docs',
         label: 'Docs',
         icon: Library,
@@ -165,6 +173,9 @@ export function useNavigation({
         return false;
       }
       if (item.id === 'docs' && hideDocs) {
+        return false;
+      }
+      if (item.id === 'projects' && hideProjects) {
         return false;
       }
       return true;
@@ -306,6 +317,7 @@ export function useNavigation({
     hideDesigns,
     hideDocs,
     hideFileEditor,
+    hideProjects,
     hideSystemView,
     hasGitHubRemote,
     unviewedValidationsCount,

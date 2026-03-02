@@ -207,6 +207,8 @@ export interface FeatureFlags {
   pipeline: boolean;
   /** System View — network/dependency graph view in the project sidebar */
   systemView: boolean;
+  /** Projects view — in-app project lifecycle management (PRDs, milestones, phases) */
+  projects: boolean;
   /**
    * User Presence Detection — enables sensor-driven presence awareness.
    * Built-in sensors: tab visibility, user activity (idle/afk), connectivity.
@@ -223,6 +225,7 @@ export const DEFAULT_FEATURE_FLAGS: FeatureFlags = {
   docs: false,
   fileEditor: false,
   pipeline: false,
+  projects: false,
   systemView: false,
   userPresenceDetection: false,
 };

@@ -260,6 +260,7 @@ export function Sidebar() {
     hideDesigns: !featureFlags.designs,
     hideDocs: !featureFlags.docs,
     hideFileEditor: !featureFlags.fileEditor,
+    hideProjects: !featureFlags.projects,
     hideSystemView: !featureFlags.systemView,
     currentProject,
     projects,
