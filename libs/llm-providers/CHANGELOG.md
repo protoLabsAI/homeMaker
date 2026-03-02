@@ -1,5 +1,12 @@
 # @protolabs-ai/llm-providers
 
+## 0.15.8
+
+### Patch Changes
+
+- Updated dependencies
+  - @protolabs-ai/types@0.24.0
+
 ## 0.15.7
 
 ### Patch Changes
