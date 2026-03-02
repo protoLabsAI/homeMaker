@@ -62,25 +62,9 @@ The `Read`, `Write`, `Edit`, `Grep`, and `Glob` tools work fine with absolute pa
 
 ## Prettier in Worktrees
 
-Running `prettier` in a worktree directory fails to pick up the root `.prettierignore` (which references paths relative to the project root). This causes prettier to try formatting files it should skip.
+Prettier formatting in worktrees is handled automatically by the server (`worktree-recovery-service.ts` and `git-workflow-service.ts`). They use `node "${projectPath}/node_modules/.bin/prettier" --ignore-path /dev/null` to bypass `.prettierignore` masking and avoid `npx` resolution failures in worktrees (no `node_modules/`).
 
-### ✅ Required Fix: `--ignore-path /dev/null`
-
-```bash
-# CORRECT: disable .prettierignore lookup when formatting worktree files
-cd /Users/kj/dev/automaker/.worktrees/my-branch && \
-  npx prettier --write --ignore-path /dev/null src/ && \
-  cd /Users/kj/dev/automaker
-
-# Format a single file in a worktree
-cd /Users/kj/dev/automaker/.worktrees/my-branch && \
-  npx prettier --write --ignore-path /dev/null src/server/routes/foo.ts && \
-  cd /Users/kj/dev/automaker
-```
-
-> **Why `--ignore-path /dev/null`?** The `.prettierignore` in the main repo has paths like `dist/`, `node_modules/`, `.automaker/`. When prettier runs from the worktree directory, those relative paths may resolve differently or fail. Using `/dev/null` skips the ignore file entirely — format exactly what you specify.
-
-> **Always `cd` back** to `/Users/kj/dev/automaker` immediately after running prettier in a worktree.
+For manual fixes: `npx prettier --write <file> --ignore-path /dev/null`.
 
 ---
 
@@ -192,7 +176,7 @@ git worktree remove --force .worktrees/feature-foo             # force (uncommit
 | Anti-Pattern | Consequence | Fix |
 |---|---|---|
 | `cd .worktrees/my-branch` | Breaks Bash permanently if worktree removed | Use `git -C <path>` or absolute paths |
-| `npx prettier --write .` from worktree dir | Wrong ignore paths; may format dist/ or .automaker/ | Add `--ignore-path /dev/null` |
+| `npx prettier --write .` from worktree dir | Wrong ignore paths; `npx` fails silently (no node_modules) | Server handles this automatically now; manual: `npx prettier --write <file> --ignore-path /dev/null` |
 | Starting agent without rebase | Mid-feature merge conflicts, wasted work | Always `fetch` + `rebase origin/dev` first |
 | `git worktree remove` with uncommitted work | Data loss | Check `git status --short` first |
 | `git checkout <branch>` in main repo | Modifies `.automaker/features/` on disk → data loss | Use worktrees or `git -C <wt> checkout` |

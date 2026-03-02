@@ -232,23 +232,9 @@ git add <your code files>
 HUSKY=0 git commit -m "feat: ..."
 ```
 
-## CRITICAL: Prettier Formatting — Always Pass `--ignore-path`
+## Prettier Formatting
 
-Prettier 3.x respects `.gitignore` by default. Since `.worktrees/` is gitignored, running `npx prettier --write` (without `--ignore-path`) silently skips ALL files in `.worktrees/` — no formatting, no error. This causes CI format failures on every agent PR.
-
-**Always use this exact command when formatting manually:**
-
-```bash
-npx prettier --ignore-path /dev/null --write <files>
-```
-
-Or to check before committing:
-
-```bash
-npm run format:check
-```
-
-**Never use** `prettier --write` without `--ignore-path /dev/null` in a worktree context.
+Prettier formatting in worktrees is handled automatically by the server's git-workflow and worktree-recovery services — they use the main repo's prettier binary with `--ignore-path /dev/null`. If you need to format manually in a worktree, use: `npx prettier --ignore-path /dev/null --write <files>`.
 
 ## CRITICAL: TypeScript Validation — Run Before Commit
 

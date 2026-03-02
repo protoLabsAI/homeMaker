@@ -49,14 +49,7 @@ gh api graphql -f query='mutation { resolveReviewThread(input: {threadId: "<id>"
 
 ## Format Failures
 
-Agents consistently produce prettier violations. CI format check runs against the ENTIRE codebase, not just PR changes.
-
-**Fix from inside the worktree:**
-```bash
-cd <worktree-path> && npx prettier --write $(git diff --name-only --diff-filter=ACMR) && cd /Users/kj/dev/automaker
-```
-
-**Never run prettier from outside the worktree** — config resolution differences cause false passes.
+Prettier formatting in worktrees is now handled automatically by the server. If a format failure still slips through CI, fix manually: `npx prettier --write <file> --ignore-path /dev/null`.
 
 ## Pre-Existing Format Violations
 

@@ -289,7 +289,8 @@ export class GitWorkflowService {
   async saveAgentProgress(
     workDir: string,
     feature: Feature,
-    branchName: string
+    branchName: string,
+    projectPath?: string
   ): Promise<string | null> {
     try {
       // Check for uncommitted changes
@@ -311,6 +312,7 @@ export class GitWorkflowService {
       await execAsync(buildGitAddCommand(workDir), { cwd: workDir, env: execEnv });
 
       // Format staged files before committing
+      // Use the main repo's prettier binary — worktrees have no node_modules/
       try {
         const { stdout: stagedFiles } = await execAsync(
           "git diff --cached --name-only --diff-filter=ACMR -- '*.ts' '*.tsx' '*.js' '*.jsx' '*.json' '*.css' '*.md'",
@@ -318,8 +320,10 @@ export class GitWorkflowService {
         );
         const files = stagedFiles.trim().split('\n').filter(Boolean);
         if (files.length > 0) {
+          const repoRoot = projectPath || workDir;
+          const prettierBin = path.join(repoRoot, 'node_modules/.bin/prettier');
           await execAsync(
-            `npx prettier --ignore-path /dev/null --write ${files.map((f) => `"${f}"`).join(' ')}`,
+            `node "${prettierBin}" --ignore-path /dev/null --write ${files.map((f) => `"${f}"`).join(' ')}`,
             { cwd: workDir, env: execEnv }
           );
           await execAsync(buildGitAddCommand(workDir), { cwd: workDir, env: execEnv });

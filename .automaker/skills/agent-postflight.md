@@ -25,15 +25,9 @@ If uncommitted changes exist: review diff, then proceed to step 2.
 
 **Why:** When agents hit turn limits, changes sit uncommitted in the worktree. This work is lost if the worktree is cleaned up.
 
-## 2. Programmatically Format (MANDATORY)
+## 2. Formatting (Automatic)
 
-```bash
-cd <worktree-path> && npx prettier --write $(git diff --name-only --diff-filter=ACMR)
-```
-
-**CRITICAL:** Always run from INSIDE the worktree. Running prettier from outside gives false passes due to config resolution differences. Always `--write`, never just `--check`.
-
-**Why:** Agents consistently produce format violations. CI will fail. Fix programmatically — don't just report.
+Prettier formatting is handled automatically by the server's worktree-recovery and git-workflow services. They use the main repo's prettier binary with `--ignore-path /dev/null`. Manual intervention is no longer needed for most cases. If you do need to fix manually: `npx prettier --write <file> --ignore-path /dev/null`.
 
 ## 3. Commit, Push, Create PR
 

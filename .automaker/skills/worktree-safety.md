@@ -33,9 +33,8 @@ git -C /path/to/.worktrees/branch-name log --oneline -5
 git -C /path/to/.worktrees/branch-name status --short
 git -C /path/to/.worktrees/branch-name diff
 
-# For npm/prettier that MUST run inside worktree dir:
-cd /absolute/path/to/.worktrees/branch-name && npx prettier --write . && cd /Users/kj/dev/automaker
-# Always cd BACK immediately after
+# Prettier in worktrees is handled automatically by the server.
+# If manual fix needed: npx prettier --write <file> --ignore-path /dev/null
 ```
 
 ## NEVER Checkout Branches in Main Repo
