@@ -150,8 +150,17 @@ UIMessage.parts[]
 | `ToolInvocationPart`  | `tool-invocation-part.tsx`  | Single tool card, registry lookup, state badges      |
 | `TaskBlock`           | `task-block.tsx`            | Multi-tool grouping, collapsible, inferred title     |
 | `ConfirmationCard`    | `confirmation-card.tsx`     | HITL Approve/Reject inline UI                        |
+| `InlineFormCard`      | `inline-form-card.tsx`      | Inline HITL form rendered from JSON Schema           |
 | `InlineCitation`      | `inline-citation.tsx`       | Numbered badge with hover popover                    |
 | `MessageSources`      | `message-sources.tsx`       | Sources list below message                           |
+| `MessageActions`      | `message-actions.tsx`       | Copy, retry, and action buttons per message          |
+| `PlanPart`            | `plan-part.tsx`             | Structured plan display within messages              |
+| `ReasoningPart`       | `reasoning-part.tsx`        | Simple reasoning wrapper                             |
+| `Loader`              | `loader.tsx`                | Typing/loading indicator                             |
+| `Shimmer`             | `shimmer.tsx`               | Skeleton loading animation for streaming             |
+| `Suggestion`          | `suggestion.tsx`            | Empty state suggestion chips                         |
+| `QueueView`           | `queue-view.tsx`            | Agent queue visualization                            |
+| `PromptInputContext`  | `prompt-input-context.tsx`  | Input state context provider                         |
 | `toolResultRegistry`  | `tool-result-registry.tsx`  | Maps tool names to custom React renderers            |
 
 ### Tool Result Cards
@@ -254,6 +263,15 @@ experimental_thinking: {
 
 The `ChainOfThought` component renders reasoning steps with spinner/check icons, auto-opens during streaming, and collapses to "Thought for Xs" when complete.
 
+## Navigation
+
+The Ava chat is accessible from multiple entry points:
+
+- **Desktop sidebar**: "Ava Chat" nav item (gated by `featureFlags.avaChat`) navigates to `/chat`
+- **Mobile bottom nav**: "Chat" tab with `MessageCircle` icon (gated by `featureFlags.avaChat`)
+- **Keyboard shortcut**: `Cmd+K` / `Ctrl+K` opens the chat modal overlay
+- **Direct route**: `/chat` renders `ChatOverlayContent` full-screen
+
 ## File Map
 
 ```
@@ -269,11 +287,17 @@ libs/ui/src/ai/
   tool-result-registry.tsx          # Tool name -> component map
   task-block.tsx                    # Multi-tool grouping
   confirmation-card.tsx             # HITL approve/reject
+  inline-form-card.tsx              # Inline HITL form (JSON Schema)
   inline-citation.tsx               # Citation badges
   message-sources.tsx               # Sources section
+  message-actions.tsx               # Per-message action buttons
+  plan-part.tsx                     # Structured plan display
   reasoning-part.tsx                # Simple reasoning wrapper
   prompt-input-context.tsx          # Input state context
   suggestion.tsx                    # Empty state suggestions
+  loader.tsx                        # Typing/loading indicator
+  shimmer.tsx                       # Skeleton loading animation
+  queue-view.tsx                    # Agent queue visualization
   tool-results/
     board-summary-card.tsx
     feature-list-card.tsx
@@ -284,6 +308,9 @@ libs/ui/src/ai/
     agent-output-card.tsx
     auto-mode-status-card.tsx
     execution-order-card.tsx
+    artifact-card.tsx               # Generated artifact display
+    image-card.tsx                  # Generated image display
+    web-preview-card.tsx            # HTML preview iframe
 
 apps/server/src/routes/chat/
   index.ts                          # POST /api/chat endpoint
@@ -291,6 +318,14 @@ apps/server/src/routes/chat/
   ava-config.ts                     # Per-project config load/save
   personas.ts                       # System prompt builder
   sitrep.ts                         # Live board state injection
+
+apps/ui/src/routes/
+  chat.tsx                          # Full-screen /chat route (featureFlags.avaChat)
+
+apps/ui/src/components/layout/
+  chat-modal.tsx                    # Cmd+K chat modal overlay
+  mobile-bottom-nav.tsx             # Mobile Chat tab (featureFlags.avaChat)
+  sidebar/hooks/use-navigation.ts   # Desktop sidebar Chat nav item
 
 apps/ui/src/components/views/chat-overlay/
   chat-overlay-view.tsx             # Top-level overlay (Electron bridge)
