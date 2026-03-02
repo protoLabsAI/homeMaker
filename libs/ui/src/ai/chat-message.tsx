@@ -29,6 +29,8 @@ import { MessageSources } from './message-sources.js';
 import type { Citation } from './inline-citation.js';
 import { AILoader } from './loader.js';
 import { MessageActions } from './message-actions.js';
+import { MessageBranches } from './message-branches.js';
+import { PlanPart, extractPlanData, type PlanData } from './plan-part.js';
 
 const messageVariants = cva('flex gap-3 px-4 py-2', {
   variants: {
@@ -228,6 +230,22 @@ function extractCitations(parts: Array<Record<string, unknown>>): Citation[] {
 }
 
 /**
+ * Extract a plan from message parts.
+ * The server writes these as `data-plan` UIMessageChunks; the AI SDK
+ * surfaces them in the message's parts array as `{ type: 'data-plan', data: PlanData }`.
+ * Returns the first plan found, or null if none.
+ */
+function extractPlan(parts: Array<Record<string, unknown>>): PlanData | null {
+  for (const part of parts) {
+    if (part.type === 'data-plan') {
+      const plan = extractPlanData(part.data);
+      if (plan) return plan;
+    }
+  }
+  return null;
+}
+
+/**
  * Extract plain text from a group's 'other' segments (text parts only).
  * Used for the copy-to-clipboard action in MessageActions.
  */
@@ -284,8 +302,15 @@ function MessagePartRenderer({
     );
   }
 
+  // data-plan — render the plan card inline where it appears in the message.
+  if (type === 'data-plan') {
+    const plan = extractPlanData(part.data);
+    if (!plan) return null;
+    return <PlanPart plan={plan} />;
+  }
+
   // data-citations are consumed by extractCitations() — not rendered inline.
-  // source-document, file, data-* — render nothing.
+  // source-document, file, other data-* — render nothing.
   return null;
 }
 
@@ -316,6 +341,10 @@ export function ChatMessage({
   onRegenerate,
   onThumbsUp,
   onThumbsDown,
+  branchIndex,
+  branchCount,
+  onPreviousBranch,
+  onNextBranch,
 }: {
   message: UIMessage;
   className?: string;
@@ -329,6 +358,14 @@ export function ChatMessage({
   onThumbsUp?: () => void;
   /** Called when the user clicks Thumbs Down on an assistant message. */
   onThumbsDown?: () => void;
+  /** Zero-based index of the currently shown branch variant (for assistant messages). */
+  branchIndex?: number;
+  /** Total number of branch variants. When > 1, MessageBranches nav renders. */
+  branchCount?: number;
+  /** Called when the user clicks the Previous branch chevron. */
+  onPreviousBranch?: () => void;
+  /** Called when the user clicks the Next branch chevron. */
+  onNextBranch?: () => void;
 } & Partial<VariantProps<typeof messageVariants>>) {
   const role = message.role as MessageRole;
   const parts = message.parts ?? [];
@@ -359,7 +396,8 @@ export function ChatMessage({
       p.type === 'reasoning' ||
       p.type === 'step-start' ||
       isToolPart(p) ||
-      p.type === 'source-url'
+      p.type === 'source-url' ||
+      p.type === 'data-plan'
   );
   if (!hasContent) return null;
 
@@ -439,14 +477,26 @@ export function ChatMessage({
                 {groupIdx === stepGroups.length - 1 && <MessageSources citations={citations} />}
               </ChatMessageBubble>
 
-              {/* MessageActions toolbar — assistant bubbles only */}
+              {/* MessageActions + branch navigation — assistant bubbles only */}
               {role === 'assistant' && (
-                <MessageActions
-                  text={bubbleText}
-                  onRegenerate={onRegenerate}
-                  onFeedback={onFeedback}
-                  className="mt-0.5 ml-1"
-                />
+                <div className="mt-0.5 ml-1 flex items-center gap-1">
+                  <MessageActions
+                    text={bubbleText}
+                    onRegenerate={onRegenerate}
+                    onFeedback={onFeedback}
+                  />
+                  {branchCount !== undefined &&
+                    branchCount > 1 &&
+                    onPreviousBranch &&
+                    onNextBranch && (
+                      <MessageBranches
+                        branchIndex={branchIndex ?? 0}
+                        branchCount={branchCount}
+                        onPrevious={onPreviousBranch}
+                        onNext={onNextBranch}
+                      />
+                    )}
+                </div>
               )}
             </div>
           </div>

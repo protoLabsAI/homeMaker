@@ -7,6 +7,7 @@
  */
 
 import { exec, execFile } from 'child_process';
+import path from 'path';
 import { promisify } from 'util';
 import { createLogger } from '@protolabs-ai/utils';
 import type { Feature } from '@protolabs-ai/types';
@@ -72,10 +73,12 @@ export interface WorktreeRecoveryResult {
  *
  * @param feature - The feature being processed
  * @param worktreePath - Absolute path to the worktree
+ * @param projectPath - Absolute path to the main project root (for resolving prettier binary)
  */
 export async function checkAndRecoverUncommittedWork(
   feature: Feature,
-  worktreePath: string
+  worktreePath: string,
+  projectPath: string
 ): Promise<WorktreeRecoveryResult> {
   const result: WorktreeRecoveryResult = { detected: false, recovered: false };
 
@@ -106,6 +109,7 @@ export async function checkAndRecoverUncommittedWork(
     logger.debug(`[PostAgentHook] Uncommitted changes:\n${statusOutput}`);
 
     // Step 1: Format changed files with prettier (non-fatal)
+    // Use the main repo's prettier binary — worktrees have no node_modules/
     try {
       const { stdout: diffOutput } = await execAsync(
         "git diff HEAD --name-only --diff-filter=ACMR -- '*.ts' '*.tsx' '*.js' '*.jsx' '*.json' '*.css' '*.md'",
@@ -113,8 +117,9 @@ export async function checkAndRecoverUncommittedWork(
       );
       const files = diffOutput.trim().split('\n').filter(Boolean);
       if (files.length > 0) {
+        const prettierBin = path.join(projectPath, 'node_modules/.bin/prettier');
         await execAsync(
-          `npx prettier --ignore-path /dev/null --write ${files.map((f) => `"${f}"`).join(' ')}`,
+          `node "${prettierBin}" --ignore-path /dev/null --write ${files.map((f) => `"${f}"`).join(' ')}`,
           { cwd: worktreePath, env: execEnv }
         );
       }

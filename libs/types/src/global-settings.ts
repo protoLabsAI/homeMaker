@@ -45,7 +45,7 @@ import type {
 } from './provider-settings.js';
 import type { EventHook } from './event-settings.js';
 import type { DiscordSettings, ErrorTrackingSettings } from './integration-settings.js';
-import type { MaintenanceSettings, ProjectRef, TrashedProjectRef } from './project-settings.js';
+import type { ProjectRef, TrashedProjectRef } from './project-settings.js';
 import type { TrustBoundaryConfig } from './workflow-settings.js';
 import type { PromotionConfig } from './promotion.js';
 
@@ -207,6 +207,14 @@ export interface FeatureFlags {
   pipeline: boolean;
   /** System View — network/dependency graph view in the project sidebar */
   systemView: boolean;
+  /** Projects view — in-app project lifecycle management (PRDs, milestones, phases) */
+  projects: boolean;
+  /**
+   * User Presence Detection — enables sensor-driven presence awareness.
+   * Built-in sensors: tab visibility, user activity (idle/afk), connectivity.
+   * Reports readings to POST /api/sensors/report. Off by default.
+   */
+  userPresenceDetection: boolean;
 }
 
 /** Default feature flags — all off by default, opt-in per environment */
@@ -217,7 +225,9 @@ export const DEFAULT_FEATURE_FLAGS: FeatureFlags = {
   docs: false,
   fileEditor: false,
   pipeline: false,
+  projects: false,
   systemView: false,
+  userPresenceDetection: false,
 };
 
 export interface GlobalSettings {
@@ -267,6 +277,8 @@ export interface GlobalSettings {
   // Feature Generation Defaults
   /** Max features to generate concurrently */
   maxConcurrency: number;
+  /** User-configurable system-wide maximum concurrent agents (overrides env var default) */
+  systemMaxConcurrency?: number;
   /** Default: skip tests during feature generation */
   defaultSkipTests: boolean;
   /** Default: enable dependency blocking */
@@ -609,12 +621,6 @@ export interface GlobalSettings {
   prOwnershipStaleTtlHours?: number;
 
   /**
-   * Maintenance scheduler settings.
-   * @see MaintenanceSettings in project-settings.ts
-   */
-  maintenance?: MaintenanceSettings;
-
-  /**
    * Hivemind mesh configuration for multi-instance coordination.
    * @see HivemindConfig
    */
@@ -654,6 +660,7 @@ export const DEFAULT_GLOBAL_SETTINGS: GlobalSettings = {
   theme: 'dark',
   sidebarOpen: true,
   maxConcurrency: DEFAULT_MAX_CONCURRENCY,
+  systemMaxConcurrency: 10,
   defaultSkipTests: true,
   enableDependencyBlocking: true,
   skipVerificationInAutoMode: false,

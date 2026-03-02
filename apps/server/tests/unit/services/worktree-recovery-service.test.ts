@@ -37,7 +37,11 @@ describe('worktree-recovery-service', () => {
       // git status --short returns empty
       mockExec.mockResolvedValueOnce({ stdout: '', stderr: '' });
 
-      const result = await checkAndRecoverUncommittedWork(baseFeature, '/mock/worktree');
+      const result = await checkAndRecoverUncommittedWork(
+        baseFeature,
+        '/mock/worktree',
+        '/fake/project'
+      );
 
       expect(result.detected).toBe(false);
       expect(result.recovered).toBe(false);
@@ -49,7 +53,11 @@ describe('worktree-recovery-service', () => {
       mockExec.mockResolvedValueOnce({ stdout: 'M  src/index.ts\n', stderr: '' });
 
       const featureNoBranch: Feature = { ...baseFeature, branchName: undefined };
-      const result = await checkAndRecoverUncommittedWork(featureNoBranch, '/mock/worktree');
+      const result = await checkAndRecoverUncommittedWork(
+        featureNoBranch,
+        '/mock/worktree',
+        '/fake/project'
+      );
 
       expect(result.detected).toBe(true);
       expect(result.recovered).toBe(false);
@@ -81,7 +89,11 @@ describe('worktree-recovery-service', () => {
         stderr: '',
       });
 
-      const result = await checkAndRecoverUncommittedWork(baseFeature, '/mock/worktree');
+      const result = await checkAndRecoverUncommittedWork(
+        baseFeature,
+        '/mock/worktree',
+        '/fake/project'
+      );
 
       expect(result.detected).toBe(true);
       expect(result.recovered).toBe(true);
@@ -103,7 +115,11 @@ describe('worktree-recovery-service', () => {
       // git commit (execFile) fails
       mockExecFile.mockRejectedValueOnce(new Error('nothing to commit, working tree clean'));
 
-      const result = await checkAndRecoverUncommittedWork(baseFeature, '/mock/worktree');
+      const result = await checkAndRecoverUncommittedWork(
+        baseFeature,
+        '/mock/worktree',
+        '/fake/project'
+      );
 
       expect(result.detected).toBe(true);
       expect(result.recovered).toBe(false);
@@ -128,7 +144,11 @@ describe('worktree-recovery-service', () => {
       // git push fails
       mockExec.mockRejectedValueOnce(new Error('remote: Permission denied'));
 
-      const result = await checkAndRecoverUncommittedWork(baseFeature, '/mock/worktree');
+      const result = await checkAndRecoverUncommittedWork(
+        baseFeature,
+        '/mock/worktree',
+        '/fake/project'
+      );
 
       expect(result.detected).toBe(true);
       expect(result.recovered).toBe(false);
@@ -160,7 +180,11 @@ describe('worktree-recovery-service', () => {
         stderr: '',
       });
 
-      const result = await checkAndRecoverUncommittedWork(baseFeature, '/mock/worktree');
+      const result = await checkAndRecoverUncommittedWork(
+        baseFeature,
+        '/mock/worktree',
+        '/fake/project'
+      );
 
       // Recovery should succeed even though formatting failed
       expect(result.detected).toBe(true);
@@ -197,7 +221,11 @@ describe('worktree-recovery-service', () => {
         stderr: '',
       });
 
-      const result = await checkAndRecoverUncommittedWork(baseFeature, '/mock/worktree');
+      const result = await checkAndRecoverUncommittedWork(
+        baseFeature,
+        '/mock/worktree',
+        '/fake/project'
+      );
 
       expect(result.detected).toBe(true);
       expect(result.recovered).toBe(true);
@@ -229,7 +257,11 @@ describe('worktree-recovery-service', () => {
         stderr: '',
       });
 
-      const result = await checkAndRecoverUncommittedWork(baseFeature, '/mock/worktree');
+      const result = await checkAndRecoverUncommittedWork(
+        baseFeature,
+        '/mock/worktree',
+        '/fake/project'
+      );
 
       expect(result.detected).toBe(true);
       expect(result.recovered).toBe(true);

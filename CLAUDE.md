@@ -59,17 +59,8 @@ git -C /path/to/.worktrees/<branch> commit --no-verify -m "<feat/fix/refactor>: 
 
 Then use `create_pr_from_worktree` targeting `dev`, move feature to `review`, enable auto-merge on the PR.
 
-**Prettier check fails in CI but passes locally (worktree path masking):**
-Files in `.worktrees/` are excluded by `.prettierignore`. When you run `npx prettier --check` with an absolute path like `/path/to/.worktrees/branch/file.ts`, prettier silently skips the file due to the ignore pattern — reporting success even if the file has issues.
-
-To correctly check a file in a worktree, bypass the ignore file:
-
-```bash
-npx prettier --check /abs/path/to/worktree/file.ts --ignore-path /dev/null
-npx prettier --write /abs/path/to/worktree/file.ts --ignore-path /dev/null
-```
-
-Then commit and push the fix.
+**Prettier check fails in CI (worktree path masking):**
+Fixed at the source — `worktree-recovery-service.ts` and `git-workflow-service.ts` now use `node "${projectPath}/node_modules/.bin/prettier" --ignore-path /dev/null` instead of `npx prettier`. If you still hit this manually, use: `npx prettier --write <file> --ignore-path /dev/null`.
 
 **"has existing context, resuming" → agent exits immediately (stale context trap):**
 Server logs show: `Feature <id> has existing context, resuming instead of starting fresh` followed immediately by `Feature <id> execution ended, cleaning up runningFeatures`. The previous run left an `agent-output.md` in `.automaker/features/<id>/`. The server tries to resume the dead Claude session, handshake fails silently, agent exits.
@@ -168,7 +159,6 @@ automaker/
     ├── git-utils/    # Git operations & worktree management
     ├── tools/        # Unified tool definition and registry system
     ├── flows/        # LangGraph state graph primitives & flow orchestration
-    ├── llm-providers/# Multi-provider LLM abstraction layer
     ├── observability/# Langfuse tracing, prompt versioning & cost tracking
     └── ui/           # Shared UI components (@protolabs-ai/ui) — atoms, molecules, theme
 ```

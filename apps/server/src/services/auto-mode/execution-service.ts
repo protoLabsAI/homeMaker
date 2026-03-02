@@ -687,7 +687,7 @@ export class ExecutionService {
       // so that stranded work is committed and a PR is created if the agent
       // completed implementation but failed to run its own git workflow step.
       if (worktreePath) {
-        const recoveryResult = await checkAndRecoverUncommittedWork(feature, workDir);
+        const recoveryResult = await checkAndRecoverUncommittedWork(feature, workDir, projectPath);
         if (recoveryResult.detected) {
           if (recoveryResult.recovered) {
             // Recovery committed, pushed, and created a PR.
@@ -1305,7 +1305,8 @@ export class ExecutionService {
       const savedHash = await gitWorkflowService.saveAgentProgress(
         tempRunningFeature.worktreePath,
         feature,
-        feature.branchName
+        feature.branchName,
+        projectPath
       );
       if (savedHash) {
         logger.info(

@@ -410,8 +410,8 @@ export type ProjectLifecyclePhase =
  * Result from lifecycle initiate operation
  */
 export interface LifecycleInitiateResult {
-  linearProjectId: string;
-  linearProjectUrl: string;
+  linearProjectId?: string;
+  linearProjectUrl?: string;
   duplicates: Array<{ id: string; name: string; url: string }>;
   localSlug: string;
   hasDuplicates: boolean;
@@ -445,7 +445,7 @@ export interface LifecycleApproveResult {
 export interface LifecycleLaunchResult {
   autoModeStarted: boolean;
   featuresInBacklog: number;
-  linearProjectUrl: string;
+  linearProjectUrl?: string;
 }
 
 /**
