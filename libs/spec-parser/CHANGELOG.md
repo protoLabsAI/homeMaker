@@ -1,5 +1,27 @@
 # @protolabs-ai/spec-parser
 
+## 0.24.0
+
+### Minor Changes
+
+- ### Features
+  - surface Needs Action blocked features in ava, headsdown, and board skills (#1592)
+  - add avaChat feature flag to gate Ava Anywhere
+  - add inline form card, hitl context, storybook stories
+
+  ### Bug Fixes
+  - stale context trap auto-detection, plan-loop guard, needs-action badge (#1591)
+
+  ### Refactors
+  - QueueView panel component (#1594)
+  - WebPreviewCard tool result card (#1586)
+  - Wire Actions + Loader + Shimmer into ChatMessage and ChatMessageList (#1582)
+
+### Patch Changes
+
+- Updated dependencies
+  - @protolabs-ai/types@0.24.0
+
 ## 0.23.0
 
 ### Minor Changes

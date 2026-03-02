@@ -1,5 +1,13 @@
 # @protolabs-ai/error-tracking
 
+## 0.6.18
+
+### Patch Changes
+
+- Updated dependencies
+  - @protolabs-ai/types@0.24.0
+  - @protolabs-ai/utils@0.24.0
+
 ## 0.6.17
 
 ### Patch Changes
