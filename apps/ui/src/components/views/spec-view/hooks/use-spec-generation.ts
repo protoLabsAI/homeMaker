@@ -88,7 +88,7 @@ export function useSpecGeneration({ loadSpec, isGenerationRunning }: UseSpecGene
       setIsRegenerating(false);
       setCurrentPhase('');
     }
-  }, [isGenerationRunning]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [isGenerationRunning]);
 
   // Subscribe to spec regeneration events
   useEffect(() => {
