@@ -207,6 +207,7 @@ jobs:
 
       - name: Rewrite and post release notes to Discord
         if: ${{ env.DISCORD_DEV_WEBHOOK != '' }}
+        continue-on-error: true
         run: |
           VERSION="v${{ steps.version.outputs.version }}"
           PREV_TAG=$(git tag --sort=-v:refname | grep -v "^${VERSION}$" | head -1)
