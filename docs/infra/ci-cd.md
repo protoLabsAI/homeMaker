@@ -261,16 +261,7 @@ node scripts/rewrite-release-notes.mjs --post-discord
 
 ### CI Integration
 
-The `auto-release.yml` workflow currently posts raw GitHub-generated notes to Discord. To enable LLM-rewritten notes, replace the "Post release notes to Discord" step with:
-
-```yaml
-- name: Rewrite and post release notes
-  if: ${{ env.DISCORD_DEV_WEBHOOK != '' }}
-  run: node scripts/rewrite-release-notes.mjs --post-discord
-  env:
-    ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
-    DISCORD_DEV_WEBHOOK: ${{ secrets.DISCORD_DEV_WEBHOOK }}
-```
+Wired into `auto-release.yml` as the "Rewrite and post release notes to Discord" step. Runs after the GitHub Release is created, auto-detects the previous tag, and posts the rewritten notes as a Discord embed. Gated on `DISCORD_DEV_WEBHOOK` being set — skips gracefully if absent.
 
 ### Requirements
 

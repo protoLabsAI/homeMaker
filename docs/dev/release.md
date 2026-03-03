@@ -118,23 +118,27 @@ const prompt = buildReleaseNotesPrompt({
 
 ## CI Integration
 
-The `auto-release.yml` workflow posts raw GitHub-generated release notes to Discord. To enable LLM-rewritten notes instead, the "Post release notes to Discord" step can be replaced with:
+The `auto-release.yml` workflow calls the rewriter script as the final step after creating the GitHub Release. The step auto-detects the previous tag and passes both versions to the script:
 
 ```yaml
-- name: Rewrite and post release notes
+- name: Rewrite and post release notes to Discord
   if: ${{ env.DISCORD_DEV_WEBHOOK != '' }}
-  run: node scripts/rewrite-release-notes.mjs --post-discord
+  run: |
+    VERSION="v${{ steps.version.outputs.version }}"
+    PREV_TAG=$(git tag --sort=-v:refname | grep -v "^${VERSION}$" | head -1)
+    node scripts/rewrite-release-notes.mjs "$VERSION" "$PREV_TAG" --post-discord
   env:
     ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
-    DISCORD_DEV_WEBHOOK: ${{ secrets.DISCORD_DEV_WEBHOOK }}
 ```
+
+The step is gated on `DISCORD_DEV_WEBHOOK` being set (defined at job level from secrets). If the webhook or API key is missing, the step is skipped gracefully.
 
 ### Enabling/Disabling
 
-- **Enabled by default**: The CLI script is always available at `scripts/rewrite-release-notes.mjs`
-- **CI integration**: Requires adding the step above to `auto-release.yml` (not yet wired — currently posts raw notes)
-- **Manual runs**: Run the script locally with `ANTHROPIC_API_KEY` set
-- **Disable in CI**: Remove or comment out the rewrite step in `auto-release.yml`; the workflow falls back to GitHub's `generate-notes` API
+- **Enabled by default**: Wired into `auto-release.yml` — runs on every `staging->main` merge
+- **Requires two secrets**: `ANTHROPIC_API_KEY` (Claude API) and `DISCORD_DEV_WEBHOOK` (Discord channel)
+- **Manual runs**: `node scripts/rewrite-release-notes.mjs` locally with `ANTHROPIC_API_KEY` set
+- **Disable in CI**: Remove or comment out the "Rewrite and post release notes" step in `auto-release.yml`; the GitHub Release body still contains the raw auto-generated notes from `gh release create`
 
 ## Model Selection
 
