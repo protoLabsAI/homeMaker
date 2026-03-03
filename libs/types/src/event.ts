@@ -258,6 +258,9 @@ export type EventType =
   | 'retro:improvement:linear-sync'
   // Bug tracking pipeline events (failure → triage → Linear)
   | 'bug:linear-sync'
+  // Bug triage workflow events (channel workflow → investigation → board feature)
+  | 'bug:reported'
+  | 'bug:reaction-triggered'
   // Docs update detector events
   | 'docs:update-needed'
   // Settings change events
@@ -352,6 +355,9 @@ export type EventType =
   | 'ava-gateway:alerts'
   | 'ava-gateway:heartbeat-ok'
   | 'ava-gateway:emergency-stop'
+  // Sensor registry events (core sensor framework)
+  | 'sensor:registered'
+  | 'sensor:data-received'
   // Server lifecycle events
   | 'server:shutdown';
 
@@ -723,6 +729,31 @@ export interface EventPayloadMap {
     phase?: PipelinePhase;
     spanId?: string;
     timestamp: string;
+  };
+
+  // Bug triage workflow events
+  'bug:reported': {
+    projectPath: string;
+    featureId: string;
+    threadId: string;
+    channelId: string;
+    reportedBy: string;
+    content: string;
+  };
+  'bug:reaction-triggered': {
+    messageContent: string;
+    channelId: string;
+    messageId: string;
+    userId: string;
+    username: string;
+  };
+
+  // Sensor framework events
+  'sensor:registered': { sensorId: string; name: string; registeredAt: string };
+  'sensor:data-received': {
+    sensorId: string;
+    data: Record<string, unknown>;
+    receivedAt: string;
   };
 }
 

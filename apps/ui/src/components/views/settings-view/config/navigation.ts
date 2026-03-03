@@ -17,10 +17,10 @@ import {
   Webhook,
   Activity,
   Cog,
-  Timer,
   UserCog,
   Users,
   Zap,
+  Radio,
 } from 'lucide-react';
 import {
   AnthropicIcon,
@@ -94,13 +94,13 @@ export const GLOBAL_NAV_GROUPS: NavigationGroup[] = [
       { id: 'health', label: 'Health', icon: Activity },
       { id: 'personas', label: 'Personas', icon: Users },
       { id: 'workflow', label: 'Workflow', icon: Cog },
-      { id: 'maintenance', label: 'Maintenance', icon: Timer },
     ],
   },
   {
     label: 'Advanced',
     items: [
       { id: 'automations', label: 'Automations', icon: Zap },
+      { id: 'sensors', label: 'Sensors', icon: Radio },
       { id: 'developer', label: 'Developer', icon: Code2 },
     ],
   },

@@ -29,8 +29,8 @@ export type SettingsViewId =
   | 'developer'
   | 'danger'
   | 'workflow'
-  | 'maintenance'
-  | 'automations';
+  | 'automations'
+  | 'sensors';
 
 interface UseSettingsViewOptions {
   initialView?: SettingsViewId;

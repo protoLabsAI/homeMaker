@@ -43,6 +43,8 @@ import { PRFeedbackService } from '../services/pr-feedback-service.js';
 import { WorktreeLifecycleService } from '../services/worktree-lifecycle-service.js';
 import { DiscordBotService } from '../services/discord-bot-service.js';
 import { RoleRegistryService } from '../services/role-registry-service.js';
+import { SensorRegistryService } from '../services/sensor-registry-service.js';
+import { ContextAggregator } from '../services/context-aggregator.js';
 import { IntegrationRegistryService } from '../services/integration-registry-service.js';
 import {
   registerBuiltInIntegrations,
@@ -85,6 +87,7 @@ import { FactStoreService } from '../services/fact-store-service.js';
 import { TrajectoryStoreService } from '../services/trajectory-store-service.js';
 import { LeadHandoffService } from '../services/lead-handoff-service.js';
 import { ChannelRouter } from '../services/channel-router.js';
+import { NotificationRouter } from '../services/notification-router.js';
 
 // Services originally loaded via top-level dynamic imports — now static for proper typing
 import { ProjectLifecycleService } from '../services/project-lifecycle-service.js';
@@ -127,6 +130,10 @@ export interface ServiceContainer {
   agentService: AgentService;
   roleRegistryService: RoleRegistryService;
   agentFactoryService: AgentFactoryService;
+
+  // Sensor registry
+  sensorRegistryService: SensorRegistryService;
+  contextAggregator: ContextAggregator;
   dynamicAgentExecutor: DynamicAgentExecutor;
   headsdownService: HeadsdownService;
 
@@ -176,6 +183,7 @@ export interface ServiceContainer {
   // Dev server & notifications
   devServerService: ReturnType<typeof getDevServerService>;
   notificationService: ReturnType<typeof getNotificationService>;
+  notificationRouter: NotificationRouter;
   actionableItemService: ReturnType<typeof getActionableItemService>;
   actionableItemBridge: ActionableItemBridgeService;
   integrityWatchdogService: DataIntegrityWatchdogService;
@@ -332,6 +340,12 @@ export async function createServices(dataDir: string, repoRoot: string): Promise
     settingsService,
     healthMonitorService
   );
+  // Sensor Registry (external sensor data ingestion)
+  const sensorRegistryService = new SensorRegistryService(events);
+
+  // Context Aggregator (reads sensor readings → unified UserPresenceState)
+  const contextAggregator = new ContextAggregator(sensorRegistryService);
+
   // Role Registry (shared agent template registry)
   const roleRegistryService = new RoleRegistryService(events);
   try {
@@ -575,6 +589,32 @@ export async function createServices(dataDir: string, repoRoot: string): Promise
     { pm: pmAgent, projm: projmAgent, em: emAgent }
   );
 
+  // Notification Router — presence-aware routing for completion/failure/HITL events.
+  // Reads userPresenceDetection flag from settings; discord DM recipients from
+  // DISCORD_DM_RECIPIENTS env var (comma-separated usernames).
+  // Subscribes to feature:completed, feature:error, and hitl:form-requested in its constructor.
+  let presenceEnabled = false;
+  try {
+    const globalSettings = await settingsService.getGlobalSettings();
+    presenceEnabled = globalSettings.featureFlags?.userPresenceDetection ?? false;
+  } catch {
+    // Settings unavailable — safe default
+  }
+  const discordDmRecipientsEnv = process.env.DISCORD_DM_RECIPIENTS ?? '';
+  const discordDmRecipients = discordDmRecipientsEnv
+    ? discordDmRecipientsEnv
+        .split(',')
+        .map((s) => s.trim())
+        .filter(Boolean)
+    : [];
+  const notificationRouter = new NotificationRouter(
+    sensorRegistryService,
+    notificationService,
+    events,
+    discordBotService,
+    { enabled: presenceEnabled, discordRecipients: discordDmRecipients }
+  );
+
   // Issue Management Pipeline (failure → triage → GitHub issue → Discord)
   const triageService = new TriageService(events);
   const issueCreationService = new IssueCreationService(
@@ -697,6 +737,8 @@ export async function createServices(dataDir: string, repoRoot: string): Promise
     hitlFormService,
     claudeUsageService,
     mcpTestService,
+    sensorRegistryService,
+    contextAggregator,
     featureHealthService,
     healthMonitorService,
     beadsService,
@@ -709,6 +751,7 @@ export async function createServices(dataDir: string, repoRoot: string): Promise
     antagonisticReviewService,
     devServerService,
     notificationService,
+    notificationRouter,
     actionableItemService,
     actionableItemBridge,
     integrityWatchdogService,

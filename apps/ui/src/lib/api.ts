@@ -7,7 +7,12 @@
  */
 import { getHttpApiClient } from './http-api-client';
 import { apiFetch } from './api-fetch';
-import type { Automation, CreateAutomationInput, UpdateAutomationInput } from '@protolabs-ai/types';
+import type {
+  Automation,
+  AutomationRunRecord,
+  CreateAutomationInput,
+  UpdateAutomationInput,
+} from '@protolabs-ai/types';
 
 export const api = getHttpApiClient();
 
@@ -50,4 +55,16 @@ export async function updateAutomation(
 export async function deleteAutomation(id: string): Promise<void> {
   const res = await apiFetch(`/api/automations/${id}`, 'DELETE');
   if (!res.ok) throw new Error(`Failed to delete automation: ${res.status}`);
+}
+
+export async function runAutomation(id: string): Promise<void> {
+  const res = await apiFetch(`/api/automations/${id}/run`, 'POST');
+  if (!res.ok) throw new Error(`Failed to run automation: ${res.status}`);
+}
+
+export async function getAutomationHistory(id: string): Promise<AutomationRunRecord[]> {
+  const res = await apiFetch(`/api/automations/${id}/history`, 'GET');
+  if (!res.ok) throw new Error(`Failed to get automation history: ${res.status}`);
+  const data = await res.json();
+  return (data.runs ?? []) as AutomationRunRecord[];
 }

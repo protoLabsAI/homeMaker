@@ -40,8 +40,8 @@ import { IntegrationsSection } from './settings-view/integrations';
 import { ProfileSection } from './settings-view/profile';
 import { PersonasSection } from './settings-view/personas';
 import { WorkflowSettingsPanel } from './settings-view/workflow/workflow-settings-panel';
-import { MaintenanceSection } from './settings-view/maintenance';
 import { AutomationsSection } from './settings-view/automations/automations-section';
+import { SensorsSection } from './settings-view/sensors/sensors-section';
 import { ImportExportDialog } from './settings-view/components/import-export-dialog';
 import { SettingsScopeToggle } from './settings-view/components/settings-scope-toggle';
 import type { Theme } from './settings-view/shared/types';
@@ -67,6 +67,8 @@ export function SettingsView() {
     setDefaultFeatureModel,
     promptCustomization,
     setPromptCustomization,
+    systemMaxConcurrency,
+    setSystemMaxConcurrency,
   } = useAppStore();
   const { skipSandboxWarning, setSkipSandboxWarning } = useAIModelsStore();
   const { theme, setTheme } = useThemeStore();
@@ -156,6 +158,7 @@ export function SettingsView() {
             defaultRequirePlanApproval={defaultRequirePlanApproval}
             enableAiCommitMessages={enableAiCommitMessages}
             defaultFeatureModel={defaultFeatureModel}
+            systemMaxConcurrency={systemMaxConcurrency}
             onDefaultSkipTestsChange={setDefaultSkipTests}
             onEnableDependencyBlockingChange={setEnableDependencyBlocking}
             onSkipVerificationInAutoModeChange={setSkipVerificationInAutoMode}
@@ -163,6 +166,7 @@ export function SettingsView() {
             onDefaultRequirePlanApprovalChange={setDefaultRequirePlanApproval}
             onEnableAiCommitMessagesChange={setEnableAiCommitMessages}
             onDefaultFeatureModelChange={setDefaultFeatureModel}
+            onSystemMaxConcurrencyChange={setSystemMaxConcurrency}
           />
         );
       case 'worktrees':
@@ -186,10 +190,10 @@ export function SettingsView() {
         return <HealthSection />;
       case 'workflow':
         return <WorkflowSettingsPanel />;
-      case 'maintenance':
-        return <MaintenanceSection />;
       case 'automations':
         return <AutomationsSection />;
+      case 'sensors':
+        return <SensorsSection />;
       case 'developer':
         return <DeveloperSection />;
       default:

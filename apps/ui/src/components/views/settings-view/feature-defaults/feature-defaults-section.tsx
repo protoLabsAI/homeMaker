@@ -1,6 +1,6 @@
-import { useQuery } from '@tanstack/react-query';
 import { Label } from '@protolabs-ai/ui/atoms';
 import { Checkbox } from '@protolabs-ai/ui/atoms';
+import { Slider } from '@protolabs-ai/ui/atoms';
 import {
   FlaskConical,
   TestTube,
@@ -16,8 +16,6 @@ import {
   Gauge,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { getElectronAPI } from '@/lib/electron';
-import { queryKeys } from '@/lib/query-keys';
 import {
   Select,
   SelectContent,
@@ -38,6 +36,7 @@ interface FeatureDefaultsSectionProps {
   defaultRequirePlanApproval: boolean;
   enableAiCommitMessages: boolean;
   defaultFeatureModel: PhaseModelEntry;
+  systemMaxConcurrency: number;
   onDefaultSkipTestsChange: (value: boolean) => void;
   onEnableDependencyBlockingChange: (value: boolean) => void;
   onSkipVerificationInAutoModeChange: (value: boolean) => void;
@@ -45,6 +44,7 @@ interface FeatureDefaultsSectionProps {
   onDefaultRequirePlanApprovalChange: (value: boolean) => void;
   onEnableAiCommitMessagesChange: (value: boolean) => void;
   onDefaultFeatureModelChange: (value: PhaseModelEntry) => void;
+  onSystemMaxConcurrencyChange: (value: number) => void;
 }
 
 export function FeatureDefaultsSection({
@@ -55,6 +55,7 @@ export function FeatureDefaultsSection({
   defaultRequirePlanApproval,
   enableAiCommitMessages,
   defaultFeatureModel,
+  systemMaxConcurrency,
   onDefaultSkipTestsChange,
   onEnableDependencyBlockingChange,
   onSkipVerificationInAutoModeChange,
@@ -62,22 +63,8 @@ export function FeatureDefaultsSection({
   onDefaultRequirePlanApprovalChange,
   onEnableAiCommitMessagesChange,
   onDefaultFeatureModelChange,
+  onSystemMaxConcurrencyChange,
 }: FeatureDefaultsSectionProps) {
-  // Fetch global auto-mode status to display the server-side concurrency cap
-  const { data: autoModeStatusData } = useQuery({
-    queryKey: ['autoMode', 'status', undefined],
-    queryFn: async () => {
-      const api = getElectronAPI();
-      return api.autoMode?.status(undefined, null);
-    },
-    staleTime: 60_000,
-    refetchOnWindowFocus: false,
-  });
-
-  const systemMaxConcurrency: number =
-    ((autoModeStatusData as Record<string, unknown> | undefined)?.systemMaxConcurrency as number) ??
-    null;
-
   return (
     <div
       className={cn(
@@ -100,8 +87,8 @@ export function FeatureDefaultsSection({
       </div>
       <div className="p-6 space-y-5">
         {/* Default Feature Model Setting */}
-        <div className="group flex items-start space-x-3 p-3 rounded-xl hover:bg-accent/30 transition-colors duration-200 -mx-3">
-          <div className="w-10 h-10 mt-0.5 rounded-xl flex items-center justify-center shrink-0 bg-brand-500/10">
+        <div className="group flex items-start space-x-3 p-3 rounded-lg hover:bg-accent/30 transition-colors duration-200 -mx-3">
+          <div className="w-10 h-10 mt-0.5 rounded-lg flex items-center justify-center shrink-0 bg-brand-500/10">
             <Cpu className="w-5 h-5 text-brand-500" />
           </div>
           <div className="flex-1 space-y-2">
@@ -124,10 +111,10 @@ export function FeatureDefaultsSection({
         <div className="border-t border-border/30" />
 
         {/* Planning Mode Default */}
-        <div className="group flex items-start space-x-3 p-3 rounded-xl hover:bg-accent/30 transition-colors duration-200 -mx-3">
+        <div className="group flex items-start space-x-3 p-3 rounded-lg hover:bg-accent/30 transition-colors duration-200 -mx-3">
           <div
             className={cn(
-              'w-10 h-10 mt-0.5 rounded-xl flex items-center justify-center shrink-0',
+              'w-10 h-10 mt-0.5 rounded-lg flex items-center justify-center shrink-0',
               defaultPlanningMode === 'skip'
                 ? 'bg-emerald-500/10'
                 : defaultPlanningMode === 'lite'
@@ -197,7 +184,7 @@ export function FeatureDefaultsSection({
         {/* Require Plan Approval Setting - only show when not skip */}
         {defaultPlanningMode !== 'skip' && (
           <>
-            <div className="group flex items-start space-x-3 p-3 rounded-xl hover:bg-accent/30 transition-colors duration-200 -mx-3">
+            <div className="group flex items-start space-x-3 p-3 rounded-lg hover:bg-accent/30 transition-colors duration-200 -mx-3">
               <Checkbox
                 id="default-require-plan-approval"
                 checked={defaultRequirePlanApproval}
@@ -227,7 +214,7 @@ export function FeatureDefaultsSection({
         <div className="border-t border-border/30" />
 
         {/* Automated Testing Setting */}
-        <div className="group flex items-start space-x-3 p-3 rounded-xl hover:bg-accent/30 transition-colors duration-200 -mx-3">
+        <div className="group flex items-start space-x-3 p-3 rounded-lg hover:bg-accent/30 transition-colors duration-200 -mx-3">
           <Checkbox
             id="default-skip-tests"
             checked={!defaultSkipTests}
@@ -254,7 +241,7 @@ export function FeatureDefaultsSection({
         <div className="border-t border-border/30" />
 
         {/* Dependency Blocking Setting */}
-        <div className="group flex items-start space-x-3 p-3 rounded-xl hover:bg-accent/30 transition-colors duration-200 -mx-3">
+        <div className="group flex items-start space-x-3 p-3 rounded-lg hover:bg-accent/30 transition-colors duration-200 -mx-3">
           <Checkbox
             id="enable-dependency-blocking"
             checked={enableDependencyBlocking}
@@ -282,7 +269,7 @@ export function FeatureDefaultsSection({
         <div className="border-t border-border/30" />
 
         {/* Skip Verification in Auto Mode Setting */}
-        <div className="group flex items-start space-x-3 p-3 rounded-xl hover:bg-accent/30 transition-colors duration-200 -mx-3">
+        <div className="group flex items-start space-x-3 p-3 rounded-lg hover:bg-accent/30 transition-colors duration-200 -mx-3">
           <Checkbox
             id="skip-verification-auto-mode"
             checked={skipVerificationInAutoMode}
@@ -310,7 +297,7 @@ export function FeatureDefaultsSection({
         <div className="border-t border-border/30" />
 
         {/* AI Commit Messages Setting */}
-        <div className="group flex items-start space-x-3 p-3 rounded-xl hover:bg-accent/30 transition-colors duration-200 -mx-3">
+        <div className="group flex items-start space-x-3 p-3 rounded-lg hover:bg-accent/30 transition-colors duration-200 -mx-3">
           <Checkbox
             id="enable-ai-commit-messages"
             checked={enableAiCommitMessages}
@@ -337,27 +324,35 @@ export function FeatureDefaultsSection({
         {/* Separator */}
         <div className="border-t border-border/30" />
 
-        {/* System Concurrency Limit (read-only) */}
-        <div className="group flex items-start space-x-3 p-3 rounded-xl -mx-3">
-          <div className="w-10 h-10 mt-0.5 rounded-xl flex items-center justify-center shrink-0 bg-muted/40">
-            <Gauge className="w-5 h-5 text-muted-foreground" />
+        {/* System Concurrency Limit (editable) */}
+        <div className="group flex items-start space-x-3 p-3 rounded-xl hover:bg-accent/30 transition-colors duration-200 -mx-3">
+          <div className="w-10 h-10 mt-0.5 rounded-xl flex items-center justify-center shrink-0 bg-brand-500/10">
+            <Gauge className="w-5 h-5 text-brand-500" />
           </div>
-          <div className="flex-1 space-y-1.5">
+          <div className="flex-1 space-y-2">
             <div className="flex items-center justify-between">
               <Label className="text-foreground font-medium">System Concurrency Limit</Label>
               <span
-                className="text-xs font-semibold tabular-nums px-2 py-0.5 rounded bg-muted/50 text-muted-foreground"
+                className="text-xs font-semibold tabular-nums px-2 py-0.5 rounded bg-muted/50 text-foreground"
                 data-testid="system-max-concurrency-value"
               >
-                {systemMaxConcurrency !== null ? systemMaxConcurrency : '--'}
+                {systemMaxConcurrency}
               </span>
             </div>
+            <div className="flex items-center gap-3">
+              <Slider
+                value={[systemMaxConcurrency]}
+                onValueChange={(value) => onSystemMaxConcurrencyChange(value[0])}
+                min={1}
+                max={20}
+                step={1}
+                className="flex-1"
+                data-testid="system-max-concurrency-slider"
+              />
+            </div>
             <p className="text-xs text-muted-foreground/80 leading-relaxed">
-              Maximum concurrent agents allowed system-wide. Set by the{' '}
-              <code className="font-mono text-[11px] bg-muted/60 px-1 py-0.5 rounded">
-                AUTOMAKER_MAX_CONCURRENCY
-              </code>{' '}
-              environment variable. Read-only — restart the server to apply changes.
+              Maximum concurrent agents allowed system-wide. This caps the per-project concurrency
+              slider. Higher values allow more parallel work but use more API resources.
             </p>
           </div>
         </div>

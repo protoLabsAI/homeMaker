@@ -55,7 +55,6 @@ import { createActionableItemsRoutes } from '../routes/actionable-items/index.js
 import { createEventHistoryRoutes } from '../routes/event-history/index.js';
 import { createBriefingRoutes } from '../routes/briefing/index.js';
 import { createSkillsRoutes } from '../routes/skills/index.js';
-import { createSchedulerRoutes } from '../routes/scheduler/index.js';
 import { createIntegrationRoutes } from '../routes/integrations/index.js';
 import { createDashboardRoutes } from '../routes/dashboard.js';
 import { createAuthorityRoutes } from '../routes/authority/index.js';
@@ -85,6 +84,7 @@ import { createLeadEngineerRoutes } from '../routes/lead-engineer/index.js';
 import { createPrometheusRoute } from '../routes/metrics/prometheus.js';
 import { createBeadsRoutes } from '../routes/beads/index.js';
 import { createAutomationsRoutes } from '../routes/automations/index.js';
+import { createSensorRoutes } from '../routes/sensors/index.js';
 
 const logger = createLogger('Server:Routes');
 
@@ -122,7 +122,6 @@ export function registerRoutes(app: Express, services: ServiceContainer): void {
     briefingCursorService,
     projectService,
     projectLifecycleService,
-    schedulerService,
     automationService,
     avaGatewayService,
     discordBotService,
@@ -153,6 +152,7 @@ export function registerRoutes(app: Express, services: ServiceContainer): void {
     projectPlanningService,
     contentFlowService,
     repoRoot,
+    sensorRegistryService,
   } = services;
 
   // Run stale validation cleanup every hour to prevent memory leaks from crashed validations
@@ -335,7 +335,6 @@ export function registerRoutes(app: Express, services: ServiceContainer): void {
     '/api/projects',
     createProjectsRoutes(featureLoader, events, projectService, projectLifecycleService)
   );
-  app.use('/api/scheduler', createSchedulerRoutes(schedulerService, settingsService));
   app.use('/api/automations', createAutomationsRoutes(automationService));
   app.use('/api/ava', createAvaRoutes(services));
   app.use('/api/discord', createDiscordRoutes(discordBotService));
@@ -399,6 +398,10 @@ export function registerRoutes(app: Express, services: ServiceContainer): void {
   // Promotion orchestration routes
   app.use('/api/promotions', createPromotionsRoutes());
   logger.info('Promotion routes mounted at /api/promotions');
+
+  // Sensor registry routes (core sensor framework)
+  app.use('/api/sensors', createSensorRoutes(sensorRegistryService));
+  logger.info('Sensor routes mounted at /api/sensors');
 
   // Note: Sentry v8 automatically captures Express errors - no manual error handler needed
 }

@@ -290,6 +290,9 @@ export type {
   // Project integration types
   ReactionAbility,
   DiscordChannelSignalConfig,
+  ChannelWorkflow,
+  ChannelWorkflowType,
+  DiscordChannelMap,
   LinearIntegrationConfig,
   DiscordIntegrationConfig,
   GoogleIntegrationConfig,
@@ -316,9 +319,6 @@ export type {
   ClaudeApiProfileTemplate,
   // Workflow settings types
   WorkflowSettings,
-  // Maintenance scheduler types
-  MaintenanceTaskOverride,
-  MaintenanceSettings,
 } from './settings.js';
 export {
   DEFAULT_KEYBOARD_SHORTCUTS,
@@ -859,6 +859,15 @@ export type {
   AutomationRunRecord,
   Automation,
 } from './automation.js';
+
+// Sensor framework types (sensor registry, readings, and presence detection)
+export type {
+  SensorId,
+  SensorState,
+  UserPresenceState,
+  SensorConfig,
+  SensorReading,
+} from './sensor.js';
 
 // PenFile types (vector graphics format v2.8)
 export type {
