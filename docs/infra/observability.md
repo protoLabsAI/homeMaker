@@ -35,7 +35,7 @@ The staging `docker-compose.staging.yml` maps all four from the host environment
 
 Called as the first operation in `runStartup()`. Configures a single `NodeSDK` with:
 
-- **BatchSpanProcessor** + `OTLPTraceExporter` pointing to `${LANGFUSE_BASE_URL}/api/public/otel` (the exporter auto-appends `/v1/traces`)
+- **BatchSpanProcessor** + `OTLPTraceExporter` pointing to `${LANGFUSE_BASE_URL}/api/public/otel/v1/traces` (full URL required — `OTLPTraceExporter` only auto-appends `/v1/traces` when using `OTEL_EXPORTER_OTLP_ENDPOINT` env var, not the programmatic `url` option)
 - **LangfuseSpanProcessor** from `@langfuse/otel` — captures AI SDK `experimental_telemetry` spans with enriched LLM metadata (model, tokens, cost)
 - **Auth**: HTTP `Authorization: Basic <base64(publicKey:secretKey)>` header
 - **Instrumentation**: `getNodeAutoInstrumentations()` — covers Express HTTP, pg, fs, and other common Node.js modules
@@ -73,7 +73,7 @@ const result = await streamText({
 3. Filter by `Service Name = protolabs-server` to isolate server traffic
 4. Click any trace to inspect spans, durations, and attributes
 
-Langfuse shows both OTLP HTTP spans (from `otel.ts`) and AI SDK spans (from `otel-setup.ts`) in the same project — they share credentials and will appear together in the traces list.
+All spans land in the same Langfuse project — OTLP HTTP spans and AI SDK spans share credentials and appear together in the traces list.
 
 ## Graceful Shutdown
 
