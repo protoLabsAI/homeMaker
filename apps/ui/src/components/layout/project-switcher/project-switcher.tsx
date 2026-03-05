@@ -9,7 +9,8 @@ import { ProjectContextMenu } from './components/project-context-menu';
 import { EditProjectDialog } from './components/edit-project-dialog';
 import { NotificationBell } from './components/notification-bell';
 import { ActionableItemsInbox } from './components/actionable-items-inbox';
-import { HITLFormNotification } from '@/components/shared/hitl-form/hitl-form-notification';
+import { HITLFormNotification } from '@protolabs-ai/ui/organisms';
+import { useHITLFormStore } from '@/store/hitl-form-store';
 import { NewProjectModal } from '@/components/dialogs/new-project-modal';
 import { OnboardingDialog } from '@/components/layout/sidebar/dialogs';
 import { useProjectCreation } from '@/components/layout/sidebar/hooks';
@@ -37,6 +38,8 @@ function getOSAbbreviation(os: string): string {
 
 export function ProjectSwitcher() {
   const navigate = useNavigate();
+  const hitlPendingForms = useHITLFormStore((s) => s.pendingForms);
+  const hitlOpenForm = useHITLFormStore((s) => s.openForm);
   const { hideWiki } = SIDEBAR_FEATURE_FLAGS;
   const {
     projects,
@@ -321,7 +324,21 @@ export function ProjectSwitcher() {
                 </linearGradient>
               </defs>
               <rect x="16" y="16" width="224" height="224" rx="56" fill="url(#bg-switcher)" />
-              <path d="M128 52 L196 128 L128 204 L60 128 Z" fill="#FFFFFF" />
+              <g
+                transform="translate(32, 32) scale(8)"
+                fill="none"
+                stroke="#FFFFFF"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <path d="M12 8V4H8" />
+                <rect width="16" height="12" x="4" y="8" rx="2" />
+                <path d="M2 14h2" />
+                <path d="M20 14h2" />
+                <path d="M15 13v2" />
+                <path d="M9 13v2" />
+              </g>
             </svg>
             <span className="text-[0.625rem] text-muted-foreground leading-none font-medium">
               v{appVersion} {versionSuffix}
@@ -331,7 +348,10 @@ export function ProjectSwitcher() {
           {/* Inbox & Notifications */}
           <div className="flex items-center justify-center gap-1 mt-2">
             <ActionableItemsInbox projectPath={currentProject?.path ?? null} />
-            <HITLFormNotification />
+            <HITLFormNotification
+              pendingCount={hitlPendingForms.length}
+              onOpen={() => hitlPendingForms[0] && hitlOpenForm(hitlPendingForms[0])}
+            />
             <NotificationBell projectPath={currentProject?.path ?? null} />
           </div>
           <div className="w-full h-px bg-border mt-3" />
