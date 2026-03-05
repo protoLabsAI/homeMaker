@@ -221,4 +221,4 @@ The service aggregates all sources in `listEvents()`, filters by date range and 
 
 - **[MCP tools reference](../integrations/mcp-tools-reference)** -- full tool listing
 - **[Plugin commands](../integrations/plugin-commands)** -- `/calendar-assistant` command
-- **[Feature flags](../dev/feature-flags)** -- `calendar` flag gates the UI view
+- **[Feature flags](../dev/feature-flags)** -- calendar is now GA (always enabled)
