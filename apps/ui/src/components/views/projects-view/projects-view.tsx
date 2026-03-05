@@ -5,6 +5,7 @@ import { useAppStore } from '@/store/app-store';
 import { ProjectsList } from './projects-list';
 import { ProjectDetail } from './project-detail';
 import { ProjectMetricsTab } from '../dashboard-view/metrics/project-tab';
+import { TimeRangeSelector, type TimeRange } from '../dashboard-view/metrics/time-range';
 
 type ProjectsTab = 'plans' | 'metrics';
 
@@ -24,6 +25,7 @@ export function ProjectsView() {
   const projectPath = useAppStore((s) => s.currentProject?.path);
   const [selectedSlug, setSelectedSlug] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<ProjectsTab>('metrics');
+  const [timeRange, setTimeRange] = useState<TimeRange>('30d');
 
   if (!projectPath) {
     return (
@@ -39,7 +41,7 @@ export function ProjectsView() {
 
   return (
     <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
-      <div className="shrink-0 px-4 pt-3 pb-2 flex items-center gap-3">
+      <div className="shrink-0 px-4 py-2 flex items-center gap-3">
         <div
           className="inline-flex h-8 items-center rounded-md bg-muted p-[3px] border border-border"
           role="tablist"
@@ -62,14 +64,20 @@ export function ProjectsView() {
             <BarChart3 className="w-4 h-4" />
           </button>
         </div>
+        {activeTab === 'metrics' && (
+          <>
+            <div className="flex-1" />
+            <TimeRangeSelector value={timeRange} onChange={setTimeRange} />
+          </>
+        )}
       </div>
 
       {activeTab === 'plans' ? (
         <ProjectsList onSelect={setSelectedSlug} />
       ) : (
-        <div className="flex-1 overflow-y-auto p-4 sm:px-8 sm:py-4">
+        <div className="flex-1 overflow-y-auto px-4 py-2 sm:px-8 sm:py-2">
           <div className="max-w-6xl mx-auto">
-            <ProjectMetricsTab projectPath={projectPath} />
+            <ProjectMetricsTab projectPath={projectPath} timeRange={timeRange} />
           </div>
         </div>
       )}
