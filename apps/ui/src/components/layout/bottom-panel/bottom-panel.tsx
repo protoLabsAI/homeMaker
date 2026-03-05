@@ -1,8 +1,8 @@
 import { useState, useEffect } from 'react';
-import { useAppStore, type Feature } from '@/store/app-store';
+import { useAppStore } from '@/store/app-store';
 import { useChatStore } from '@/store/chat-store';
 import { useIsMobile } from '@/hooks/use-media-query';
-import { useRunningAgentsCount } from '@/hooks/queries/use-running-agents';
+import { useProjectHealth } from '@/hooks/use-project-health';
 import { isElectron, getOverlayAPI } from '@/lib/electron';
 import {
   Bot,
@@ -18,11 +18,11 @@ export function BottomPanel() {
   const isMobile = useIsMobile();
   const bottomPanelOpen = useAppStore((s) => s.bottomPanelOpen);
   const toggleBottomPanel = useAppStore((s) => s.toggleBottomPanel);
-  const features = useAppStore((s) => s.features);
+  const projectPath = useAppStore((s) => s.currentProject?.path);
   const avaChat = useAppStore((s) => s.featureFlags.avaChat);
   const chatModalOpen = useChatStore((s) => s.chatModalOpen);
   const setChatModalOpen = useChatStore((s) => s.setChatModalOpen);
-  const { data: agentCount } = useRunningAgentsCount();
+  const { boardCounts, runningAgentsCount: agentCount } = useProjectHealth(projectPath);
 
   const [time, setTime] = useState(() => new Date());
   useEffect(() => {
@@ -32,17 +32,7 @@ export function BottomPanel() {
 
   if (isMobile) return null;
 
-  const backlog = features.filter((f: Feature) => (f.status as string) === 'backlog').length;
-  const inProgress = features.filter(
-    (f: Feature) => (f.status as string) === 'in_progress' || (f.status as string) === 'running'
-  ).length;
-  const review = features.filter((f: Feature) => (f.status as string) === 'review').length;
-  const done = features.filter(
-    (f: Feature) =>
-      (f.status as string) === 'done' ||
-      (f.status as string) === 'completed' ||
-      (f.status as string) === 'verified'
-  ).length;
+  const { backlog, inProgress, review, done } = boardCounts;
 
   return (
     <div
