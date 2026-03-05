@@ -4,7 +4,15 @@ import { useChatStore } from '@/store/chat-store';
 import { useIsMobile } from '@/hooks/use-media-query';
 import { useRunningAgentsCount } from '@/hooks/queries/use-running-agents';
 import { isElectron, getOverlayAPI } from '@/lib/electron';
-import { Bot, ListTodo, Activity, GitPullRequest, Terminal, MessageCircle } from 'lucide-react';
+import {
+  Bot,
+  ListTodo,
+  Activity,
+  GitPullRequest,
+  CheckCircle2,
+  Terminal,
+  MessageCircle,
+} from 'lucide-react';
 
 export function BottomPanel() {
   const isMobile = useIsMobile();
@@ -29,6 +37,12 @@ export function BottomPanel() {
     (f: Feature) => (f.status as string) === 'in_progress' || (f.status as string) === 'running'
   ).length;
   const review = features.filter((f: Feature) => (f.status as string) === 'review').length;
+  const done = features.filter(
+    (f: Feature) =>
+      (f.status as string) === 'done' ||
+      (f.status as string) === 'completed' ||
+      (f.status as string) === 'verified'
+  ).length;
 
   return (
     <div
@@ -60,6 +74,10 @@ export function BottomPanel() {
         <span className="flex items-center gap-1">
           <GitPullRequest className="h-3.5 w-3.5" />
           <span>{review}</span>
+        </span>
+        <span className="flex items-center gap-1">
+          <CheckCircle2 className="h-3.5 w-3.5" />
+          <span>{done}</span>
         </span>
       </div>
 

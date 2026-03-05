@@ -4,7 +4,6 @@ import { cn } from '@/lib/utils';
 import { useAppStore } from '@/store/app-store';
 import { ProjectsList } from './projects-list';
 import { ProjectDetail } from './project-detail';
-import { ProjectHealthCard } from '../dashboard-view/project-health-card';
 import { EventFeed } from '../dashboard-view/event-feed';
 import { ProjectMetricsTab } from '../dashboard-view/metrics/project-tab';
 
@@ -71,10 +70,7 @@ export function ProjectsView() {
       ) : (
         <div className="flex-1 overflow-y-auto p-4 sm:px-8 sm:py-4">
           <div className="max-w-6xl mx-auto space-y-4">
-            <div className="grid grid-cols-1 lg:grid-cols-[1fr_1fr] gap-4">
-              <ProjectHealthCard />
-              <EventFeed projectPath={projectPath} className="max-h-[180px]" />
-            </div>
+            <EventFeed projectPath={projectPath} className="max-h-[180px]" />
             <ProjectMetricsTab projectPath={projectPath} />
           </div>
         </div>
