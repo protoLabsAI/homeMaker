@@ -1,5 +1,4 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { useNavigate } from '@tanstack/react-router';
 import { createLogger } from '@protolabsai/utils/logger';
 import {
   Terminal as TerminalIcon,
@@ -14,7 +13,6 @@ import {
   SquarePlus,
   Settings,
 } from 'lucide-react';
-import { PanelHeader } from '@/components/shared/panel-header';
 import { Spinner } from '@protolabsai/ui/atoms';
 import { getServerUrlSync } from '@/lib/http-api-client';
 import { useAppStore } from '@/store/app-store';
@@ -215,18 +213,13 @@ function NewTabDropZone({ isDropTarget }: { isDropTarget: boolean }) {
   );
 }
 
-interface TerminalViewProps {
-  /** Initial working directory to open a terminal in (e.g., from worktree panel) */
-  initialCwd?: string;
-  /** Branch name for display in toast (optional) */
-  initialBranch?: string;
-  /** Mode for opening terminal: 'tab' for new tab, 'split' for split in current tab */
-  initialMode?: 'tab' | 'split';
-  /** Unique nonce to allow opening the same worktree multiple times */
-  nonce?: number;
-}
-
-export function TerminalView({ initialCwd, initialBranch, initialMode, nonce }: TerminalViewProps) {
+export function TerminalView() {
+  // Consume pending terminal requests from the store (e.g., from worktree panel)
+  const pendingRequest = useTerminalStore((s) => s.pendingTerminalRequest);
+  const initialCwd = pendingRequest?.cwd;
+  const initialBranch = pendingRequest?.branch;
+  const initialMode = pendingRequest?.mode;
+  const nonce = pendingRequest?.nonce;
   const { currentProject } = useAppStore();
   const {
     terminalState,
@@ -254,8 +247,6 @@ export function TerminalView({ initialCwd, initialBranch, initialMode, nonce }: 
     setTerminalScreenReaderMode,
     updateTerminalPanelSizes,
   } = useTerminalStore();
-
-  const navigate = useNavigate();
 
   const [status, setStatus] = useState<TerminalStatus | null>(null);
   const [loading, setLoading] = useState(true);
@@ -610,8 +601,8 @@ export function TerminalView({ initialCwd, initialBranch, initialMode, nonce }: 
           // Refresh session count
           fetchServerSettings();
 
-          // Clear the cwd from the URL to prevent re-creating on refresh
-          navigate({ to: '/terminal', search: {}, replace: true });
+          // Clear the pending request to prevent re-creating on re-render
+          useTerminalStore.getState().setPendingTerminalRequest(null);
         } else {
           logger.error('Failed to create terminal for cwd:', data.error);
           toast.error('Failed to create terminal', {
@@ -646,7 +637,6 @@ export function TerminalView({ initialCwd, initialBranch, initialMode, nonce }: 
     addTerminalToLayout,
     addTerminalTab,
     fetchServerSettings,
-    navigate,
   ]);
 
   // Handle project switching - save and restore terminal layouts
@@ -1476,41 +1466,31 @@ export function TerminalView({ initialCwd, initialBranch, initialMode, nonce }: 
     );
   }
 
-  // No terminals yet - show welcome screen
+  // No terminals yet - show tab bar with just the + button
   if (terminalState.tabs.length === 0) {
     return (
-      <div className="flex-1 flex flex-col overflow-hidden">
-        <PanelHeader
-          icon={TerminalIcon}
-          title="Terminal"
-          actions={[{ icon: Plus, label: 'New terminal', onClick: () => createTerminal() }]}
-        />
-        <div className="flex-1 flex flex-col items-center justify-center text-center p-6">
-          <div className="p-4 rounded-full bg-brand-500/10 mb-4">
-            <TerminalIcon className="h-12 w-12 text-brand-500" />
+      <div className="h-full flex flex-col overflow-hidden">
+        <div className="flex items-center bg-card border-b border-border px-2 shrink-0">
+          <div className="flex items-center gap-1 flex-1 overflow-x-auto py-1">
+            <button
+              className="flex items-center justify-center p-1.5 rounded hover:bg-accent text-muted-foreground hover:text-foreground"
+              onClick={() => createTerminal()}
+              title="New Tab"
+            >
+              <Plus className="h-4 w-4" />
+            </button>
           </div>
-          <p className="text-muted-foreground max-w-md mb-4">
-            Create a new terminal session to start executing commands.
-            {currentProject && (
-              <span className="block mt-2 text-sm">
-                Working directory:{' '}
-                <code className="px-1.5 py-0.5 rounded bg-muted">{currentProject.path}</code>
-              </span>
-            )}
+        </div>
+        <div className="flex-1 flex items-center justify-center min-h-0">
+          <p className="text-sm text-muted-foreground/50">
+            Press + or{' '}
+            <button
+              onClick={() => createTerminal()}
+              className="text-muted-foreground hover:text-foreground underline underline-offset-2 cursor-pointer"
+            >
+              open a terminal
+            </button>
           </p>
-
-          <Button variant="outline" size="sm" onClick={() => createTerminal()} className="mb-6">
-            <Plus className="h-4 w-4 mr-2" />
-            New Terminal
-          </Button>
-
-          {status?.platform && (
-            <p className="text-xs text-muted-foreground">
-              Platform: {status.platform.platform}
-              {status.platform.isWSL && ' (WSL)'}
-              {' | '}Shell: {status.platform.defaultShell}
-            </p>
-          )}
         </div>
       </div>
     );
@@ -1527,11 +1507,6 @@ export function TerminalView({ initialCwd, initialBranch, initialMode, nonce }: 
       onDragCancel={handleDragCancel}
     >
       <div className="flex-1 flex flex-col overflow-hidden">
-        <PanelHeader
-          icon={TerminalIcon}
-          title="Terminal"
-          actions={[{ icon: Plus, label: 'New terminal', onClick: () => createTerminal() }]}
-        />
         {/* Tab bar */}
         <div className="flex items-center bg-card border-b border-border px-2">
           {/* Tabs */}

@@ -1,5 +1,5 @@
 // @ts-nocheck -- DnD kit type conflicts with Feature index signature
-import { useEffect, useState, useCallback, useMemo } from 'react';
+import React, { useEffect, useState, useCallback, useMemo } from 'react';
 import { createLogger } from '@protolabsai/utils/logger';
 import {
   DndContext,
@@ -85,7 +85,7 @@ import {
   useSelectionMode,
   useListViewState,
 } from './board-view/hooks';
-import { SelectionActionBar, ListView, StatsPanel } from './board-view/components';
+import { SelectionActionBar, ListView } from './board-view/components';
 import { MassEditDialog } from './board-view/dialogs';
 import { InitScriptIndicator } from './board-view/init-script-indicator';
 import { useInitScriptEvents } from '@/hooks/use-init-script-events';
@@ -95,6 +95,14 @@ import { queryKeys } from '@/lib/query-keys';
 import { useAutoModeQueryInvalidation } from '@/hooks/use-query-invalidation';
 import { useUpdateGlobalSettings } from '@/hooks/mutations/use-settings-mutations';
 import { DEFAULT_MAX_CONCURRENCY } from '@protolabsai/types';
+
+// Lazy-loaded views for context and memory tabs
+const LazyContextView = React.lazy(() =>
+  import('./context-view').then((m) => ({ default: m.ContextView }))
+);
+const LazyMemoryView = React.lazy(() =>
+  import('./memory-view').then((m) => ({ default: m.MemoryView }))
+);
 
 // Stable empty array to avoid infinite loop in selector
 const EMPTY_WORKTREES: ReturnType<ReturnType<typeof useWorktreeStore.getState>['getWorktrees']> =
@@ -1457,9 +1465,27 @@ export function BoardView() {
 
         {/* Main Content Area */}
         <div className="flex-1 flex flex-col overflow-hidden">
-          {/* View Content - Kanban Board, List View, or Stats */}
-          {viewMode === 'stats' ? (
-            <StatsPanel />
+          {/* View Content */}
+          {viewMode === 'context' ? (
+            <React.Suspense
+              fallback={
+                <div className="flex-1 flex items-center justify-center">
+                  <Spinner />
+                </div>
+              }
+            >
+              <LazyContextView />
+            </React.Suspense>
+          ) : viewMode === 'memory' ? (
+            <React.Suspense
+              fallback={
+                <div className="flex-1 flex items-center justify-center">
+                  <Spinner />
+                </div>
+              }
+            >
+              <LazyMemoryView />
+            </React.Suspense>
           ) : isListView ? (
             <ListView
               columnFeaturesMap={columnFeaturesMap}

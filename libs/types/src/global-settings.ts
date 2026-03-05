@@ -191,17 +191,22 @@ const DEFAULT_CODEX_ADDITIONAL_DIRS: string[] = [];
 export interface FeatureFlags {
   /** Ava Anywhere — chat overlay, Cmd+K modal, /chat route, mobile chat tab */
   avaChat: boolean;
-  /** Calendar view in project sidebar */
+  /** Calendar nav item in sidebar */
+  calendar: boolean;
   /** Designs/pen file viewer in project sidebar */
   designs: boolean;
   /** Docs view in project sidebar */
   docs: boolean;
+  /** Notes nav item in sidebar */
+  notes: boolean;
   /**
    * Authority pipeline (TRIAGE → RESEARCH → SPEC → SPEC_REVIEW → … → PUBLISH).
    * When false, PipelineOrchestrator ignores all events — no gate cycling, no HITL
    * interruptions. Off by default until the pipeline overhaul is complete.
    */
   pipeline: boolean;
+  /** Spec editor in sidebar Tools section */
+  specEditor: boolean;
   /** System View — network/dependency graph view in the project sidebar */
   systemView: boolean;
   /**
@@ -215,11 +220,35 @@ export interface FeatureFlags {
 /** Default feature flags — all off by default, opt-in per environment */
 export const DEFAULT_FEATURE_FLAGS: FeatureFlags = {
   avaChat: false,
+  calendar: false,
   designs: false,
   docs: false,
+  notes: false,
   pipeline: false,
+  specEditor: false,
   systemView: false,
   userPresenceDetection: false,
+};
+
+// ============================================================================
+// Scheduler Settings
+// ============================================================================
+
+/**
+ * Scheduler settings for persisting task state across server restarts.
+ */
+export interface SchedulerSettings {
+  /**
+   * Per-task overrides for built-in scheduled tasks.
+   * Key: task ID (e.g., "archival", "health-check")
+   * Value: overrides for enabled state and/or cron expression
+   */
+  taskOverrides: Record<string, { enabled?: boolean; cronExpression?: string }>;
+}
+
+/** Default scheduler settings — no overrides */
+export const DEFAULT_SCHEDULER_SETTINGS: SchedulerSettings = {
+  taskOverrides: {},
 };
 
 export interface GlobalSettings {
@@ -640,6 +669,12 @@ export interface GlobalSettings {
    * Toggled per-installation via Settings > Developer > Feature Flags.
    */
   featureFlags?: FeatureFlags;
+
+  /**
+   * Scheduler settings for persisting task enable/disable state and cron overrides.
+   * @see SchedulerSettings
+   */
+  schedulerSettings?: SchedulerSettings;
 }
 
 /** Default global settings used when no settings file exists */
@@ -715,4 +750,6 @@ export const DEFAULT_GLOBAL_SETTINGS: GlobalSettings = {
   },
   // Feature flags — all on in development by default
   featureFlags: DEFAULT_FEATURE_FLAGS,
+  // Scheduler settings — no task overrides by default
+  schedulerSettings: DEFAULT_SCHEDULER_SETTINGS,
 };
