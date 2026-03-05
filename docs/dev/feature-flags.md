@@ -9,19 +9,23 @@ Feature flags live in a single source of truth: `DEFAULT_FEATURE_FLAGS` in `libs
 ```typescript
 // libs/types/src/global-settings.ts
 export interface FeatureFlags {
-  calendar: boolean;
+  avaChat: boolean;
   designs: boolean;
   docs: boolean;
-  fileEditor: boolean;
   pipeline: boolean;
+  specEditor: boolean;
+  systemView: boolean;
+  userPresenceDetection: boolean;
 }
 
 export const DEFAULT_FEATURE_FLAGS: FeatureFlags = {
-  calendar: false,
+  avaChat: false,
   designs: false,
   docs: false,
-  fileEditor: false,
   pipeline: false,
+  specEditor: false,
+  systemView: false,
+  userPresenceDetection: false,
 };
 ```
 
@@ -29,13 +33,24 @@ export const DEFAULT_FEATURE_FLAGS: FeatureFlags = {
 
 ## Current Flags
 
-| Flag         | Default | What it gates                                                          |
-| ------------ | ------- | ---------------------------------------------------------------------- |
-| `calendar`   | off     | Calendar view in the project sidebar                                   |
-| `designs`    | off     | Designs/pen file viewer in the project sidebar                         |
-| `docs`       | off     | Docs viewer in the project sidebar                                     |
-| `fileEditor` | off     | Tabbed code editor in the project sidebar                              |
-| `pipeline`   | off     | HITL interrupt forms and pipeline gate cycling (TRIAGE, SPEC, PUBLISH) |
+| Flag                    | Default | What it gates                                                          |
+| ----------------------- | ------- | ---------------------------------------------------------------------- |
+| `avaChat`               | off     | Ava Anywhere -- chat overlay, Cmd+K modal, /chat route, mobile tab     |
+| `designs`               | off     | Designs/pen file viewer in the project sidebar                         |
+| `docs`                  | off     | Docs viewer in the project sidebar                                     |
+| `pipeline`              | off     | HITL interrupt forms and pipeline gate cycling (TRIAGE, SPEC, PUBLISH) |
+| `specEditor`            | off     | Spec editor in the sidebar Tools section                               |
+| `systemView`            | off     | Network/dependency graph view in the project sidebar                   |
+| `userPresenceDetection` | off     | Sensor-driven presence awareness (tab visibility, idle/afk)            |
+
+### Graduated Flags (GA -- always enabled)
+
+These flags were removed from `FeatureFlags` after reaching general availability:
+
+| Former Flag | Graduated | Notes                            |
+| ----------- | --------- | -------------------------------- |
+| `calendar`  | v0.17     | Calendar view in project sidebar |
+| `notes`     | v0.17     | Notes tabs in project sidebar    |
 
 ## How to Add a New Flag
 
@@ -45,7 +60,7 @@ Follow these 5 steps in order. TypeScript will fail to compile after step 1 unti
 
 ```typescript
 // Add to FeatureFlags interface
-myFeature?: boolean;  // optional, or add as required with a false default below
+myFeature: boolean;
 
 // Add to DEFAULT_FEATURE_FLAGS
 export const DEFAULT_FEATURE_FLAGS: FeatureFlags = {
@@ -93,6 +108,15 @@ if (myFeatureEnabled) {
 it('does nothing when myFeature flag is false (default)', async () => { ... });
 it('runs when myFeature flag is true', async () => { ... });
 ```
+
+## Graduating a Flag
+
+When a feature is stable and ready for GA:
+
+1. Remove the field from `FeatureFlags` interface and `DEFAULT_FEATURE_FLAGS`
+2. Remove the entry from `FEATURE_FLAG_LABELS` in `developer-section.tsx`
+3. Remove any server-side guards that check the flag — the feature is now always on
+4. Add the flag to the "Graduated Flags" table in this document
 
 ## Server-Side Consumption Pattern
 
