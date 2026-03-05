@@ -263,22 +263,39 @@
       <section class="max-w-5xl mx-auto px-6 mb-12">
         <div class="max-w-2xl text-zinc-400 text-sm leading-relaxed space-y-3">
           <p>
-            protoLabs is the maintained successor of
+            We forked
             <a
               href="https://github.com/AutoMaker-Org/automaker"
               target="_blank"
               rel="noopener"
               class="text-accent hover:text-white transition-colors"
               >Automaker</a
-            >. We forked on February 4th, 2026 and rebuilt the project from the ground up into an
-            autonomous multi-agent development studio. In under a month we shipped dependency-aware
-            scheduling, model escalation, observability, a desktop app, and over 1,700 PRs.
-            Everything below is ours — nothing from before the fork.
+            >
+            on February 4th, 2026. The original project had a Kanban board and basic agent
+            execution. In the first week we shipped 116 PRs — auto-mode recovery, dependency
+            enforcement, and the foundations of the orchestration engine.
           </p>
           <p>
-            Every entry below is a real pull request — created by an AI agent, reviewed by CI and
-            CodeRabbit, and merged through our three-branch promotion pipeline. No demos, no
-            mockups, just production code.
+            Week two hit 477 PRs. Observability landed (Langfuse tracing on every agent run), the
+            desktop app took shape (Electron builds for macOS), and the content engine went from
+            zero to a full multi-stage pipeline with antagonistic review.
+          </p>
+          <p>
+            By week three we had a Lead Engineer service running a per-feature state machine, a
+            7-agent team with domain specialists, and 14 shared packages extracted into a clean
+            dependency chain. Week four brought the calendar, promotion pipeline, and Chat UI 2.0.
+          </p>
+          <p>
+            Everything below is ours. Every entry is a real pull request — created by an AI agent,
+            reviewed by CI and
+            <a
+              href="https://coderabbit.ai"
+              target="_blank"
+              rel="noopener"
+              class="text-accent hover:text-white transition-colors"
+              >CodeRabbit</a
+            >, and merged through our three-branch promotion pipeline. 45 PRs per day, averaged
+            across 29 days. No demos, no mockups — production code.
           </p>
         </div>
       </section>
