@@ -220,7 +220,10 @@ export class CrdtSyncService {
     }
 
     // Build a HivemindConfig from proto config or defaults
-    const hivemind = protoConfig?.['hivemind'] as HivemindConfig | undefined;
+    // Public config key is "mesh"; "hivemind" kept as internal type name
+    const hivemind = (protoConfig?.['mesh'] ?? protoConfig?.['hivemind']) as
+      | HivemindConfig
+      | undefined;
     this.config = {
       enabled: true,
       role: this.role,

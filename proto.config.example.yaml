@@ -1,20 +1,20 @@
-# protoLabs Multi-Instance Configuration
+# protoLabs Studio Mesh — Multi-Instance Configuration
 # Copy to proto.config.yaml and customize for your instance.
-# See docs/dev/distributed-sync.md for full documentation.
+# See docs/dev/studio-mesh.md for full documentation.
 #
-# This file activates CRDT sync — without it, the server runs in
-# single-instance mode (plain filesystem reads/writes).
+# This file activates Studio Mesh (CRDT sync) — without it, the server
+# runs in single-instance mode (plain filesystem reads/writes).
 
 protolab:
   # role: primary | worker
   # primary: owns leader election, workers defer to primary
   role: primary
-  # WebSocket port for CRDT sync mesh
+  # WebSocket port for mesh sync
   syncPort: 9800
   # Stable unique identifier for this instance
   instanceId: my-instance
 
-hivemind:
+mesh:
   # How often to broadcast capacity heartbeats (ms)
   heartbeatIntervalMs: 30000
   # Mark a peer as unreachable after this duration without heartbeat (ms)
