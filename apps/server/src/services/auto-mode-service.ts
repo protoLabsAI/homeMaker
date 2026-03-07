@@ -9,6 +9,7 @@
  * - Verification and merge workflows
  */
 
+import fs from 'node:fs';
 import * as v8 from 'node:v8';
 import { ProviderFactory } from '../providers/provider-factory.js';
 import { simpleQuery } from '../providers/simple-query-service.js';
@@ -3351,6 +3352,30 @@ Format your response as a structured markdown document.`;
       }
 
       logger.info(`Created worktree for branch "${branchName}" at: ${worktreePath}`);
+
+      // Exclude .automaker/features/ from worktree git status to prevent
+      // board state files from blocking rebases and polluting diffs
+      try {
+        const resolvedPath = path.resolve(worktreePath);
+        const gitDirResult = await execAsync('git rev-parse --git-dir', { cwd: resolvedPath });
+        const gitDir = gitDirResult.stdout.trim();
+        const excludePath = path.resolve(resolvedPath, gitDir, 'info', 'exclude');
+        const excludeDir = path.dirname(excludePath);
+        await fs.promises.mkdir(excludeDir, { recursive: true });
+        const excludeEntry = '.automaker/features/\n';
+        let existing = '';
+        try {
+          existing = await fs.promises.readFile(excludePath, 'utf-8');
+        } catch {
+          // file doesn't exist yet
+        }
+        if (!existing.includes('.automaker/features/')) {
+          await fs.promises.appendFile(excludePath, excludeEntry, 'utf-8');
+          logger.debug(`Added .automaker/features/ to worktree git exclude: ${excludePath}`);
+        }
+      } catch (err) {
+        logger.debug('Failed to update worktree git exclude (non-fatal):', err);
+      }
 
       return path.resolve(worktreePath);
     } catch (error) {
