@@ -99,7 +99,6 @@ import { changelogService } from '../services/changelog-service.js';
 import { ProjectPMService } from '../services/project-pm-service.js';
 import * as projectPmModule from '../services/project-pm.module.js';
 import { CrdtSyncService } from '../services/crdt-sync-service.js';
-import type { WorkStealingService } from '../services/work-stealing-service.js';
 
 const logger = createLogger('Server:Services');
 
@@ -253,9 +252,6 @@ export interface ServiceContainer {
 
   // CRDT sync service (multi-instance coordination)
   crdtSyncService: CrdtSyncService;
-
-  // Work-stealing service (cross-instance feature assignment, wired by module)
-  workStealingService: WorkStealingService | null;
 
   // Drift detection interval (set by wireServices, cleared by shutdown)
   driftCheckInterval: ReturnType<typeof setInterval> | null;
@@ -762,7 +758,6 @@ export async function createServices(dataDir: string, repoRoot: string): Promise
     projectPlanningService,
     projectPmService,
     crdtSyncService,
-    workStealingService: null,
     driftCheckInterval: null,
   };
 }
