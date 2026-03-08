@@ -159,6 +159,50 @@ export class CRDTStore extends EventEmitter {
   }
 
   /**
+   * Return a snapshot of the local document registry (domain:id → AutomergeUrl).
+   */
+  getRegistry(): RegistryMap {
+    return { ...this.registry };
+  }
+
+  /**
+   * Adopt a remote registry (typically from the primary instance).
+   * For each key in the remote registry:
+   *   - If local has no entry → adopt the remote URL
+   *   - If local has a DIFFERENT URL → adopt the remote URL and evict stale handle
+   *   - If local has the SAME URL → no-op
+   *
+   * This resolves split-brain where two instances independently created
+   * documents for the same domain:id with different Automerge URLs.
+   */
+  adoptRemoteRegistry(remote: RegistryMap): { adopted: number; conflicts: number } {
+    this.assertInitialized();
+    let adopted = 0;
+    let conflicts = 0;
+
+    for (const [key, remoteUrl] of Object.entries(remote)) {
+      const localUrl = this.registry[key];
+      if (localUrl === remoteUrl) continue; // Already in sync
+
+      if (localUrl) {
+        // Conflict: local has a different URL for the same key
+        conflicts++;
+        // Evict the stale local handle so next getOrCreate() uses the adopted URL
+        this.handles.delete(key);
+      }
+
+      this.registry[key] = remoteUrl;
+      adopted++;
+    }
+
+    if (adopted > 0) {
+      this.saveRegistry();
+    }
+
+    return { adopted, conflicts };
+  }
+
+  /**
    * Find a document by its AutomergeUrl (for cross-store document access).
    * Used to request a document from a remote peer by its URL.
    */

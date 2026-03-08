@@ -128,6 +128,25 @@ export async function register(container: ServiceContainer): Promise<CrdtStoreMo
 
   logger.info('CRDTStore injected into AvaChannelService, CalendarService, TodoService');
 
+  // Wire registry sync via CrdtSyncService to prevent split-brain.
+  // Primary: broadcasts its document registry when a peer connects.
+  // Worker: adopts the primary's registry on receipt, resolving URL conflicts.
+  const { crdtSyncService } = container;
+  if (role === 'primary') {
+    crdtSyncService.setRegistryProvider(() => store.getRegistry());
+    logger.info('Registry provider attached — will broadcast to connecting peers');
+  } else {
+    crdtSyncService.onRegistryReceived((remoteRegistry) => {
+      const { adopted, conflicts } = store.adoptRemoteRegistry(remoteRegistry);
+      if (adopted > 0) {
+        logger.info(
+          `Registry sync: adopted ${adopted} entries from primary (${conflicts} conflicts resolved)`
+        );
+      }
+    });
+    logger.info('Registry receiver attached — will adopt primary registry on connect');
+  }
+
   const close = async () => {
     await store.close();
     if (syncServer) {
