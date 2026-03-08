@@ -202,7 +202,7 @@ export class CRDTStore extends EventEmitter {
       doc._meta.updatedAt = updatedAt;
     });
 
-    this.emit('change', { domain, id, doc: handle.docSync() });
+    this.emit('change', { domain, id, doc: handle.doc() });
   }
 
   /**
@@ -247,7 +247,7 @@ export class CRDTStore extends EventEmitter {
     fs.mkdirSync(checkpointDir, { recursive: true });
 
     for (const [key, handle] of this.handles.entries()) {
-      const doc = handle.docSync();
+      const doc = handle.doc();
       if (!doc) continue;
       const binary = Automerge.save(doc);
       const filename = path.join(checkpointDir, `${encodeKey(key)}.bin`);

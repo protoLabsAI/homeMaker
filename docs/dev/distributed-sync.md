@@ -155,7 +155,7 @@ Every Automerge document retains its full change history. Use `Automerge.getHist
 import * as Automerge from '@automerge/automerge';
 
 const handle = store.getHandle('features', featureId);
-const doc = handle.docSync();
+const doc = handle.doc();
 
 const history = Automerge.getHistory(doc);
 // history: Array<{ change: Change; snapshot: Doc }>

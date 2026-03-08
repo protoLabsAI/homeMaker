@@ -137,7 +137,7 @@ export class TodoService extends EventEmitter {
           listOrder: [],
           updatedAt: new Date().toISOString(),
         });
-        const doc = handle.docSync();
+        const doc = handle.doc();
         if (doc) {
           return {
             version: 1,

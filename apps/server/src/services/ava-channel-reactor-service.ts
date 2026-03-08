@@ -192,7 +192,7 @@ export class AvaChannelReactorService {
         dateKey,
         { messages: [] }
       );
-      const existing = handle.docSync();
+      const existing = handle.doc();
       if (existing?.messages) {
         for (const msg of existing.messages) {
           this.knownMessageIds.add(msg.id);

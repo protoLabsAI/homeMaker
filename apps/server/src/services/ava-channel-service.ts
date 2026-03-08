@@ -257,7 +257,7 @@ export class AvaChannelService {
           const handle = await this.store.getOrCreate<AvaChannelDocument>('ava-channel', date, {
             messages: [],
           });
-          const doc = handle.docSync();
+          const doc = handle.doc();
           const messages: AvaChatMessage[] = doc ? [...(doc.messages ?? [])] : [];
           fs.writeFileSync(archivePath, JSON.stringify(messages, null, 2), 'utf-8');
           archived++;
@@ -311,7 +311,7 @@ export class AvaChannelService {
         const handle = await this.store.getOrCreate<AvaChannelDocument>('ava-channel', date, {
           messages: [],
         });
-        const doc = handle.docSync();
+        const doc = handle.doc();
         if (!doc) return [];
         return [...(doc.messages ?? [])];
       } catch (err) {
