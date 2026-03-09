@@ -3867,3 +3867,44 @@ usageStats:
 - **Problem solved:** Two-tab layout could be implemented with complex conditionals in parent, or with clean component abstraction
 - **Why this works:** Independent components enable isolated testing, clear responsibility (each tab owns its own header controls), and easier future feature additions per tab
 - **Trade-offs:** Slightly more files, but chat-overlay-content.tsx is now a clean composition layer (6 lines per tab) instead of 200+ line conditionals
+
+### Two-part fix: (1) enhanced observability of unclassified failures via warn-level logging with raw reason text, (2) added missing pattern for 'agent escalation' scenarios. Not pattern-only fix. (2026-03-09)
+- **Context:** Recurring 'unknown' failures were silently dropped with no diagnostics, AND a common failure reason (agent escalation) lacked a matching pattern, causing it to fall through to unknown.
+- **Why:** Silent drops make pattern gaps invisible in production. By upgrading unclassified failures to warn-level (visible in production logs), operators can spot new patterns to classify. This creates a sustainable feedback loop rather than reactive pattern additions.
+- **Rejected:** Single-pattern approach (just add 'agent escalation' pattern) would leave the observability gap. Operators wouldn't know what other unknown failures they're missing in production.
+- **Trade-offs:** More log volume at warn level, but necessary trade-off for pattern discovery and system health. Alternative of high-volume warn logs vs missing patterns in the dark.
+- **Breaking if changed:** If you remove the warn-level logging of unclassified failures, you lose visibility into what patterns need to be added next. System becomes opaque to new failure modes.
+
+#### [Pattern] Pure function rule evaluation on immutable world state (LeadWorldState) that returns side-effect actions (LeadRuleAction[]) as a separate layer (2026-03-09)
+- **Problem solved:** Lead Engineer service needs to evaluate rules on every inbound event without direct state mutations
+- **Why this works:** Separates read logic from write logic. Rules are pure, testable, and deterministic. Executor applies actions independently, enabling async and retry semantics.
+- **Trade-offs:** Cleaner architecture and testability vs. additional layer of indirection and requirement to keep world state fresh
+
+### Internal state machine (FeatureState) with 8 states (INTAKE→PLAN→EXECUTE→REVIEW→MERGE→DEPLOY→VERIFY→DONE) vs. simplified public board status with 6 states (2026-03-09)
+- **Context:** Need to track detailed execution lifecycle internally while presenting clean status to users and integrating with Authority System
+- **Why:** Rich internal state enables fine-grained control and observability; simplified public states reduce cognitive load and support multiple domain models (board, authority system, user experience)
+- **Rejected:** Single unified state machine would require either 8-state board (UI complexity) or loss of internal context (operational blindness)
+- **Trade-offs:** Richer operational semantics vs. complexity of status translation layer and risk of inconsistency between internal and external representations
+- **Breaking if changed:** Authority System integration relies on status mapping; missing translation layer causes sync failures
+
+#### [Gotcha] Type-layer documentation (feature.ts, lead-engineer.ts type definitions) drifts behind service-layer documentation (ava-chat-system.md, distributed-sync.md) (2026-03-09)
+- **Situation:** Review of 15 recently-changed files showed service implementations well-documented but their type contracts were not
+- **Root cause:** Service documentation is closer to visible behavior and user impact; type documentation requires intentional effort to keep synchronized. Types are implementation detail less visible to reviewers.
+- **How to avoid:** Type-layer less visible in docs = harder onboarding for new developers; harder to understand contracts before diving into code
+
+#### [Pattern] Rolling 200-entry circular buffer log of rule evaluations in LeadEngineerSession (ruleLog) for operational observability (2026-03-09)
+- **Problem solved:** Need to track rule decisions over time without unbounded memory growth in long-running session
+- **Why this works:** Fixed-size log prevents memory leaks in continuous operation; 200 entries provides recent history for debugging without requiring persistent storage
+- **Trade-offs:** Observability window is limited to last 200 evaluations; old decisions are permanently lost; insufficient for long-term audit trails
+
+### PhaseHandoff verdict system (APPROVE/WARN/BLOCK) explicitly gates pipeline progression instead of implicit state logic (2026-03-09)
+- **Context:** End of each Lead Engineer phase needs quality gates that prevent advancement if conditions aren't met
+- **Why:** Explicit verdicts are declarative and unambiguous; BLOCK prevents data corruption by requiring human intervention; WARN allows best-effort progression with visibility
+- **Rejected:** Implicit progression based on feature state alone would be silent and could advance broken work to next phase
+- **Trade-offs:** BLOCK is hard gate—if issued incorrectly, entire feature pipeline halts (operational friction); WARN requires process to track and handle warnings
+- **Breaking if changed:** BLOCK verdict must be cleared explicitly; system could deadlock if verdict logic is buggy and always returns BLOCK
+
+#### [Gotcha] Snapshot types (LeadFeatureSnapshot, LeadAgentSnapshot, LeadPRSnapshot, LeadMilestoneSnapshot) must be kept in sync with their source entity types as they evolve (2026-03-09)
+- **Situation:** World state contains snapshots that rule evaluation depends on; source entities (Feature, Agent, PR, Milestone) may change over time
+- **Root cause:** Snapshots are immutable inputs to pure rule functions; stale snapshots cause rules to miss critical state changes or make decisions on outdated data
+- **How to avoid:** Deterministic rule evaluation vs. snapshot staleness; must rebuild world state frequently to stay current

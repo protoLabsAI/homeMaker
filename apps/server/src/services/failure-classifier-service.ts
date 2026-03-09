@@ -316,6 +316,33 @@ const FAILURE_PATTERNS: FailurePattern[] = [
     confidence: 0.9,
   },
 
+  // Agent escalation — needs human input / clarification
+  {
+    patterns: [
+      /could not determine/i,
+      /needs? (human|user|manual) (input|review|intervention|clarification)/i,
+      /waiting for.*(input|clarification|design|decision|approval)/i,
+      /blocked.*pending/i,
+      /requires? clarification/i,
+      /unclear requirements?/i,
+      /ambiguous/i,
+      /no (clear )?next step/i,
+      /cannot proceed without/i,
+      /insufficient (context|information|details?)/i,
+    ],
+    category: 'validation',
+    isRetryable: false,
+    suggestedDelay: 0,
+    maxRetries: 0,
+    createRecoveryStrategy: (reason) => ({
+      type: 'escalate_to_user',
+      reason: `Agent needs human input to proceed: ${reason.slice(0, 200)}`,
+    }),
+    contextToPreserve: ['agentOutput', 'lastQuestion', 'blockedOn'],
+    explanation: 'Agent escalation — needs human input or clarification to proceed',
+    confidence: 0.75,
+  },
+
   // Network/transient errors (catch-all for network issues)
   {
     patterns: [
@@ -419,7 +446,11 @@ export class FailureClassifierService {
     }
 
     // No pattern matched - return unknown
-    logger.debug('No pattern matched, classifying as unknown');
+    // Warn so unclassified failure reasons are visible in production logs.
+    // If this pattern is common, add a new entry to FAILURE_PATTERNS above.
+    logger.warn('No pattern matched, classifying as unknown', {
+      reasonSnippet: reason.slice(0, 200),
+    });
     return {
       ...createUnknownAnalysis(reason),
       confidence: 0.5, // Low confidence for unknown

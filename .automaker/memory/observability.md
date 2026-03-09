@@ -34,3 +34,11 @@ usageStats:
 - **Why this works:** Decouples scan from consumers; enables multiple handlers (logging, metrics, alerts) to subscribe independently
 - **Trade-offs:** Requires EventEmitter wiring through multiple dependency layers vs. ability for downstream code to react without coupling.
 >>>>>>> Stashed changes
+
+
+### Include first 200 chars of raw unclassified reason in warn-level logs, enabling operators to spot patterns without instrumenting additional code. (2026-03-09)
+- **Context:** Operators need to identify new failure patterns from production logs. Including the raw reason text makes pattern-spotting actionable without requiring code changes or additional queries.
+- **Why:** Raw reason text is the highest-signal data for identifying missing patterns. Logging it at warn level (visible in production) enables continuous pattern discovery. Filtering/grouping these logs reveals systematic gaps.
+- **Rejected:** Logging only a counter of unclassified failures (would require manual investigation). Logging the entire reason string unbounded (could leak secrets or create excessive log volume).
+- **Trade-offs:** Slightly more log volume (bounded by 200 char limit) vs significant improvement in debuggability and pattern discovery velocity.
+- **Breaking if changed:** If raw reason text is removed, operators lose the ability to spot new patterns from production behavior.
