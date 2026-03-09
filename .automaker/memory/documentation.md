@@ -5,11 +5,10 @@ relevantTo: [documentation]
 importance: 0.7
 relatedFiles: []
 usageStats:
-  loaded: 226
-  referenced: 45
-  successfulFeatures: 45
+  loaded: 235
+  referenced: 49
+  successfulFeatures: 49
 ---
-
 # documentation
 
 #### [Pattern] API reference uses method signatures with actual TypeScript types rather than prose descriptions (2026-02-13)

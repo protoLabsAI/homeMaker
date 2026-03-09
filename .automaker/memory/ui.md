@@ -533,3 +533,51 @@ usageStats:
 - **Situation:** In hivemind mode, messages come from multiple instances. Without badges, users can't tell which instance said what
 - **Root cause:** Multi-instance streams are ambiguous without source information. Badges provide instant visual context without reading metadata
 - **How to avoid:** Takes screen space, but prevents user confusion and is expected UX pattern in distributed systems
+
+### Input preview truncated to exactly 200 characters + ellipsis. Uses JSON.stringify on raw toolInput object, not formatted display. (2026-03-09)
+- **Context:** Tool inputs vary wildly (bash: 'ls /tmp' vs 20KB file content). Need readable preview without breaking card layout.
+- **Why:** 200 chars = sweet spot where simple bash/node/agent commands remain readable, complex inputs truncate gracefully. Ellipsis signals truncation (vs silent clipping). JSON.stringify matches internal representation.
+- **Rejected:** Fixed 100-char preview (too many commands truncated); 500-char preview (breaks card width on mobile); formatted/syntax-highlighted display (adds complexity, changes semantics); word-wrap to multiple lines (breaks vertical card stacking)
+- **Trade-offs:** Easier: single regex-free truncation logic. Harder: users see raw JSON, not formatted/pretty preview. Some tools with nested configs lose detail.
+- **Breaking if changed:** If you increase to 500+ chars, vertical card stacking becomes unstable on narrow viewports. If you use JSON.parse + format, you lose fidelity to actual tool invocation.
+
+#### [Pattern] WaitingTimer extracted as sub-component using useEffect + useState to count elapsed seconds live from server-provided receivedAt ISO timestamp. Recalculates every interval. (2026-03-09)
+- **Problem solved:** Approval cards need to show 'how long has user been waiting for this approval' in real-time.
+- **Why this works:** Client-side timer decouples UX feedback (show urgency now) from server clock sync (use server's timestamp as reference). Server can't know how long approval should 'wait' from user's perspective. Component re-renders show live elapsed time.
+- **Trade-offs:** Easier: timer always accurate to user's view. Harder: each card running useEffect means N timers in background; requires cleanup.
+
+### Cards use amber-500 color with opacity modifiers: border-amber-500/50 (border), bg-amber-500/5 (background). No other pending-state colors tested. (2026-03-09)
+- **Context:** Visual distinction needed for 'awaiting approval' state. Must signal attention without aggression (not error-red).
+- **Why:** Amber = caution/attention without urgency. Opacity (_/50 border, _/5 background) creates hierarchy: border visible, background subtle. Matches design convention for 'needs action' vs 'blocked' (red) or 'normal' (gray).
+- **Rejected:** Red (signals error, too aggressive for deliberate approval gate); blue (signals info, too neutral); yellow (too bright); full opacity amber (too harsh)
+- **Trade-offs:** Easier: clear visual grouping of approval cards. Harder: color coding assumes users know amber=action-needed; may need legend on first use.
+- **Breaking if changed:** If you remove opacity and use solid amber, cards become visually aggressive and fight for attention. If you change to red, users may confuse 'approval pending' with 'error state'.
+
+### Tool input preview truncates at 200 chars + ellipsis via simple string slicing of `JSON.stringify(toolInput)`, not semantic JSON parsing. (2026-03-09)
+- **Context:** Approval cards need to show a preview of what the tool will receive, but tool inputs can be very large (nested objects, large arrays).
+- **Why:** Simple string truncation is deterministic, fast, and gives the user a sense of the input structure (they see valid JSON up to 200 chars, then '…'). Parsing and selectively eliding keys would be more complex and harder to predict.
+- **Rejected:** Could parse JSON and show first N fields, but that's context-sensitive (what if the first field is a huge array?). Could show keys only (no values), but that loses critical context.
+- **Trade-offs:** String truncation = fast + predictable, but users might see cut-off field names or incomplete objects. Semantic approach = smarter but non-deterministic and slower.
+- **Breaking if changed:** If you increase the 200-char limit too much, wide tool inputs could overflow the card layout. If you decrease it, users won't see enough context to understand what they're approving. 200 was likely picked through design iteration.
+
+#### [Gotcha] The 'Show All Protocol' button implements context-dependent behavior with two distinct code paths: (1) when showProtocol=false, it sets showProtocol=true AND calls showAllProtocol() to select all chips; (2) when showProtocol=true, it ONLY calls showAllProtocol() without touching showProtocol. This dual-path architecture creates an asymmetry where the button label and visual state appear static but its behavioral contract changes based on showProtocol. (2026-03-09)
+- **Situation:** A single UI button needed to serve both 'enable protocol' and 'select all categories' functions depending on prior state. The acceptance criteria required 'Show All Protocol' to select all chips when protocol was already visible.
+- **Root cause:** Avoids button proliferation and reduces cognitive load—one button handles both visibility toggle and chip selection. However, the dual code paths are necessary because toggling protocol visibility has side effects (fetching/showing messages) that differ from chip selection (pure client-side filtering).
+- **How to avoid:** Fewer controls on screen, but the button's contract is non-obvious—behavior depends on unrelated state (showProtocol). Developers maintaining this code must trace both paths and understand why they differ.
+
+#### [Pattern] Guard pattern: filteredMessages checks `if (isProtocolMessage(m))` before applying category membership filter (selectedCategories.has(category)). This ensures human messages cannot be filtered by protocol categories and remain visible regardless of chip selection. (2026-03-09)
+- **Problem solved:** Chat mixes protocol system messages (extractable bracket tags) and human text (no tags). Only protocol messages have semantic categories; human messages should never be subject to category-based visibility rules.
+- **Why this works:** Domain semantics: categories (Heartbeat, Work Steal, etc.) are defined only for protocol messages. The guard prevents a subtle bug where getProtocolCategory() returns null for human text but the filter logic treats that as 'uncategorized' and hides the message. Human messages have *no* category by design, so they bypass the category filter entirely.
+- **Trade-offs:** Guard makes intent explicit (categories are protocol-only) and adds negligible cost (one conditional per message). Drawback: if the guard is accidentally removed during refactoring, human messages can disappear—this is a critical path.
+
+#### [Pattern] Branch navigation for message regeneration uses dual-ref/state pattern: `pendingBranchFor` ref drives non-reactive effect logic while `pendingBranchOrigId` state mirrors it to trigger UI shimmer. (2026-03-09)
+- **Problem solved:** Regeneration triggers async streaming — need the pending state visible to both effects (synchronous ref check) and React rendering (state-driven shimmer).
+- **Why this works:** useRef avoids stale-closure issues in effects that watch `messages` + `isStreaming`. useState provides the re-render needed to show/hide the shimmer. Both are kept in sync manually: set together on regenerate, cleared together when streaming completes or errors.
+- **Trade-offs:** Easier: effects can reliably read the ref without capturing stale values. Harder: two places to keep in sync — if one is cleared without the other, UI can stuck in shimmer or miss the shimmer entirely.
+- **Breaking if changed:** Removing the ref and using only state causes stale-closure reads in the streaming completion effect. Removing the state and using only the ref removes the shimmer re-render entirely.
+
+#### [Pattern] `branchInfoMap` (computed via useMemo) drives branch navigation UI — maps each currently-displayed variant's message ID to `{ branchIndex, branchCount, origId }`. (2026-03-09)
+- **Problem solved:** Branch navigation UI (prev/next arrows + "N of M" counter) needs per-message metadata without prop-drilling the full branchMap down to individual message components.
+- **Why this works:** Flat lookup map by displayed message ID lets ChatMessageList/ChatMessage components check their own ID to get branch metadata without knowing the full branch tree structure. The map is re-derived every time branchMap or currentBranchIndex changes.
+- **Trade-offs:** Simpler consumer API (components just do branchInfoMap.get(message.id)), but map is fully recomputed on any branch state change. This is acceptable at typical chat message counts (≤200 messages).
+- **Breaking if changed:** If branchInfoMap is keyed by origId instead of displayed variant ID, every consumer must track origId separately. Maintain the "keyed by displayed ID" invariant.

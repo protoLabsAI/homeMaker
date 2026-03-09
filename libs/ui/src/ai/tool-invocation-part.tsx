@@ -32,6 +32,13 @@ import { MetricsCard } from './tool-results/metrics-card.js';
 import { BriefingCard } from './tool-results/briefing-card.js';
 import { PromotionCandidatesCard } from './tool-results/promotion-candidates-card.js';
 import { PRStatusCard } from './tool-results/pr-status-card.js';
+import { MergePRCard } from './tool-results/merge-pr-card.js';
+import { PromotionCard } from './tool-results/promotion-card.js';
+import { RunningAgentsCard } from './tool-results/running-agents-card.js';
+import { ProjectListCard } from './tool-results/project-list-card.js';
+import { ProjectDetailCard } from './tool-results/project-detail-card.js';
+import { SitrepCard } from './tool-results/sitrep-card.js';
+import { HealthCheckCard } from './tool-results/health-check-card.js';
 
 // Register custom renderers for the boardRead tool group
 toolResultRegistry.register('get_board_summary', BoardSummaryCard);
@@ -78,6 +85,19 @@ toolResultRegistry.register('list_staging_candidates', PromotionCandidatesCard);
 // Register custom renderers for the prWorkflow tool group
 toolResultRegistry.register('check_pr_status', PRStatusCard);
 toolResultRegistry.register('get_pr_feedback', PRStatusCard);
+toolResultRegistry.register('merge_pr', MergePRCard);
+toolResultRegistry.register('promote_to_staging', PromotionCard);
+
+// Register custom renderers for the agentControl tool group (running agents list)
+toolResultRegistry.register('list_running_agents', RunningAgentsCard);
+
+// Register custom renderers for the projects tool group
+toolResultRegistry.register('list_projects', ProjectListCard);
+toolResultRegistry.register('get_project', ProjectDetailCard);
+
+// Register custom renderers for the sitrep and health tool group
+toolResultRegistry.register('get_sitrep', SitrepCard);
+toolResultRegistry.register('health_check', HealthCheckCard);
 
 type ToolState =
   | 'input-streaming'
