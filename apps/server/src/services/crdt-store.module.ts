@@ -148,7 +148,24 @@ export async function register(container: ServiceContainer): Promise<CrdtStoreMo
   }
 
   const close = async () => {
-    await store.close();
+    // Suppress WebSocket errors during shutdown — the Automerge
+    // WebSocketClientAdapter may throw asynchronously when the peer
+    // disconnected before the socket was fully established.
+    const suppressWsError = (err: Error) => {
+      if (err.message?.includes('WebSocket was closed before')) {
+        logger.debug('Suppressed WebSocket close error during shutdown');
+        return;
+      }
+      throw err;
+    };
+    process.on('uncaughtException', suppressWsError);
+    try {
+      await store.close();
+      // Allow any async WebSocket close events to fire before removing handler
+      await new Promise<void>((resolve) => setTimeout(resolve, 100));
+    } finally {
+      process.removeListener('uncaughtException', suppressWsError);
+    }
     if (syncServer) {
       await new Promise<void>((resolve) => {
         syncServer!.close(() => resolve());
