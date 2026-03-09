@@ -78,7 +78,7 @@ export class CalendarService {
           CALENDAR_DOC_ID,
           { events: {}, updatedAt: new Date().toISOString() }
         );
-        const doc = handle.docSync();
+        const doc = handle.doc();
         if (doc?.events) {
           return Object.values(doc.events);
         }

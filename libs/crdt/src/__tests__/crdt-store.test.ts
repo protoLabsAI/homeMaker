@@ -81,7 +81,7 @@ describe('CRDTStore — single node', () => {
       createdAt: new Date().toISOString(),
     });
 
-    const doc = handle.docSync()!;
+    const doc = handle.doc()!;
     expect(doc.schemaVersion).toBe(1);
     expect(doc._meta.instanceId).toBe('node-A');
     expect(typeof doc._meta.createdAt).toBe('string');
@@ -102,7 +102,7 @@ describe('CRDTStore — single node', () => {
     });
 
     const handle = await store.getOrCreate<FeatureDocument>('features', 'feat-2');
-    const doc = handle.docSync()!;
+    const doc = handle.doc()!;
 
     expect(doc.title).toBe('Updated');
     expect(doc._meta.instanceId).toBe('node-A');
@@ -203,7 +203,7 @@ describe('CRDTStore — single node', () => {
     expect(hydrationCalled).toBe(true);
 
     const handle = await hydratedStore.getOrCreate<FeatureDocument>('features', 'hydrated-1');
-    expect(handle.docSync()!.title).toBe('From filesystem');
+    expect(handle.doc()!.title).toBe('From filesystem');
 
     await hydratedStore.close();
     fs.rmSync(hydrationDir, { recursive: true, force: true });
@@ -370,7 +370,7 @@ describe('CRDTStore — two-node sync', () => {
     // findByUrl resolves when the doc is available from the peer
     const syncMs = Date.now() - syncStart;
 
-    expect(handleB.docSync()?.title).toBe('From A');
+    expect(handleB.doc()?.title).toBe('From A');
     // Verify sync completed within 200ms (allowing generous tolerance for CI)
     expect(syncMs).toBeLessThan(200);
   });
@@ -393,7 +393,7 @@ describe('CRDTStore — two-node sync', () => {
 
     // Wait for B to sync the initial doc
     const handleB = await storeB.findByUrl<FeatureDocument>(url);
-    await pollUntil(() => handleB.docSync()?.title === 'Base', 1000);
+    await pollUntil(() => handleB.doc()?.title === 'Base', 1000);
 
     // Concurrent updates: A changes title, B changes description
     await Promise.all([
@@ -410,17 +410,17 @@ describe('CRDTStore — two-node sync', () => {
 
     const merged = await pollUntil(
       () =>
-        handleA.docSync()?.title === 'Title from A' &&
-        handleA.docSync()?.description === 'Desc from B' &&
-        handleB.docSync()?.title === 'Title from A' &&
-        handleB.docSync()?.description === 'Desc from B',
+        handleA.doc()?.title === 'Title from A' &&
+        handleA.doc()?.description === 'Desc from B' &&
+        handleB.doc()?.title === 'Title from A' &&
+        handleB.doc()?.description === 'Desc from B',
       2000
     );
 
     expect(merged).toBe(true);
 
-    const docA = handleA.docSync()!;
-    const docB = handleB.docSync()!;
+    const docA = handleA.doc()!;
+    const docB = handleB.doc()!;
 
     // Both nodes see both changes merged (no data lost)
     expect(docA.title).toBe('Title from A');

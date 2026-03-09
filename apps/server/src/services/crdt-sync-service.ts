@@ -52,7 +52,19 @@ interface CrdtSettingsEvent {
   timestamp: string;
 }
 
-type SyncMessage = PeerMessage | CrdtFeatureEvent | CrdtSettingsEvent;
+/**
+ * Wire message carrying the CRDTStore document registry from primary to workers.
+ * Resolves split-brain where both instances independently created Automerge
+ * documents for the same domain:id with different URLs.
+ */
+interface CrdtRegistrySyncEvent {
+  type: 'registry_sync';
+  instanceId: string;
+  registry: Record<string, string>;
+  timestamp: string;
+}
+
+type SyncMessage = PeerMessage | CrdtFeatureEvent | CrdtSettingsEvent | CrdtRegistrySyncEvent;
 
 interface TrackedPeer extends HivemindPeer {
   ws?: WebSocket;
@@ -94,6 +106,10 @@ export class CrdtSyncService {
   private _avaChannelBugReportCallback:
     | ((content: string, featureId?: string) => Promise<void>)
     | null = null;
+  /** Returns the CRDTStore registry (primary broadcasts this to workers). */
+  private _registryProvider: (() => Record<string, string>) | null = null;
+  /** Called when a worker receives a registry from the primary. */
+  private _registryReceivedCallback: ((registry: Record<string, string>) => void) | null = null;
 
   constructor() {
     this.instanceId = os.hostname();
@@ -148,6 +164,23 @@ export class CrdtSyncService {
     callback: (content: string, featureId?: string) => Promise<void>
   ): void {
     this._avaChannelBugReportCallback = callback;
+  }
+
+  /**
+   * Register a provider that returns the local CRDTStore document registry.
+   * The primary uses this to broadcast the registry to connecting workers.
+   */
+  setRegistryProvider(provider: () => Record<string, string>): void {
+    this._registryProvider = provider;
+  }
+
+  /**
+   * Register a callback invoked when a worker receives a registry_sync message
+   * from the primary. The callback should merge the remote registry into the
+   * local CRDTStore to resolve split-brain document URLs.
+   */
+  onRegistryReceived(callback: (registry: Record<string, string>) => void): void {
+    this._registryReceivedCallback = callback;
   }
 
   /**
@@ -816,6 +849,24 @@ export class CrdtSyncService {
       }
       case 'identity': {
         this._upsertPeer(msg, ws, now);
+        // Primary broadcasts its CRDTStore registry to the newly connected peer
+        // so the peer can adopt the primary's document URLs (prevents split-brain).
+        if (this.role === 'primary' && this._registryProvider) {
+          const registryMsg: CrdtRegistrySyncEvent = {
+            type: 'registry_sync',
+            instanceId: this.instanceId,
+            registry: this._registryProvider(),
+            timestamp: new Date().toISOString(),
+          };
+          try {
+            ws.send(JSON.stringify(registryMsg));
+            logger.info(
+              `[CRDT] Sent registry sync to peer ${msg.instanceId} (${Object.keys(registryMsg.registry).length} entries)`
+            );
+          } catch {
+            // Best effort
+          }
+        }
         break;
       }
       case 'goodbye': {
@@ -863,6 +914,16 @@ export class CrdtSyncService {
         // Primary relays feature events to all other connected workers.
         if (this.role === 'primary') {
           this._broadcastToServerExcept(JSON.stringify(msg), ws);
+        }
+        break;
+      }
+      case 'registry_sync': {
+        if (msg.instanceId === this.instanceId) break;
+        logger.info(
+          `[CRDT] Received registry sync from ${msg.instanceId} (${Object.keys(msg.registry).length} entries)`
+        );
+        if (this._registryReceivedCallback) {
+          this._registryReceivedCallback(msg.registry);
         }
         break;
       }

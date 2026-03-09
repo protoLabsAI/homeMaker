@@ -49,6 +49,8 @@ function createMockContainer() {
     repoRoot: '/test/project',
     crdtSyncService: {
       getInstanceId: vi.fn(() => 'test-instance'),
+      setRegistryProvider: vi.fn(),
+      onRegistryReceived: vi.fn(),
     },
     avaChannelService: {
       setCrdtStore: vi.fn(),

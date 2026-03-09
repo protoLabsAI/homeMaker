@@ -20,10 +20,7 @@ function makeTempDir(): string {
 
 /** Build a minimal mock CRDTStore that holds shard documents in-memory */
 function makeMockStore() {
-  const docs = new Map<
-    string,
-    { messages: Array<Record<string, unknown>>; docSync: () => unknown }
-  >();
+  const docs = new Map<string, { messages: Array<Record<string, unknown>>; doc: () => unknown }>();
 
   const registry = new Map<string, string>();
 
@@ -37,7 +34,7 @@ function makeMockStore() {
       const messages: Array<Record<string, unknown>> = [];
       docs.set(key, {
         messages,
-        docSync: () => ({ schemaVersion: 1, _meta: {}, messages }),
+        doc: () => ({ schemaVersion: 1, _meta: {}, messages }),
       });
       registry.set(`${domain}/${id}`, key);
     }
@@ -57,7 +54,7 @@ function makeMockStore() {
       // Register the doc URL
       registry.set(`${domain}/${id}`, getKey(domain, id));
       return {
-        docSync: doc.docSync,
+        doc: doc.doc,
       };
     }),
 
@@ -267,7 +264,7 @@ describe('AvaChannelService', () => {
     it('returns empty array for a date with no shard and no archive', async () => {
       // Mock getOrCreate to return an empty doc
       store.getOrCreate.mockImplementation(async () => ({
-        docSync: () => ({ schemaVersion: 1, _meta: {}, messages: [] }),
+        doc: () => ({ schemaVersion: 1, _meta: {}, messages: [] }),
       }));
 
       const msgs = await service.getMessages({
