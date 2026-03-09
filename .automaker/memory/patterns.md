@@ -25,3 +25,8 @@ usageStats:
 - **Problem solved:** generateSpecMd must produce useful output without access to product/business context
 - **Why this works:** Acknowledges that product goals, target users, workflows cannot be reliably auto-generated without hallucination risk
 - **Trade-offs:** More friction for user (must fill TODOs) but prevents confidence in incorrect auto-generated product specification
+
+#### [Pattern] Intentionally lower confidence scoring (0.75 vs standard) for broad-keyword patterns ('needs human input', 'ambiguous', 'cannot proceed') to avoid false positives. Accept imperfect recall to prevent misclassification. (2026-03-09)
+- **Problem solved:** The new 'agent escalation' pattern covers common escalation phrases that are linguistically broader than specific failure modes. Using high confidence would create false positives misclassifying other failures.
+- **Why this works:** False positives (classifying a retry-able failure as non-retryable escalation) cause more damage than false negatives (some escalations slip through to unknown). Lower confidence + high recall on unclassified logging allows gradual pattern tightening.
+- **Trade-offs:** Some real agent escalations may still be classified as unknown initially, but they'll surface in the warn logs for pattern refinement. Avoids breaking the retry system with false escalations.

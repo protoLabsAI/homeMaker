@@ -159,13 +159,73 @@ interface DoraRegulationAlert {
 
 Thresholds are configurable at service construction time via `DoraMetricsService(featureLoader, thresholds?)`.
 
+## Operational Intelligence Endpoints
+
+Two additional endpoints expose operational signals tracked by the server.
+
+### GET /api/metrics/friction
+
+Returns all active recurring failure patterns tracked by `FrictionTrackerService`, sorted descending by occurrence count. Patterns expire after their rolling window; expired patterns are excluded.
+
+**Query parameters:** none
+
+**Example response:**
+
+```json
+{
+  "success": true,
+  "patterns": [
+    {
+      "pattern": "TypeScript compilation error",
+      "count": 5,
+      "lastSeen": "2026-03-09T10:00:00.000Z"
+    },
+    { "pattern": "Test timeout in CI", "count": 2, "lastSeen": "2026-03-09T08:30:00.000Z" }
+  ],
+  "total": 2
+}
+```
+
+### GET /api/metrics/failure-breakdown
+
+Aggregates `failureClassification.category` across all features in a project. Only features with a persisted `failureClassification` (written by the `EscalateProcessor`) are counted.
+
+**Query parameters:**
+
+| Param         | Type   | Required | Description                       |
+| ------------- | ------ | -------- | --------------------------------- |
+| `projectPath` | string | ✓        | Absolute path to the project root |
+
+**Example response:**
+
+```json
+{
+  "success": true,
+  "categories": [
+    { "category": "test_failure", "count": 8 },
+    { "category": "transient", "count": 3 },
+    { "category": "unknown", "count": 1 }
+  ],
+  "total": 12
+}
+```
+
+**Errors:**
+
+| Status | Cause                 |
+| ------ | --------------------- |
+| 400    | `projectPath` missing |
+| 500    | Feature loader error  |
+
 ## Key Files
 
-| File                                               | Role                                        |
-| -------------------------------------------------- | ------------------------------------------- |
-| `apps/server/src/routes/dora/index.ts`             | HTTP route — GET /api/dora/metrics          |
-| `apps/server/src/services/dora-metrics-service.ts` | Metric computation and threshold evaluation |
-| `libs/types/src/dora-metrics.ts`                   | `DoraMetrics`, `DoraRegulationAlert` types  |
+| File                                                   | Role                                                    |
+| ------------------------------------------------------ | ------------------------------------------------------- |
+| `apps/server/src/routes/metrics/dora.ts`               | HTTP routes — friction, failure-breakdown, dora history |
+| `apps/server/src/routes/metrics/index.ts`              | Metrics router — mounts all metrics sub-routes          |
+| `apps/server/src/services/dora-metrics-service.ts`     | Metric computation and threshold evaluation             |
+| `apps/server/src/services/friction-tracker-service.ts` | In-memory friction pattern counter with rolling window  |
+| `libs/types/src/dora-metrics.ts`                       | `DoraMetrics`, `DoraRegulationAlert` types              |
 
 ## Limitations
 

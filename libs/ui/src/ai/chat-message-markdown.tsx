@@ -177,7 +177,7 @@ export function ChatMessageMarkdown({
               const langMatch = codeProps.className?.match(/language-(\w+)/);
               const language = langMatch?.[1];
               const code = extractText(codeProps.children);
-              return <CodeBlock code={code} language={language} />;
+              return <CodeBlock code={code} language={language} isStreaming={isStreaming} />;
             }
 
             // Fallback for raw <pre> blocks

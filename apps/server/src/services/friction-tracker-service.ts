@@ -100,8 +100,15 @@ export class FrictionTrackerService {
   async recordFailure(pattern: string): Promise<void> {
     // 'unknown' is a catch-all fallback category, not a meaningful recurring pattern.
     // Skipping it prevents unrelated unclassified failures from accumulating into a
-    // spurious System Improvement ticket.
-    if (!pattern || pattern === 'unknown') return;
+    // spurious System Improvement ticket. A warn-level log in FailureClassifierService
+    // will surface the original reason for pattern expansion analysis.
+    if (!pattern || pattern === 'unknown') {
+      logger.debug(
+        'Dropping unclassified failure from friction counters — pattern="unknown" is a catch-all; ' +
+          'check FailureClassifierService warn logs to identify recurring unclassified reasons.'
+      );
+      return;
+    }
 
     const now = Date.now();
     const existing = this.counters.get(pattern);
