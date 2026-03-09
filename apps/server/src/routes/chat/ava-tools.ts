@@ -35,6 +35,10 @@ import type { MetricsService } from '../../services/metrics-service.js';
 import type { ProjectService } from '../../services/project-service.js';
 import type { ProjectLifecycleService } from '../../services/project-lifecycle-service.js';
 import type { SettingsService } from '../../services/settings-service.js';
+import type { AvaChannelService } from '../../services/ava-channel-service.js';
+import type { DiscordBotService } from '../../services/discord-bot-service.js';
+import type { CalendarService } from '../../services/calendar-service.js';
+import type { HealthMonitorService } from '../../services/health-monitor-service.js';
 import type { ToolProgressEmitter } from './tool-progress.js';
 import { buildProgressHooks } from '../../lib/agent-hooks.js';
 import { githubMergeService } from '../../services/github-merge-service.js';
@@ -102,6 +106,14 @@ export interface AvaToolsServices {
    * Undefined means full trust (bypassPermissions).
    */
   canUseTool?: CanUseTool;
+  /** Ava channel service — optional, used for avaChannel tool group */
+  avaChannelService?: AvaChannelService;
+  /** Discord bot service — optional, used for discord tool group */
+  discordBotService?: DiscordBotService;
+  /** Calendar service — optional, used for calendar tool group */
+  calendarService?: CalendarService;
+  /** Health monitor service — optional, used for health tool group */
+  healthMonitorService?: HealthMonitorService;
 }
 
 export interface AvaToolsConfig {
@@ -140,6 +152,16 @@ export interface AvaToolsConfig {
   userPresenceDetection?: boolean;
   /** When true, all destructive tools skip HITL confirmation (needsApproval: false) */
   autoApproveTools?: boolean;
+  /** Enable Ava channel tools (send to Ava Discord channel) */
+  avaChannel?: boolean;
+  /** Enable Discord tools (discord messaging) */
+  discord?: boolean;
+  /** Enable calendar tools (calendar events) */
+  calendar?: boolean;
+  /** Enable health tools (health monitoring) */
+  health?: boolean;
+  /** Enable settings tools (global settings access) */
+  settings?: boolean;
 }
 
 // Re-use the same status literals that the Feature type exposes
@@ -499,6 +521,31 @@ export function buildAvaTools(
       execute: async ({ featureId }) => {
         const output = await services.featureLoader.getAgentOutput(projectPath, featureId);
         return { featureId, output };
+      },
+    });
+
+    tools['send_message_to_agent'] = makeTool({
+      description:
+        'Send a follow-up message or instruction to the agent working on a feature. The agent will process the message in the context of its current worktree.',
+      inputSchema: z.object({
+        featureId: z.string().describe('The feature ID of the agent to message'),
+        message: z.string().describe('The message or instruction to send to the agent'),
+      }),
+      execute: async ({ featureId, message }) => {
+        try {
+          await services.autoModeService.followUpFeature(
+            projectPath,
+            featureId,
+            message,
+            undefined,
+            true
+          );
+          return { success: true, featureId, message: 'Message sent to agent.' };
+        } catch (err) {
+          return {
+            error: `Failed to send message: ${err instanceof Error ? err.message : String(err)}`,
+          };
+        }
       },
     });
   }
@@ -876,6 +923,105 @@ export function buildAvaTools(
         return { success: true, tabId: tabId ?? workspace.tabOrder[workspace.tabOrder.length - 1] };
       },
     });
+
+    tools['create_note_tab'] = makeTool({
+      description: 'Create a new empty note tab in the project notes workspace.',
+      inputSchema: z.object({
+        name: z.string().describe('Name for the new note tab'),
+      }),
+      execute: async ({ name }) => {
+        await ensureNotesDir(projectPath);
+        const wsPath = getNotesWorkspacePath(projectPath);
+        let workspace: NotesWorkspace;
+        try {
+          const raw = await secureFs.readFile(wsPath, 'utf-8');
+          workspace = JSON.parse(raw as string) as NotesWorkspace;
+        } catch {
+          const defaultId = crypto.randomUUID();
+          workspace = {
+            version: 1,
+            workspaceVersion: 0,
+            activeTabId: defaultId,
+            tabOrder: [defaultId],
+            tabs: {
+              [defaultId]: {
+                id: defaultId,
+                name: 'Notes',
+                content: '',
+                permissions: { agentRead: true, agentWrite: true },
+                metadata: { createdAt: Date.now(), updatedAt: Date.now() },
+              },
+            },
+          };
+        }
+        const newId = crypto.randomUUID();
+        const now = Date.now();
+        workspace.tabs[newId] = {
+          id: newId,
+          name,
+          content: '',
+          permissions: { agentRead: true, agentWrite: true },
+          metadata: { createdAt: now, updatedAt: now },
+        };
+        workspace.tabOrder.push(newId);
+        workspace.workspaceVersion = (workspace.workspaceVersion ?? 0) + 1;
+        await secureFs.writeFile(wsPath, JSON.stringify(workspace, null, 2), 'utf-8');
+        return { success: true, tabId: newId, name };
+      },
+    });
+
+    tools['delete_note_tab'] = makeTool({
+      description: 'Delete a note tab from the project notes workspace by its ID.',
+      inputSchema: z.object({
+        tabId: z.string().describe('ID of the tab to delete'),
+      }),
+      needsApproval: destructiveNeedsApproval,
+      execute: async ({ tabId }) => {
+        const wsPath = getNotesWorkspacePath(projectPath);
+        try {
+          const raw = await secureFs.readFile(wsPath, 'utf-8');
+          const workspace = JSON.parse(raw as string) as NotesWorkspace;
+          if (!workspace.tabs[tabId]) {
+            return { error: `Tab '${tabId}' not found` };
+          }
+          delete workspace.tabs[tabId];
+          workspace.tabOrder = workspace.tabOrder.filter((id) => id !== tabId);
+          if (workspace.activeTabId === tabId) {
+            workspace.activeTabId = workspace.tabOrder[0] ?? null;
+          }
+          workspace.workspaceVersion = (workspace.workspaceVersion ?? 0) + 1;
+          await secureFs.writeFile(wsPath, JSON.stringify(workspace, null, 2), 'utf-8');
+          return { success: true, tabId };
+        } catch {
+          return { error: 'Notes workspace not found' };
+        }
+      },
+    });
+
+    tools['rename_note_tab'] = makeTool({
+      description: 'Rename a note tab in the project notes workspace.',
+      inputSchema: z.object({
+        tabId: z.string().describe('ID of the tab to rename'),
+        name: z.string().describe('New name for the tab'),
+      }),
+      execute: async ({ tabId, name }) => {
+        const wsPath = getNotesWorkspacePath(projectPath);
+        try {
+          const raw = await secureFs.readFile(wsPath, 'utf-8');
+          const workspace = JSON.parse(raw as string) as NotesWorkspace;
+          if (!workspace.tabs[tabId]) {
+            return { error: `Tab '${tabId}' not found` };
+          }
+          workspace.tabs[tabId].name = name;
+          workspace.tabs[tabId].metadata.updatedAt = Date.now();
+          workspace.workspaceVersion = (workspace.workspaceVersion ?? 0) + 1;
+          await secureFs.writeFile(wsPath, JSON.stringify(workspace, null, 2), 'utf-8');
+          return { success: true, tabId, name };
+        } catch {
+          return { error: 'Notes workspace not found' };
+        }
+      },
+    });
   }
 
   // -----------------------------------------------------------------------
@@ -1010,6 +1156,36 @@ export function buildAvaTools(
         } catch (err) {
           return {
             error: `Failed to fetch PR feedback: ${err instanceof Error ? err.message : String(err)}`,
+          };
+        }
+      },
+    });
+
+    tools['resolve_pr_threads'] = makeTool({
+      description:
+        'Resolve all unresolved CodeRabbit review threads for a PR. Optionally filter by minimum severity to only resolve threads at or above a given severity level.',
+      inputSchema: z.object({
+        prNumber: z.number().int().describe('PR number whose review threads should be resolved'),
+        minSeverity: z
+          .enum(['low', 'medium', 'high'])
+          .optional()
+          .describe(
+            "Minimum severity threshold — only resolve threads at or above this level (default: 'low')"
+          ),
+      }),
+      execute: async ({ prNumber, minSeverity }) => {
+        try {
+          const port = parseInt(process.env.PORT || '3008', 10);
+          const response = await fetch(`http://localhost:${port}/api/github/resolve-pr-threads`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ projectPath, prNumber, minSeverity: minSeverity ?? 'low' }),
+          });
+          const data = (await response.json()) as Record<string, unknown>;
+          return data;
+        } catch (err) {
+          return {
+            error: `Failed to resolve PR threads: ${err instanceof Error ? err.message : String(err)}`,
           };
         }
       },
@@ -1418,6 +1594,314 @@ export function buildAvaTools(
           inProgress: inProgress.slice(0, 10),
           recentDone: recentDone.slice(0, 5),
         };
+      },
+    });
+  }
+
+  // -----------------------------------------------------------------------
+  // Ava Channel tools
+  // -----------------------------------------------------------------------
+  if (config.avaChannel && services.avaChannelService) {
+    const avaChannel = services.avaChannelService;
+
+    tools['send_channel_message'] = makeTool({
+      description:
+        'Send a message to the Ava backchannel (cross-instance communication channel). Messages are visible to all connected instances.',
+      inputSchema: z.object({
+        content: z.string().describe('Message content to send'),
+      }),
+      execute: async ({ content }) => {
+        const msg = await avaChannel.postMessage(content, 'ava');
+        return { success: true, messageId: msg.id, timestamp: msg.timestamp };
+      },
+    });
+
+    tools['read_channel_messages'] = makeTool({
+      description:
+        'Read recent messages from the Ava backchannel. Returns messages ordered by time.',
+      inputSchema: z.object({
+        hours: z.number().optional().describe('How many hours back to read (default: 24)'),
+        instanceId: z.string().optional().describe('Filter messages by instance ID'),
+      }),
+      execute: async ({ hours, instanceId }) => {
+        const messages = await avaChannel.getRecentMessages(hours ?? 24, instanceId);
+        return {
+          count: messages.length,
+          messages: messages.slice(0, 50).map((m) => ({
+            id: m.id,
+            content: m.content,
+            source: m.source,
+            timestamp: m.timestamp,
+            instanceId: m.instanceId,
+          })),
+        };
+      },
+    });
+
+    tools['file_system_improvement'] = makeTool({
+      description:
+        'File a system improvement ticket on the board. Requires a title, description, and friction summary. Used for self-improvement when Ava identifies friction or bugs.',
+      inputSchema: z.object({
+        title: z.string().describe('Short title for the improvement'),
+        description: z.string().describe('Detailed description of what needs to change'),
+        frictionSummary: z.string().describe('Summary of the friction or pain point observed'),
+        complexity: z
+          .enum(['small', 'medium', 'large', 'architectural'])
+          .optional()
+          .describe('Estimated complexity'),
+        priority: z
+          .number()
+          .int()
+          .min(0)
+          .max(4)
+          .optional()
+          .describe('Priority: 1=urgent, 2=high, 3=normal, 4=low'),
+      }),
+      needsApproval: destructiveNeedsApproval,
+      execute: async ({ title, description, frictionSummary, complexity, priority }) => {
+        try {
+          const port = parseInt(process.env.PORT || '3008', 10);
+          const response = await fetch(
+            `http://localhost:${port}/api/ava-channel/file-improvement`,
+            {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                projectPath,
+                title,
+                description,
+                frictionSummary,
+                complexity,
+                priority,
+                discussantCount: 2,
+              }),
+            }
+          );
+          return (await response.json()) as Record<string, unknown>;
+        } catch (err) {
+          return {
+            error: `Failed to file improvement: ${err instanceof Error ? err.message : String(err)}`,
+          };
+        }
+      },
+    });
+  }
+
+  // -----------------------------------------------------------------------
+  // Discord tools
+  // -----------------------------------------------------------------------
+  if (config.discord && services.discordBotService) {
+    const discord = services.discordBotService;
+
+    tools['send_discord_dm'] = makeTool({
+      description: 'Send a direct message to a Discord user by username.',
+      inputSchema: z.object({
+        username: z.string().describe('Discord username to send the DM to'),
+        content: z.string().describe('Message content'),
+      }),
+      execute: async ({ username, content }) => {
+        const sent = await discord.sendDM(username, content);
+        return { success: sent };
+      },
+    });
+
+    tools['read_discord_dms'] = makeTool({
+      description: 'Read recent direct messages from a Discord user.',
+      inputSchema: z.object({
+        username: z.string().describe('Discord username to read DMs from'),
+        limit: z.number().int().optional().describe('Number of messages to read (default: 20)'),
+      }),
+      execute: async ({ username, limit }) => {
+        const messages = await discord.readDMs(username, limit ?? 20);
+        return { count: messages.length, messages };
+      },
+    });
+
+    tools['send_discord_channel_message'] = makeTool({
+      description:
+        'Send a message to a Discord channel by channel ID. Common channels: #ava=1469195643590541353, #dev=1469080556720623699, #infra=1469109809939742814.',
+      inputSchema: z.object({
+        channelId: z.string().describe('Discord channel ID'),
+        content: z.string().describe('Message content'),
+      }),
+      execute: async ({ channelId, content }) => {
+        const sent = await discord.sendToChannel(channelId, content);
+        return { success: sent };
+      },
+    });
+
+    tools['read_discord_channel_messages'] = makeTool({
+      description:
+        'Read recent messages from a Discord channel. Common channels: #ava=1469195643590541353, #dev=1469080556720623699, #infra=1469109809939742814.',
+      inputSchema: z.object({
+        channelId: z.string().describe('Discord channel ID'),
+        limit: z.number().int().optional().describe('Number of messages to read (default: 20)'),
+      }),
+      execute: async ({ channelId, limit }) => {
+        const messages = await discord.readMessages(channelId, limit ?? 20);
+        return { count: messages.length, messages };
+      },
+    });
+  }
+
+  // -----------------------------------------------------------------------
+  // Calendar tools
+  // -----------------------------------------------------------------------
+  if (config.calendar && services.calendarService) {
+    const calendar = services.calendarService;
+
+    tools['list_calendar_events'] = makeTool({
+      description:
+        'List calendar events for the project. Supports filtering by date range and event type.',
+      inputSchema: z.object({
+        startDate: z.string().optional().describe('Start date filter (YYYY-MM-DD)'),
+        endDate: z.string().optional().describe('End date filter (YYYY-MM-DD)'),
+        types: z
+          .array(z.enum(['feature', 'milestone', 'custom', 'google', 'job', 'ceremony']))
+          .optional()
+          .describe('Filter by event types'),
+      }),
+      execute: async ({ startDate, endDate, types }) => {
+        const events = await calendar.listEvents(projectPath, { startDate, endDate, types });
+        return { count: events.length, events };
+      },
+    });
+
+    tools['create_calendar_event'] = makeTool({
+      description: 'Create a new calendar event in the project.',
+      inputSchema: z.object({
+        title: z.string().describe('Event title'),
+        description: z.string().optional().describe('Event description'),
+        date: z.string().describe('Event date (YYYY-MM-DD)'),
+        endDate: z.string().optional().describe('End date for multi-day events (YYYY-MM-DD)'),
+        type: z
+          .enum(['feature', 'milestone', 'custom', 'google', 'job', 'ceremony'])
+          .optional()
+          .describe('Event type (default: custom)'),
+        time: z.string().optional().describe('Time in HH:mm 24h format'),
+      }),
+      execute: async ({ title, description, date, endDate, type, time }) => {
+        const event = await calendar.createEvent(projectPath, {
+          title,
+          description,
+          date,
+          endDate,
+          type: type ?? 'custom',
+          time,
+        });
+        return { success: true, event };
+      },
+    });
+
+    tools['update_calendar_event'] = makeTool({
+      description: 'Update an existing calendar event.',
+      inputSchema: z.object({
+        eventId: z.string().describe('Event ID to update'),
+        title: z.string().optional().describe('New title'),
+        description: z.string().optional().describe('New description'),
+        startDate: z.string().optional().describe('New start date (YYYY-MM-DD)'),
+        endDate: z.string().optional().describe('New end date (YYYY-MM-DD)'),
+        time: z.string().optional().describe('New time in HH:mm 24h format'),
+      }),
+      needsApproval: destructiveNeedsApproval,
+      execute: async ({ eventId, ...updates }) => {
+        const event = await calendar.updateEvent(projectPath, eventId, updates);
+        return { success: true, event };
+      },
+    });
+
+    tools['delete_calendar_event'] = makeTool({
+      description: 'Delete a calendar event by ID.',
+      inputSchema: z.object({
+        eventId: z.string().describe('Event ID to delete'),
+      }),
+      needsApproval: destructiveNeedsApproval,
+      execute: async ({ eventId }) => {
+        await calendar.deleteEvent(projectPath, eventId);
+        return { success: true, eventId };
+      },
+    });
+  }
+
+  // -----------------------------------------------------------------------
+  // Health tools
+  // -----------------------------------------------------------------------
+  if (config.health && services.healthMonitorService) {
+    const healthMonitor = services.healthMonitorService;
+
+    tools['health_check'] = makeTool({
+      description:
+        'Run a health check on the server. Returns status (healthy/degraded/critical), memory usage, uptime, and any detected issues.',
+      inputSchema: z.object({}),
+      execute: async () => {
+        const result = await healthMonitor.runHealthCheck();
+        return result;
+      },
+    });
+
+    tools['get_sitrep'] = makeTool({
+      description:
+        'Get a full situation report: board summary, running agents, auto-mode status, blocked features, open PRs, staging delta, recent commits, and server health.',
+      inputSchema: z.object({}),
+      execute: async () => {
+        const { getSitrep: fetchSitrep } = await import('./sitrep.js');
+        const report = await fetchSitrep(projectPath);
+        return report;
+      },
+    });
+  }
+
+  // -----------------------------------------------------------------------
+  // Settings tools
+  // -----------------------------------------------------------------------
+  if (config.settings && services.settingsService) {
+    const settingsSvc = services.settingsService;
+
+    tools['get_global_settings'] = makeTool({
+      description:
+        'Get global application settings including feature flags, user profile, and default configurations.',
+      inputSchema: z.object({}),
+      execute: async () => {
+        const settings = await settingsSvc.getGlobalSettings();
+        return settings;
+      },
+    });
+
+    tools['update_global_settings'] = makeTool({
+      description: 'Update global application settings. Supports partial updates (deep merge).',
+      inputSchema: z.object({
+        updates: z
+          .record(z.unknown())
+          .describe('Partial settings object to merge into global settings'),
+      }),
+      needsApproval: destructiveNeedsApproval,
+      execute: async ({ updates }) => {
+        const settings = await settingsSvc.updateGlobalSettings(updates);
+        return { success: true, settings };
+      },
+    });
+
+    tools['get_project_settings'] = makeTool({
+      description:
+        'Get project-specific settings (.automaker/settings.json) including workflow config, git settings, and model preferences.',
+      inputSchema: z.object({}),
+      execute: async () => {
+        const settings = await settingsSvc.getProjectSettings(projectPath);
+        return settings;
+      },
+    });
+
+    tools['update_project_settings'] = makeTool({
+      description: 'Update project-specific settings. Supports partial updates (deep merge).',
+      inputSchema: z.object({
+        updates: z
+          .record(z.unknown())
+          .describe('Partial settings object to merge into project settings'),
+      }),
+      needsApproval: destructiveNeedsApproval,
+      execute: async ({ updates }) => {
+        const settings = await settingsSvc.updateProjectSettings(projectPath, updates);
+        return { success: true, settings };
       },
     });
   }
