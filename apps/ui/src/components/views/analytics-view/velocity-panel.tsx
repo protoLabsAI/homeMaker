@@ -1,6 +1,6 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@protolabsai/ui/atoms';
 import { Clock } from 'lucide-react';
-import { formatDuration } from '@protolabsai/utils';
+import { formatDuration } from '@protolabsai/utils/format-time';
 
 interface VelocityPanelProps {
   avgCycleTimeMs: number;

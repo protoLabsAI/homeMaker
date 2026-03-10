@@ -21,7 +21,7 @@ import {
   Activity,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { formatDuration, formatTimestamp } from '@protolabsai/utils';
+import { formatDuration, formatTimestamp } from '@protolabsai/utils/format-time';
 
 interface IntegrationsTabProps {
   projectPath: string | undefined;

@@ -12,7 +12,7 @@
  */
 
 import { Loader2, Bot, Clock, Hash } from 'lucide-react';
-import { formatElapsed } from '@protolabsai/utils';
+import { formatElapsed } from '@protolabsai/utils/format-time';
 import { cn } from '../../lib/utils.js';
 import type { ToolResultRendererProps } from '../tool-result-registry.js';
 

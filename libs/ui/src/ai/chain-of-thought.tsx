@@ -11,7 +11,7 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { Brain, ChevronDown, Loader2, Check } from 'lucide-react';
-import { formatDuration } from '@protolabsai/utils';
+import { formatDuration } from '@protolabsai/utils/format-time';
 import { cn } from '../lib/utils.js';
 
 export interface ChainOfThoughtProps {

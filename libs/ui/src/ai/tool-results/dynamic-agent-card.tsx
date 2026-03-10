@@ -5,7 +5,7 @@
  */
 
 import { Loader2, Bot, CheckCircle2, XCircle, Clock } from 'lucide-react';
-import { formatDuration } from '@protolabsai/utils';
+import { formatDuration } from '@protolabsai/utils/format-time';
 import { cn } from '../../lib/utils.js';
 import type { ToolResultRendererProps } from '../tool-result-registry.js';
 

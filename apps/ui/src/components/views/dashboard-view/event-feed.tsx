@@ -8,7 +8,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@prot
 import * as LucideIcons from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { formatTimestamp } from '@protolabsai/utils';
+import { formatTimestamp } from '@protolabsai/utils/format-time';
 
 interface EventFeedProps {
   projectPath: string | null;

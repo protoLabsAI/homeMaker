@@ -14,7 +14,7 @@ import { CheckCircle, XCircle, Clock, Shield, AlertTriangle } from 'lucide-react
 import { getHttpApiClient } from '@/lib/http-api-client';
 import { queryKeys } from '@/lib/query-keys';
 import { useAppStore } from '@/store/app-store';
-import { formatTimestamp } from '@protolabsai/utils';
+import { formatTimestamp } from '@protolabsai/utils/format-time';
 
 const PIPELINE_STATES = ['INTAKE', 'PLAN', 'EXECUTE', 'REVIEW', 'MERGE', 'DEPLOY', 'DONE'] as const;
 

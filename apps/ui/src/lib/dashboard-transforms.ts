@@ -1,5 +1,5 @@
 import type { LucideIcon } from 'lucide-react';
-import { formatDuration, formatTimestamp } from '@protolabsai/utils';
+import { formatDuration, formatTimestamp } from '@protolabsai/utils/format-time';
 
 // ============================================================================
 // Type Definitions
@@ -319,7 +319,7 @@ export function formatPercentage(value: number): string {
   return `${Math.round(value)}%`;
 }
 
-export { formatDuration } from '@protolabsai/utils';
+export { formatDuration } from '@protolabsai/utils/format-time';
 
 /**
  * Formats relative time from timestamp

@@ -4,7 +4,7 @@
 
 import { Card, CardContent } from '@protolabsai/ui/atoms';
 import { DollarSign, Hash, Zap, Clock, GitPullRequest, GitCommit } from 'lucide-react';
-import { formatDuration } from '@protolabsai/utils';
+import { formatDuration } from '@protolabsai/utils/format-time';
 
 interface KpiCardsProps {
   data?: {

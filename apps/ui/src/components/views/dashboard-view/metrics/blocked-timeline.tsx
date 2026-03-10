@@ -13,7 +13,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@protolabsai/ui/atoms'
 import { useChartColors } from '@/hooks/use-chart-colors';
 import { useBlockedTimeline } from '@/hooks/queries/use-metrics';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from 'recharts';
-import { formatDuration } from '@protolabsai/utils';
+import { formatDuration } from '@protolabsai/utils/format-time';
 
 interface BlockedTimelineProps {
   projectPath: string;

@@ -10,7 +10,7 @@ import { motion } from 'motion/react';
 import { Bot } from 'lucide-react';
 import type { AgentNodeData, ActiveTool } from '../types';
 import { cn } from '@/lib/utils';
-import { formatDuration } from '@protolabsai/utils';
+import { formatDuration } from '@protolabsai/utils/format-time';
 
 function getModelBadge(model?: string): { label: string; color: string } {
   if (!model) return { label: 'Agent', color: 'zinc' };

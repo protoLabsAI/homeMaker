@@ -5,7 +5,7 @@ import { CheckCircle2, XCircle, Loader2, ExternalLink } from 'lucide-react';
 import type { AutomationRunRecord, AutomationRunStatus } from '@protolabsai/types';
 import { getAutomationHistory } from '@/lib/api';
 import { getLangfuseTraceUrl } from '@/lib/langfuse-url';
-import { formatDuration, formatTimestamp } from '@protolabsai/utils';
+import { formatDuration, formatTimestamp } from '@protolabsai/utils/format-time';
 
 // ---------------------------------------------------------------------------
 // Helpers

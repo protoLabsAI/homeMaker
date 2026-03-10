@@ -24,7 +24,7 @@ import { Badge } from '@protolabsai/ui/atoms';
 import { Button } from '@protolabsai/ui/atoms';
 import { scrubPii } from '@/lib/scrub-pii';
 import { formatCostUsd } from '@/lib/format';
-import { formatDuration } from '@protolabsai/utils';
+import { formatDuration } from '@protolabsai/utils/format-time';
 import { getLangfuseTraceUrl, getLangfuseSpanUrl } from '@/lib/langfuse-url';
 import { getHttpApiClient } from '@/lib/http-api-client';
 import { queryKeys } from '@/lib/query-keys';

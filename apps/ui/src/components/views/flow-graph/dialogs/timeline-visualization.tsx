@@ -11,7 +11,7 @@
 import { ExternalLink, Clock, AlertCircle } from 'lucide-react';
 import type { PipelinePhase, PhaseTransition } from '@protolabsai/types';
 import { getLangfuseSpanUrl } from '@/lib/langfuse-url';
-import { formatDuration, formatTimestamp } from '@protolabsai/utils';
+import { formatDuration, formatTimestamp } from '@protolabsai/utils/format-time';
 
 interface ToolExecution {
   name: string;

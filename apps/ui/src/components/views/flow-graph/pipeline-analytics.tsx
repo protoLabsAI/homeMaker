@@ -20,7 +20,7 @@ import {
 import { getHttpApiClient } from '@/lib/http-api-client';
 import { useAppStore } from '@/store/app-store';
 import { cn } from '@/lib/utils';
-import { formatDuration } from '@protolabsai/utils';
+import { formatDuration } from '@protolabsai/utils/format-time';
 
 interface PipelineAnalyticsData {
   activePipelines: number;
