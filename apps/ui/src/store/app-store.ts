@@ -168,6 +168,10 @@ export interface AppState {
   serverStatus: 'connected' | 'disconnected' | 'connecting'; // Current connection status
   serverInfo: { version: string; status: string; timestamp: string } | null; // Info from /api/health
   recentConnections: Array<{ url: string; lastConnected: string }>; // Recent connections with timestamps
+
+  // Connected instance identity
+  instanceName: string | null; // Human-readable name of the connected instance (e.g. 'Dev Server', 'Staging')
+  instanceRole: string | null; // Role of the connected instance (e.g. 'primary', 'worker')
 }
 
 export interface AppActions {
@@ -338,6 +342,8 @@ export interface AppActions {
   // Server connection actions
   connectToServer: (url: string) => Promise<void>;
   removeRecentConnection: (url: string) => void;
+  setInstanceName: (name: string | null) => void;
+  fetchInstanceInfo: () => Promise<void>;
 
   // Reset
   reset: () => void;
@@ -444,6 +450,9 @@ const initialState: AppState = {
       return [];
     }
   })(),
+  // Connected instance identity
+  instanceName: null,
+  instanceRole: null,
 };
 
 export const useAppStore = create<AppState & AppActions>()((set, get) => ({
@@ -1315,7 +1324,17 @@ export const useAppStore = create<AppState & AppActions>()((set, get) => ({
     try {
       const api = getHttpApiClient();
       const data = await api.hivemind.getSelf();
-      set({ selfInstanceId: data.instanceId });
+      const selfId = data.instanceId;
+      // Try to find a human-readable name via hivemind status (self shows up in onlinePeers)
+      let displayName: string | null = null;
+      try {
+        const status = await api.hivemind.getStatus();
+        const selfPeer = status.onlinePeers.find((p) => p.identity.instanceId === selfId);
+        displayName = selfPeer?.identity.name ?? null;
+      } catch {
+        // Status endpoint may fail — fall back to instanceId
+      }
+      set({ selfInstanceId: selfId, instanceName: displayName ?? selfId });
     } catch (err) {
       logger.warn('[AppStore] Failed to fetch self instanceId:', err);
     }
@@ -1353,7 +1372,7 @@ export const useAppStore = create<AppState & AppActions>()((set, get) => ({
 
   // Server connection actions
   connectToServer: async (url) => {
-    set({ serverStatus: 'connecting', serverInfo: null });
+    set({ serverStatus: 'connecting', serverInfo: null, instanceName: null, instanceRole: null });
     try {
       const response = await fetch(`${url}/api/health`, {
         method: 'GET',
@@ -1409,6 +1428,31 @@ export const useAppStore = create<AppState & AppActions>()((set, get) => ({
       // localStorage might be disabled
     }
     set({ recentConnections, recentServerUrls });
+  },
+
+  setInstanceName: (name) => set({ instanceName: name }),
+
+  fetchInstanceInfo: async () => {
+    try {
+      const api = getHttpApiClient();
+      // Fetch self instanceId
+      const selfData = await api.hivemind.getSelf();
+      const selfId = selfData.instanceId;
+      // Fetch hivemind status to get role and display name
+      let displayName: string | null = null;
+      let instanceRole: string | null = null;
+      try {
+        const status = await api.hivemind.getStatus();
+        instanceRole = status.role ?? null;
+        const selfPeer = status.onlinePeers.find((p) => p.identity.instanceId === selfId);
+        displayName = selfPeer?.identity.name ?? null;
+      } catch {
+        // Status endpoint may fail — fall back gracefully
+      }
+      set({ selfInstanceId: selfId, instanceName: displayName ?? selfId, instanceRole });
+    } catch (err) {
+      logger.warn('[AppStore] Failed to fetch instance info:', err);
+    }
   },
 
   // Reset
