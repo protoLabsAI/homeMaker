@@ -761,6 +761,22 @@ export class FeatureScheduler {
             continue;
           }
 
+          // Creation cooldown: skip features created too recently to allow the creator time
+          // to set dependencies, adjust properties, or batch-create related features.
+          if (feature.createdAt) {
+            const cooldownMs = await this.getPickupCooldownMs();
+            if (cooldownMs > 0) {
+              const ageMs = Date.now() - new Date(feature.createdAt).getTime();
+              if (ageMs < cooldownMs) {
+                const remainingSec = Math.ceil((cooldownMs - ageMs) / 1000);
+                logger.info(
+                  `[loadPendingFeatures] Skipping feature ${feature.id} - within creation cooldown (${remainingSec}s remaining)`
+                );
+                continue;
+              }
+            }
+          }
+
           // Guard: if feature already has an open PR, sync it to 'review' and skip execution.
           const existingPrByBranchFilter = feature.branchName
             ? openPrBranches.get(feature.branchName)
@@ -1095,6 +1111,20 @@ export class FeatureScheduler {
   }
 
   // ── Private helpers ──────────────────────────────────────────────────────
+
+  /**
+   * Read the auto-mode pickup cooldown from workflow settings.
+   * Default: 30000ms (30s). Set to 0 to disable.
+   */
+  private async getPickupCooldownMs(): Promise<number> {
+    const DEFAULT_COOLDOWN_MS = 30_000;
+    try {
+      const settings = await this.settingsService?.getGlobalSettings();
+      return settings?.autoModePickupCooldownMs ?? DEFAULT_COOLDOWN_MS;
+    } catch {
+      return DEFAULT_COOLDOWN_MS;
+    }
+  }
 
   private async getCurrentBranch(projectPath: string): Promise<string | null> {
     try {
