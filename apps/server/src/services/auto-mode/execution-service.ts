@@ -454,13 +454,45 @@ export class ExecutionService {
           if (worktreePath) {
             logger.info(`Created worktree for branch "${branchName}": ${worktreePath}`);
           } else {
-            logger.warn(`Failed to create worktree for branch "${branchName}", using project path`);
+            // FATAL: Never fall back to projectPath when worktrees are enabled.
+            // Falling back silently causes agents to write into the main working tree,
+            // corrupting it and losing work from other features.
+            const reason = `Worktree creation failed for branch "${branchName}" (feature ${featureId}). Blocking feature to prevent main working tree corruption.`;
+            logger.error(reason);
+            await this.featureLoader.update(projectPath, featureId, {
+              status: 'blocked',
+              statusChangeReason: reason,
+            });
+            this.events.emit('feature:error', { projectPath, featureId, error: reason });
+            return;
           }
         }
+      } else if (useWorktrees && !branchName) {
+        // Worktrees are enabled but the feature has no branch name — cannot proceed safely
+        const reason = `Feature ${featureId} has no branchName but useWorktrees is enabled. Blocking feature — assign a branch name first.`;
+        logger.error(reason);
+        await this.featureLoader.update(projectPath, featureId, {
+          status: 'blocked',
+          statusChangeReason: reason,
+        });
+        this.events.emit('feature:error', { projectPath, featureId, error: reason });
+        return;
       }
 
       // Ensure workDir is always an absolute path for cross-platform compatibility
       const workDir = worktreePath ? path.resolve(worktreePath) : path.resolve(projectPath);
+
+      // Defense-in-depth: if worktrees are enabled, workDir must NOT be the project path
+      if (useWorktrees && path.resolve(workDir) === path.resolve(projectPath)) {
+        const reason = `Worktree safety check failed for feature ${featureId}: workDir resolved to projectPath ("${projectPath}"). Blocking feature to prevent main working tree corruption.`;
+        logger.error(reason);
+        await this.featureLoader.update(projectPath, featureId, {
+          status: 'blocked',
+          statusChangeReason: reason,
+        });
+        this.events.emit('feature:error', { projectPath, featureId, error: reason });
+        return;
+      }
 
       // CRITICAL: Rebase worktree onto latest origin/main before agent execution
       // This prevents agents from executing against stale code when PRs merge in quick succession

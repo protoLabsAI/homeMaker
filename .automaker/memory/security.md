@@ -493,3 +493,29 @@ usageStats:
 - **Situation:** Tool must identify correct response from potentially multiple backchannel messages from target instance
 - **Root cause:** String-based matching is simple, works with current message format conventions
 - **How to avoid:** Convention-based matching avoids schema enforcement but is fragile. Different instances could format responses differently, breaking correlation.
+
+### Disabled all project-tactical tools by default (boardWrite, agentControl, autoMode, prWorkflow, etc.), requiring explicit config to enable; only oversight/read tools enabled by default (2026-03-10)
+- **Context:** Ava shifts from 'all-capable by default' to 'read-only oversight by default', reducing unintended mutations and autonomous agent control surface
+- **Why:** Least-privilege principle: powerful tools should be opt-in, not opt-out. Oversight (read, briefing, metrics) is safe; mutations and control are not
+- **Rejected:** Keep all enabled, require opt-out—but opt-in prevents capability drift and accidental deployment into unsafe states
+- **Trade-offs:** Gained: safety, reduced mutation surface, prevents accidents. Lost: convenience for deployments needing full Ava capabilities (requires config)
+- **Breaking if changed:** Workflows relying on disabled tools fail silently if config not updated—silent failures worse than loud ones; requires migration documentation
+
+### CORS allowAllOrigins is conditional: only enabled when hivemind feature flag is true. Read from config file, not hardcoded or always-on. (2026-03-10)
+- **Context:** Server needs to accept cross-origin requests for remote client use case, but shouldn't be open to all origins by default
+- **Why:** Security-first design: CORS stays locked down unless explicitly enabled. Prevents accidental exposure via deployment oversight.
+- **Rejected:** Always allow CORS (security risk) or never allow (breaks hivemind feature)
+- **Trade-offs:** Requires feature flag coordination, but prevents security regression if code is redeployed without hivemind intent
+- **Breaking if changed:** Removing the feature flag check exposes server to any origin; if hivemind config loading fails, CORS silently disabled
+
+#### [Gotcha] CORS permissiveness tied to hivemind feature flag. When hivemind enabled in proto config, server allows * origin. Flag is runtime-configurable, not deployment-locked. (2026-03-10)
+- **Situation:** Supporting development/testing mode where remote clients need broad CORS, but securing production
+- **Root cause:** Development needs flexible cross-origin requests for testing different client deployments. Feature flag allows toggling without redeployment.
+- **How to avoid:** Convenience of runtime flag vs security of locked deployment config. Creates potential for accidental misconfiguration (flag left on in production).
+
+### CORS permissiveness gated by `hivemindEnabled` config flag. Default middleware is restrictive; only when `allowAllOrigins: true` is passed does it open to `*`. (2026-03-10)
+- **Context:** Server needs to support cross-origin requests for hivemind deployments, but default should be secure.
+- **Why:** Principle of least privilege: secure by default. Only deployments that explicitly enable hivemind get permissive CORS. This prevents accidental exposure in standard deployments.
+- **Rejected:** Always-open CORS, or removing CORS check—would expose all instances by default. Strict CORS for all—would break hivemind use case.
+- **Trade-offs:** Requires config to be loaded and passed to middleware setup. If config loading fails silently, CORS remains restrictive (safe) but feature doesn't work. Extra layer of indirection (config → option → middleware), but pays off in safety.
+- **Breaking if changed:** If config is loaded after middleware is set up, CORS won't reflect the flag. If config parsing breaks, middleware defaults to restrictive (safe). If someone removes the flag check, all servers become permissive (bad).

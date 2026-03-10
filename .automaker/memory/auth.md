@@ -5,9 +5,9 @@ relevantTo: [auth]
 importance: 0.7
 relatedFiles: []
 usageStats:
-  loaded: 28
-  referenced: 4
-  successfulFeatures: 4
+  loaded: 32
+  referenced: 7
+  successfulFeatures: 7
 ---
 # auth
 
@@ -49,3 +49,8 @@ usageStats:
 - **Problem solved:** Multiple authentication paths (MCP plugin, REST API key, web UI session, internal service-to-service) need to be distinguished to assign appropriate trust tier and validation level.
 - **Why this works:** Headers are available before authentication middleware (which may not run in all paths). Allows differentiation of origin without requiring full auth context object. Explicit header parsing makes source determination visible in code.
 - **Trade-offs:** Header-based approach is fragile (missing header defaults to internal = tier 4, potentially over-permissive). Alternative (explicit auth middleware) is more robust but heavier and breaks MCP plugin architecture.
+
+#### [Pattern] Layered fallback chain for server URL: `localStorage` (user override) → `Electron IPC cache` (last known good) → `env vars` (deploy-time). Each layer is checked in order; first non-null wins. (2026-03-10)
+- **Problem solved:** App must support user-set overrides (dev/testing) while maintaining safe defaults (prod, Electron context).
+- **Why this works:** Resilience: if one source is unavailable/corrupted, app doesn't crash. User preference (localStorage) is checked first, so user can override env vars. Graceful degradation.
+- **Trade-offs:** Simple to implement, but source of truth shifts at runtime. Code cannot assume `getServerUrl()` takes the same path twice (localStorage might be cleared between calls). Potential for subtle bugs if caller assumes consistency.

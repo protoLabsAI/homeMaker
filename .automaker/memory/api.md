@@ -5,9 +5,9 @@ relevantTo: [api]
 importance: 0.7
 relatedFiles: []
 usageStats:
-  loaded: 422
-  referenced: 96
-  successfulFeatures: 96
+  loaded: 428
+  referenced: 98
+  successfulFeatures: 98
 ---
 # api
 
@@ -878,3 +878,20 @@ usageStats:
 - **Rejected:** Could have global PM tools that operate across all projects (would require cross-project filtering logic), could have user-level PM tools (would lose project context)
 - **Trade-offs:** Simple contract (projectSlug is always available), but means PM is inherently project-bound—can't build tools that compare across projects or manage multiple projects atomically
 - **Breaking if changed:** If a tool is added that needs to cross projects (e.g., dependency_graph across multiple projects), the projectSlug-everywhere assumption breaks; refactor would touch all 39 tools
+
+### Added 'delegation' as optional field in AvaToolsConfig while keeping 'delegateToPm' functional, using OR logic in guard: if (config.delegateToPm || config.delegation) (2026-03-10)
+- **Context:** Needed new preferred field name for tool group without breaking existing configs using 'delegateToPm'
+- **Why:** Parallel keys with OR logic allow both old and new configs to work simultaneously, enabling gradual migration without deprecation cycle or breaking change
+- **Rejected:** Direct replacement (breaking), or single deprecation warning (delays change, creates maintenance burden)
+- **Trade-offs:** Gained: seamless backward compatibility. Lost: clarity about canonical key name (requires documentation)
+- **Breaking if changed:** Code checking only config.delegation misses legacy delegateToPm configs; mitigation requires using merged result or checking both keys
+
+#### [Pattern] Fallback chain for server URL: localStorage override → Electron cached URL → VITE env var → hardcoded default. Priority decreases down the chain. (2026-03-10)
+- **Problem solved:** Multiple sources could provide server URL; need clear precedence when multiple are available
+- **Why this works:** User choice (localStorage) must override everything; environment-specific (Electron) beats build-time config; env vars beat defaults. Each layer more specific than the next.
+- **Trade-offs:** Explicit chain is predictable but requires documentation; harder to debug which source 'won'
+
+#### [Pattern] LIFO deduplication with bounded size (max 10) for recentServerUrls. Uses Set-based dedup before pushing; maintains LIFO order because most recent is most useful for human recall. (2026-03-10)
+- **Problem solved:** Building recent URLs history for UI dropdown without unbounded localStorage growth
+- **Why this works:** LIFO because users typically switch back to most recent server. Dedup prevents clutter when same URL added repeatedly (e.g., reconnects). Max size prevents localStorage bloat.
+- **Trade-offs:** Max size 10 means old servers eventually purged (could lose important history). LIFO ordering depends on usage patterns - different users may want different histories.
