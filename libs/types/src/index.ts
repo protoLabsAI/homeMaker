@@ -3,6 +3,9 @@
  * Shared type definitions for AutoMaker
  */
 
+// Agent definition factory context types
+export type { AgentDefinitionContext, WorldStateSlice } from './agent.js';
+
 // Ava Channel types — private multi-instance communication channel
 export type {
   AvaChannelContext,
@@ -791,12 +794,15 @@ export type {
 } from './metrics.js';
 
 // Lead Engineer types (production-phase nerve center)
-export { FeatureState } from './lead-engineer.js';
+export { FeatureState, WorldStateDomain } from './lead-engineer.js';
 export type {
   LeadFeatureSnapshot,
   LeadAgentSnapshot,
   LeadPRSnapshot,
   LeadMilestoneSnapshot,
+  AvaWorldState,
+  PMWorldState,
+  LEWorldState,
   LeadWorldState,
   LeadRuleAction,
   LeadFastPathRule,

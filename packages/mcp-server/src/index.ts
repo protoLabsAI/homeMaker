@@ -269,6 +269,7 @@ import { worktreeGitTools } from './tools/worktree-git-tools.js';
 import { promotionTools } from './tools/promotion-tools.js';
 import { leadEngineerTools } from './tools/lead-engineer-tools.js';
 import { avaChannelTools } from './tools/ava-channel-tools.js';
+import { knowledgeTools } from './tools/knowledge-tools.js';
 
 // Aggregate all tools
 const tools: Tool[] = [
@@ -294,6 +295,7 @@ const tools: Tool[] = [
   ...promotionTools,
   ...leadEngineerTools,
   ...avaChannelTools,
+  ...knowledgeTools,
 ];
 
 // Tool implementations
@@ -1361,6 +1363,31 @@ async function handleTool(name: string, args: Record<string, unknown>): Promise<
         projectSlug: args.projectSlug,
       });
 
+    // Project Assignment
+    case 'assign_project':
+      return apiCall('/projects/assignment/assign', {
+        projectPath: args.projectPath,
+        projectSlug: args.projectSlug,
+        assignedTo: args.assignedTo,
+        assignedBy: args.assignedBy,
+      });
+
+    case 'unassign_project':
+      return apiCall('/projects/assignment/unassign', {
+        projectPath: args.projectPath,
+        projectSlug: args.projectSlug,
+      });
+
+    case 'list_project_assignments':
+      return apiCall('/projects/assignment/list-assignments', {
+        projectPath: args.projectPath,
+      });
+
+    case 'reassign_orphaned_projects':
+      return apiCall('/projects/assignment/reassign-orphaned', {
+        projectPath: args.projectPath,
+      });
+
     // Lead Engineer (Production Phase)
     case 'start_lead_engineer':
       return apiCall('/lead-engineer/start', {
@@ -1993,6 +2020,34 @@ async function handleTool(name: string, args: Record<string, unknown>): Promise<
         priority: args.priority,
         instanceId: args.instanceId,
         discussantCount: args.discussantCount,
+      });
+
+    // Knowledge Store
+    case 'knowledge_search':
+      return apiCall('/knowledge/search', {
+        projectPath: args.projectPath,
+        query: args.query,
+        domain: args.domain,
+        maxResults: args.maxResults,
+        maxTokens: args.maxTokens,
+      });
+
+    case 'knowledge_ingest':
+      return apiCall('/knowledge/ingest', {
+        projectPath: args.projectPath,
+        content: args.content,
+        domain: args.domain,
+        heading: args.heading,
+      });
+
+    case 'knowledge_rebuild':
+      return apiCall('/knowledge/rebuild', {
+        projectPath: args.projectPath,
+      });
+
+    case 'knowledge_stats':
+      return apiCall('/knowledge/stats', {
+        projectPath: args.projectPath,
       });
 
     default:
