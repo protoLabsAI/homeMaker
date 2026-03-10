@@ -219,6 +219,15 @@ export interface WorkflowSettings {
    * @default 10
    */
   maxPendingCiRuns?: number;
+  /**
+   * Enable real authority enforcement in executeAction().
+   * When true, actions above the agent's trust tier risk threshold are blocked,
+   * an approval request is created in the actionable items queue, and the denial
+   * is logged with full context (agent, action, risk level, trust tier).
+   * When false (default), executeAction() is a no-op placeholder — existing behavior unchanged.
+   * @default false
+   */
+  authorityEnforcement?: boolean;
 }
 
 /** Default workflow settings */
