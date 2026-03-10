@@ -5,11 +5,10 @@ relevantTo: [patterns]
 importance: 0.7
 relatedFiles: []
 usageStats:
-  loaded: 61
-  referenced: 20
-  successfulFeatures: 20
+  loaded: 62
+  referenced: 21
+  successfulFeatures: 21
 ---
-
 # patterns
 
 #### [Pattern] Calendar event signal classification using keyword matching with fallback routing: Check for marketing keywords (campaign, content, social, analytics) → GTM track; engineering keywords (sprint, deployment, bug) → Ops track; default to Ops. All events classified, no drop-through. (2026-02-22)

@@ -5,9 +5,9 @@ relevantTo: [gotchas]
 importance: 0.7
 relatedFiles: []
 usageStats:
-  loaded: 976
-  referenced: 272
-  successfulFeatures: 272
+  loaded: 986
+  referenced: 277
+  successfulFeatures: 277
 ---
 # gotchas
 
@@ -665,3 +665,13 @@ usageStats:
 - **Situation:** Committed 4 files with ~1000 LOC of new code; build passed cleanly
 - **Root cause:** Worktree isolation means local environment might diverge from CI—pre-commit build verification catches issues before push and avoids CI loop delay
 - **How to avoid:** Adds ~2min overhead locally to catch issues immediately vs 5-10min waiting for CI to run; prevents broken commits on branch
+
+#### [Gotcha] Discord channel IDs table existed in both the LLM prompt and in memory/MEMORY.md, creating a duplicate data maintenance burden. Removing from prompt eliminates sync risk. (2026-03-10)
+- **Situation:** System configuration scattered across multiple files — channel IDs in prompt, same IDs in memory file. Updates to either location could desynchronize.
+- **Root cause:** System prompts are code and should follow DRY principle. Reference data that changes independently (channel IDs, config) should have a single source of truth. LLM prompts should reference stable facts, not configuration that ops teams might update.
+- **How to avoid:** Prompt is smaller and cleaner vs. if Ava needs channel IDs at runtime, must query them from MCP or memory rather than having them inline.
+
+#### [Gotcha] Bootstrap synchronization: `serverUrlOverride` is initialized from localStorage in store setup. If store hydration is not guaranteed before HTTP client makes first request, race condition exists where client uses fallback URL while store is still syncing. (2026-03-10)
+- **Situation:** App startup sequence: store initialization, HTTP client creation, first API call. Order matters.
+- **Root cause:** localStorage is async in some contexts (though typically sync in browsers); if hydration is deferred, early requests use old URL.
+- **How to avoid:** Hydration adds small startup cost. If not handled carefully, can cause race conditions. The summary doesn't specify how hydration is guaranteed to complete before first request.

@@ -5,9 +5,9 @@ relevantTo: [architecture]
 importance: 0.7
 relatedFiles: []
 usageStats:
-  loaded: 86
-  referenced: 30
-  successfulFeatures: 30
+  loaded: 90
+  referenced: 33
+  successfulFeatures: 33
 ---
 # architecture
 
@@ -4166,3 +4166,93 @@ usageStats:
 - **Rejected:** Could have user roles + per-tool permission checks (more granular, but complex), could scope tools to user's assigned features (loses board-wide visibility)
 - **Trade-offs:** Simpler authorization (project access = all PM tool access), but means no per-tool permissions within a project. All-or-nothing project access
 - **Breaking if changed:** If per-tool permissions are added later (e.g., only some users can delete features), entire tool surface needs a permission layer; if user context becomes required for auditing, tool signatures change
+
+#### [Pattern] Deep-merge pattern in loadAvaConfig: user overrides merge into full default config rather than replacing it, preserving all default tool groups unless explicitly overridden (2026-03-10)
+- **Problem solved:** Default disables ~10 tool groups, but users need to selectively enable specific tools without listing all 20 groups or modifying code
+- **Why this works:** Absence of a key in user config doesn't reset it—all defaults persist. Selective override is more forgiving than replacement semantics and produces simpler user configs
+- **Trade-offs:** Gained: minimal user config files (only overrides needed), defaults always present. Lost: full config not visible in user file alone; implicit behavior harder to audit
+
+### System architecture infrastructure details (CRDT, fleet scheduler, heartbeat intervals, Discord channel ID tables) were removed from LLM prompt entirely (~35% of content). Prompt now focuses only on user-facing behavior and capabilities. (2026-03-10)
+- **Context:** Original prompt mixed implementation internals with behavioral guidance, causing bloat that pushed token count too high.
+- **Why:** LLM system prompts should guide behavior, not document infrastructure. Ava operates through APIs and events, not by knowing internal coordination mechanisms. Infrastructure knowledge doesn't improve decision-making and competes for token budget with actionable guidance.
+- **Rejected:** Keep infrastructure as 'context' for completeness; move to separate documentation only when token budget is critical.
+- **Trade-offs:** Simpler, more focused prompt vs. complete picture of system internals. Infrastructure changes no longer require prompt updates, reducing maintenance burden.
+- **Breaking if changed:** If Ava needs to make decisions based on fleet state or CRDT consistency, this knowledge would be needed. However, current architecture routes such decisions through APIs, not through Ava's awareness.
+
+### Established explicit delegation boundary: delegate PROJECT-SPECIFIC work (status queries, feature creation, implementation plans on single projects) to PM; own CROSS-PROJECT decisions (coordination, sequencing, strategic audits, game plans). (2026-03-10)
+- **Context:** Previous prompt had minimal guidance on when to delegate vs. handle directly, creating ambiguity in routing decisions.
+- **Why:** Clear scope boundaries improve routing consistency and prevent scope creep. Separates data ownership (PM owns project details) from strategic coordination (Ava owns cross-project judgment). Mirrors organizational structure where each PM is domain expert for their project.
+- **Rejected:** Implicit delegation through examples only (too vague for consistent LLM behavior); Ava owns all decisions (loses PM agency, creates bottleneck); Ava delegates everything (loses strategic role).
+- **Trade-offs:** More deterministic behavior, cleaner separation of concerns vs. requires async coordination between Ava and multiple PMs, increases communication complexity.
+- **Breaking if changed:** If this boundary shifts (e.g., Ava should own project-level implementation decisions), delegation logic throughout the system breaks. Requires re-tuning all downstream features that depend on this boundary.
+
+#### [Pattern] Explicit delegation patterns table (signal → action) maps observable cues (question phrasing, scenario type) to specific routing decisions. Example: 'What's happening on [project]?' → delegate_to_pm; 'Audit all projects' → loop delegate_to_pm per project, synthesize cross-project view. (2026-03-10)
+- **Problem solved:** Previous guidance was implicit: only statement 'What Ava Does Directly' without concrete examples of when the opposite (delegation) applies.
+- **Why this works:** LLMs benefit from explicit pattern matching. A table of signals makes the decision boundary learnable and reproducible. Teaching by example (this scenario → this tool) is more reliable than abstract rules.
+- **Trade-offs:** More prescriptive and consistent behavior vs. less flexibility for edge cases; table must be updated as new patterns emerge.
+
+#### [Pattern] Dual-layer storage pattern: server URL override stored in BOTH localStorage (persistence) and app-store state (reactivity). Changes to one trigger updates to the other via setServerUrlOverride(). (2026-03-10)
+- **Problem solved:** Need to preserve user's URL choice across page reloads while also updating UI reactively when override changes
+- **Why this works:** localStorage alone is inert; app-state alone loses on refresh. Dual storage decouples persistence from UI reactivity.
+- **Trade-offs:** More complex sync logic, but guarantees both behaviors work correctly
+
+#### [Gotcha] HTTP client invalidation requires calling reconnect() on existing singleton THEN replacing it with fresh instance. Just updating state doesn't terminate stale connections. (2026-03-10)
+- **Situation:** When server URL override changes, old HTTP client still connected to previous server, WebSocket still active to old endpoint
+- **Root cause:** HTTP clients cache TCP connections and WebSocket maintains live connection state. These don't auto-reset on config change.
+- **How to avoid:** More overhead (explicit reconnection), but ensures clean cutover to new server with no stale connections
+
+#### [Pattern] Recent URLs list: deduplicated, capped at 10, persisted to localStorage. Maintains user's history of tried servers without bloat. (2026-03-10)
+- **Problem solved:** Users switching between multiple server URLs; want quick access to recent choices without unlimited growth
+- **Why this works:** Dedup prevents confusion (duplicate entries in dropdown); cap at 10 prevents localStorage runaway (~500 bytes per entry × 10 = 5KB); persistence survives sessions
+- **Trade-offs:** Oldest entries eventually drop off; must re-add if you switch back to very old server
+
+### Fallback chain for getServerUrl(): localStorage override → Electron cached URL → VITE_SERVER_URL env var → relative URL. Order matters: most specific/recent first, then deployment config, then sensible default. (2026-03-10)
+- **Context:** Determining server URL in headless client that can run in web, Electron, or remote scenarios
+- **Why:** Allows runtime override (localStorage) to take precedence over static config, while Electron cache bridges gap when URL not explicitly passed. Progressive fallback ensures always working URL.
+- **Rejected:** Alternative: env var only - would prevent runtime switching. Alternative: all sources equal priority - would create non-deterministic behavior.
+- **Trade-offs:** Order makes some sources 'win' silently; harder to debug which source is active. But enables flexible deployment (web, Electron, remote client).
+- **Breaking if changed:** Changing order (e.g., env var first) means static config overrides user runtime choice - defeats runtime switching feature. Removing localStorage check breaks entire override capability.
+
+#### [Pattern] Dual client invalidation pattern: setServerUrlOverride() calls both invalidateHttpClient() (recreates HTTP singleton) AND httpApiClientInstance.reconnect() (closes/reopens WebSocket). Both transports invalidated atomically. (2026-03-10)
+- **Problem solved:** Ensuring client stays consistent when server URL changes at runtime
+- **Why this works:** HTTP client may cache responses in memory. WebSocket maintains persistent connection state. If only HTTP invalidated, stale WS goes to old server. If only WS invalidated, HTTP client still cached. Dual invalidation enforces clean state across both layers.
+- **Trade-offs:** More expensive (closes connections, clears caches), but guarantees no data inconsistency. Alternative of lazy reconnection would risk serving stale cached data.
+
+#### [Pattern] HTTP client as singleton with invalidation function (invalidateHttpClient) rather than creating new instance on each call. Invalidation clears cache and recreates singleton. (2026-03-10)
+- **Problem solved:** Managing HTTP client lifecycle when server URL can change at runtime
+- **Why this works:** Singleton avoids constant re-creation overhead. Invalidation ensures stale cached responses don't persist after server change. Balances performance (reuse) with correctness (fresh on override).
+- **Trade-offs:** Invalidation adds complexity (must remember to call it). Singleton improves performance but creates implicit dependency on invalidation call.
+
+### localStorage-first override pattern: setServerUrlOverride() persists to localStorage key 'automaker:serverUrlOverride'. getServerUrl() checks localStorage before env vars. Survives page reloads and app restarts. (2026-03-10)
+- **Context:** Allowing user to switch server URL at runtime without environment variable redeployment
+- **Why:** localStorage is persistent across sessions but mutable at runtime. Enables dev/testing workflows (e.g., switch between staging/prod servers without redeploy). Env var is immutable per deployment.
+- **Rejected:** Memory-only override: lost on page reload, bad UX. Session storage: lost on browser close. Env var only: requires redeployment to switch, blocks dev workflows.
+- **Trade-offs:** Persistent storage means stale overrides can linger if user doesn't clear. Hard-coded key 'automaker:serverUrlOverride' means no migration path if key changes.
+- **Breaking if changed:** Removing localStorage check: runtime switching disappears, dev workflows blocked. Changing localStorage key: old overrides become orphaned, no automatic migration.
+
+#### [Gotcha] Electron-specific fallback in getServerUrl() caches URL from Electron IPC. Web and headless clients skip this. Creates two different code paths for 'where is the server'. (2026-03-10)
+- **Situation:** Supporting Electron desktop app where server URL may be determined at runtime via IPC, but web clients have no such mechanism
+- **Root cause:** Electron app runs server locally but renderer process (web bundle) doesn't know URL directly - needs IPC to ask main process. Web doesn't have main process, so URL comes from env/override.
+- **How to avoid:** Desktop and web clients have different initialization requirements. Complicates testing (need to mock Electron fallback on web). Makes client code less portable.
+
+#### [Pattern] Reactive watch effect on serverUrlOverride state: when changed, triggers chain of (invalidateHttpClient → reconnect WebSocket) then adds URL to recentServerUrls. Single state change triggers coordinated invalidation across all layers. (2026-03-10)
+- **Problem solved:** Keeping multiple client instances and caches in sync when server changes
+- **Why this works:** Effect pattern ensures invalidation happens automatically whenever state changes. Removes manual error-prone coordination. Centralizes server-change logic in one place (the effect).
+- **Trade-offs:** Effect can hide where invalidation happens (implicit). If effect breaks, entire feature silently fails. More declarative but less explicit than manual calls.
+
+### URL validation 'Phase 5: Polish' item: validate URL format before storing in override or recentServerUrls. Validation prevents invalid URLs from being persisted and later causing reconnection failures. (2026-03-10)
+- **Context:** Protecting against user error (typos) or programmatic mistakes when setting server override
+- **Why:** Invalid URL stored locally causes cascading failures later (reconnect fails silently, hard to debug). Validation at input catches errors immediately while context is clear.
+- **Rejected:** Lazy validation (only when reconnecting): error message appears later, harder to trace to original setServerUrl call. No validation: localStorage polluted with garbage URLs.
+- **Trade-offs:** Validation function needs URL parser (adds logic). Rejects invalid URLs which might be intentional (for testing). Error feedback must be clear.
+- **Breaking if changed:** Removing validation: allows invalid URLs to persist in localStorage, causing obscure failures later. Bad URLs survive app restart, hard to recover from.
+
+#### [Pattern] HTTP client invalidation (`invalidateHttpClient()`) used as a reconnection trigger when server URL changes. The action calls this method to force connection reset without explicit URL parameter passing. (2026-03-10)
+- **Problem solved:** When user changes server URL via `setServerUrlOverride()`, both HTTP and WebSocket connections must reconnect to the new address.
+- **Why this works:** Decouples URL change logic from client recreation. The client handles its own state invalidation/reset, making the pattern reusable for other invalidation triggers. Avoids passing URL through multiple layers.
+- **Trade-offs:** Elegant separation of concerns, but creates hidden dependency: if HTTP client doesn't properly handle invalidation (doesn't recreate WebSocket), feature silently fails. Gotcha is that the failure mode is not obvious—users won't see errors, just stale connections.
+
+#### [Pattern] Recent URLs stored with deduplication and size limit (max 10). When `setServerUrlOverride()` is called, new URL is added to front of array, duplicates removed, array truncated to 10. (2026-03-10)
+- **Problem solved:** UX pattern: show user a history of servers they've recently switched to, enable quick re-selection without typing.
+- **Why this works:** Small, bounded history prevents unbounded growth while keeping common case (switch between 3-5 servers) instant. Deduplication avoids cluttering the list with repeated entries.
+- **Trade-offs:** Logic is straightforward but order-dependent: deduplication must happen before truncation. If someone adds this pattern elsewhere, they must remember this order.

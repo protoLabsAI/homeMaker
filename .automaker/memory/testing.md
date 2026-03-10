@@ -5,9 +5,9 @@ relevantTo: [testing]
 importance: 0.7
 relatedFiles: []
 usageStats:
-  loaded: 70
-  referenced: 25
-  successfulFeatures: 25
+  loaded: 71
+  referenced: 26
+  successfulFeatures: 26
 ---
 # testing
 
@@ -1210,3 +1210,8 @@ usageStats:
 - **Rejected:** Server-side only: client has no way to verify events weren't leaked. Client-only: server broadcasts events regardless, data exposure in logs/observability.
 - **Trade-offs:** Duplicate session-checking logic. Better: UX (client sees immediate filtering) and observability (errors caught at boundary, not buried in event loop).
 - **Breaking if changed:** If client filtering removed: cross-session PR events become visible (wrong session sees another's watch notifications). If server scoping removed: client alone can't prevent leaks on unstable/malicious servers.
+
+#### [Gotcha] LLM prompt changes cannot be meaningfully verified by automated UI tests (Playwright, etc.). Routing and delegation behavior changes require live inference and manual validation. (2026-03-10)
+- **Situation:** Implementation included a note: 'Playwright test cannot meaningfully verify that Ava's language model behavior changes correctly — that requires live inference.' Build/lint checks cannot validate that LLM now correctly routes `delegate_to_pm` in new contexts.
+- **Root cause:** LLM behavior is probabilistic and context-dependent. A test can verify that a tool exists and is callable, but cannot verify that the model will actually call it in the right scenarios. Behavior validation requires human judgment of actual responses.
+- **How to avoid:** Accept manual acceptance testing as part of verification gates for LLM prompts vs. full automation coverage. More expensive to verify but more reliable.

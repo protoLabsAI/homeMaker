@@ -1931,12 +1931,40 @@ export class AutoModeService {
           if (worktreePath) {
             logger.info(`Created worktree for branch "${branchName}": ${worktreePath}`);
           } else {
-            logger.warn(`Failed to create worktree for branch "${branchName}", using project path`);
+            const reason = `Pipeline worktree creation failed for branch "${branchName}" (feature ${featureId}). Blocking feature to prevent main working tree corruption.`;
+            logger.error(reason);
+            await this.featureLoader.update(projectPath, featureId, {
+              status: 'blocked',
+              statusChangeReason: reason,
+            });
+            this.events.emit('feature:error', { projectPath, featureId, error: reason });
+            return;
           }
         }
+      } else if (useWorktrees && !branchName) {
+        const reason = `Feature ${featureId} has no branchName but useWorktrees is enabled (pipeline resume). Blocking feature — assign a branch name first.`;
+        logger.error(reason);
+        await this.featureLoader.update(projectPath, featureId, {
+          status: 'blocked',
+          statusChangeReason: reason,
+        });
+        this.events.emit('feature:error', { projectPath, featureId, error: reason });
+        return;
       }
 
       const workDir = worktreePath ? path.resolve(worktreePath) : path.resolve(projectPath);
+
+      // Defense-in-depth: if worktrees are enabled, workDir must NOT be the project path
+      if (useWorktrees && path.resolve(workDir) === path.resolve(projectPath)) {
+        const reason = `Pipeline worktree safety check failed for feature ${featureId}: workDir resolved to projectPath ("${projectPath}"). Blocking feature to prevent main working tree corruption.`;
+        logger.error(reason);
+        await this.featureLoader.update(projectPath, featureId, {
+          status: 'blocked',
+          statusChangeReason: reason,
+        });
+        this.events.emit('feature:error', { projectPath, featureId, error: reason });
+        return;
+      }
 
       // CRITICAL: Rebase worktree onto latest origin/main before pipeline execution
       if (worktreePath) {
@@ -2218,11 +2246,28 @@ export class AutoModeService {
           workDir = worktreePath;
           logger.info(`Follow-up created worktree for branch "${branchName}": ${workDir}`);
         } else {
-          logger.warn(
-            `Follow-up failed to create worktree for branch "${branchName}", using project path`
-          );
+          const reason = `Follow-up worktree creation failed for branch "${branchName}" (feature ${featureId}). Refusing to fall back to main working tree.`;
+          logger.error(reason);
+          await this.featureLoader.update(projectPath, featureId, {
+            status: 'blocked',
+            statusChangeReason: reason,
+          });
+          this.events.emit('feature:error', { projectPath, featureId, error: reason });
+          throw new Error(reason);
         }
       }
+    }
+
+    // Defense-in-depth: if worktrees are enabled, workDir must NOT be the project path
+    if (useWorktrees && path.resolve(workDir) === path.resolve(projectPath)) {
+      const reason = `Follow-up worktree safety check failed for feature ${featureId}: workDir resolved to projectPath ("${projectPath}"). Blocking feature to prevent main working tree corruption.`;
+      logger.error(reason);
+      await this.featureLoader.update(projectPath, featureId, {
+        status: 'blocked',
+        statusChangeReason: reason,
+      });
+      this.events.emit('feature:error', { projectPath, featureId, error: reason });
+      throw new Error(reason);
     }
 
     // CRITICAL: Rebase worktree onto latest origin/main before follow-up execution
@@ -3341,6 +3386,8 @@ Format your response as a structured markdown document.`;
       let currentPath: string | null = null;
       let currentBranch: string | null = null;
 
+      const resolvedProjectPath = path.resolve(projectPath);
+
       for (const line of lines) {
         if (line.startsWith('worktree ')) {
           currentPath = line.slice(9);
@@ -3349,12 +3396,19 @@ Format your response as a structured markdown document.`;
         } else if (line === '' && currentPath && currentBranch) {
           // End of a worktree entry
           if (currentBranch === branchName) {
-            // Resolve to absolute path - git may return relative paths
-            // On Windows, this is critical for cwd to work correctly
-            // On all platforms, absolute paths ensure consistent behavior
             const resolvedPath = path.isAbsolute(currentPath)
               ? path.resolve(currentPath)
               : path.resolve(projectPath, currentPath);
+            // Skip the main worktree — returning the project root would cause
+            // agents to write directly into the main working tree
+            if (resolvedPath === resolvedProjectPath) {
+              logger.warn(
+                `findExistingWorktreeForBranch: skipping main worktree match for branch "${branchName}" (path matches projectPath)`
+              );
+              currentPath = null;
+              currentBranch = null;
+              continue;
+            }
             return resolvedPath;
           }
           currentPath = null;
@@ -3364,10 +3418,16 @@ Format your response as a structured markdown document.`;
 
       // Check the last entry (if file doesn't end with newline)
       if (currentPath && currentBranch && currentBranch === branchName) {
-        // Resolve to absolute path for cross-platform compatibility
         const resolvedPath = path.isAbsolute(currentPath)
           ? path.resolve(currentPath)
           : path.resolve(projectPath, currentPath);
+        // Skip the main worktree
+        if (resolvedPath === resolvedProjectPath) {
+          logger.warn(
+            `findExistingWorktreeForBranch: skipping main worktree match for branch "${branchName}" (path matches projectPath)`
+          );
+          return null;
+        }
         return resolvedPath;
       }
 

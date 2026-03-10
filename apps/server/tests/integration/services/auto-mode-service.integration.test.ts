@@ -137,8 +137,8 @@ describe('auto-mode-service.ts (integration)', () => {
 
       vi.mocked(ProviderFactory.getProviderForModel).mockReturnValue(mockProvider as any);
 
-      // Execute feature (should handle error)
-      await service.executeFeature(testRepo.path, 'test-feature-error', true, false);
+      // Execute feature without worktrees (no branchName on feature)
+      await service.executeFeature(testRepo.path, 'test-feature-error', false, false);
 
       // Verify feature status was updated to backlog (non-retryable error)
       const feature = await featureLoader.get(testRepo.path, 'test-feature-error');
@@ -326,14 +326,23 @@ describe('auto-mode-service.ts (integration)', () => {
     }, 10000);
 
     it('should process pending features in auto loop', async () => {
-      // Create multiple backlog features
+      // Create multiple backlog features with branchName and worktrees
+      // (useWorktrees is always true in startAutoLoop)
+      const worktreesDir = path.join(testRepo.path, '.worktrees');
+      await fs.mkdir(worktreesDir, { recursive: true });
+
       await createTestFeature(testRepo.path, 'auto-1', {
         id: 'auto-1',
         category: 'test',
         description: 'Auto feature 1',
         status: 'backlog',
         skipTests: true,
+        branchName: 'feature/auto-1',
       });
+      await execAsync(
+        `git worktree add -b feature/auto-1 "${path.join(worktreesDir, 'feature-auto-1')}" HEAD`,
+        { cwd: testRepo.path }
+      );
 
       await createTestFeature(testRepo.path, 'auto-2', {
         id: 'auto-2',
@@ -341,7 +350,12 @@ describe('auto-mode-service.ts (integration)', () => {
         description: 'Auto feature 2',
         status: 'backlog',
         skipTests: true,
+        branchName: 'feature/auto-2',
       });
+      await execAsync(
+        `git worktree add -b feature/auto-2 "${path.join(worktreesDir, 'feature-auto-2')}" HEAD`,
+        { cwd: testRepo.path }
+      );
 
       const mockProvider = {
         getName: () => 'claude',
@@ -369,9 +383,10 @@ describe('auto-mode-service.ts (integration)', () => {
       const feature1 = await featureLoader.get(testRepo.path, 'auto-1');
       const feature2 = await featureLoader.get(testRepo.path, 'auto-2');
 
-      // At least one should have been processed
+      // At least one should have been processed (done, in_progress, or blocked
+      // by the post-agent git workflow — all indicate the agent ran successfully)
       const processedCount = [feature1, feature2].filter(
-        (f) => f?.status === 'done' || f?.status === 'in_progress'
+        (f) => f?.status === 'done' || f?.status === 'in_progress' || f?.status === 'blocked'
       ).length;
 
       expect(processedCount).toBeGreaterThan(0);
@@ -497,8 +512,8 @@ describe('auto-mode-service.ts (integration)', () => {
 
       vi.mocked(ProviderFactory.getProviderForModel).mockReturnValue(mockProvider as any);
 
-      // Should not throw
-      await service.executeFeature(testRepo.path, 'error-feature', true, false);
+      // Should not throw — use useWorktrees=false since feature has no branchName
+      await service.executeFeature(testRepo.path, 'error-feature', false, false);
 
       // Feature should be marked as backlog (non-retryable error)
       const feature = await featureLoader.get(testRepo.path, 'error-feature');
@@ -506,19 +521,32 @@ describe('auto-mode-service.ts (integration)', () => {
     }, 30000);
 
     it('should continue auto loop after feature error', async () => {
+      const worktreesDir = path.join(testRepo.path, '.worktrees');
+      await fs.mkdir(worktreesDir, { recursive: true });
+
       await createTestFeature(testRepo.path, 'fail-1', {
         id: 'fail-1',
         category: 'test',
         description: 'Will fail',
         status: 'backlog',
+        branchName: 'feature/fail-1',
       });
+      await execAsync(
+        `git worktree add -b feature/fail-1 "${path.join(worktreesDir, 'feature-fail-1')}" HEAD`,
+        { cwd: testRepo.path }
+      );
 
       await createTestFeature(testRepo.path, 'success-1', {
         id: 'success-1',
         category: 'test',
         description: 'Will succeed',
         status: 'backlog',
+        branchName: 'feature/success-1',
       });
+      await execAsync(
+        `git worktree add -b feature/success-1 "${path.join(worktreesDir, 'feature-success-1')}" HEAD`,
+        { cwd: testRepo.path }
+      );
 
       let callCount = 0;
       const mockProvider = {
