@@ -171,6 +171,7 @@ export interface AppState {
 
   // Connected instance identity
   instanceName: string | null; // Human-readable name of the connected instance (e.g. 'Dev Server', 'Staging')
+  instanceRole: string | null; // Role of the connected instance (e.g. 'primary', 'worker')
 }
 
 export interface AppActions {
@@ -342,6 +343,7 @@ export interface AppActions {
   connectToServer: (url: string) => Promise<void>;
   removeRecentConnection: (url: string) => void;
   setInstanceName: (name: string | null) => void;
+  fetchInstanceInfo: () => Promise<void>;
 
   // Reset
   reset: () => void;
@@ -450,6 +452,7 @@ const initialState: AppState = {
   })(),
   // Connected instance identity
   instanceName: null,
+  instanceRole: null,
 };
 
 export const useAppStore = create<AppState & AppActions>()((set, get) => ({
@@ -1369,7 +1372,7 @@ export const useAppStore = create<AppState & AppActions>()((set, get) => ({
 
   // Server connection actions
   connectToServer: async (url) => {
-    set({ serverStatus: 'connecting', serverInfo: null, instanceName: null });
+    set({ serverStatus: 'connecting', serverInfo: null, instanceName: null, instanceRole: null });
     try {
       const response = await fetch(`${url}/api/health`, {
         method: 'GET',
@@ -1428,6 +1431,29 @@ export const useAppStore = create<AppState & AppActions>()((set, get) => ({
   },
 
   setInstanceName: (name) => set({ instanceName: name }),
+
+  fetchInstanceInfo: async () => {
+    try {
+      const api = getHttpApiClient();
+      // Fetch self instanceId
+      const selfData = await api.hivemind.getSelf();
+      const selfId = selfData.instanceId;
+      // Fetch hivemind status to get role and display name
+      let displayName: string | null = null;
+      let instanceRole: string | null = null;
+      try {
+        const status = await api.hivemind.getStatus();
+        instanceRole = status.role ?? null;
+        const selfPeer = status.onlinePeers.find((p) => p.identity.instanceId === selfId);
+        displayName = selfPeer?.identity.name ?? null;
+      } catch {
+        // Status endpoint may fail — fall back gracefully
+      }
+      set({ selfInstanceId: selfId, instanceName: displayName ?? selfId, instanceRole });
+    } catch (err) {
+      logger.warn('[AppStore] Failed to fetch instance info:', err);
+    }
+  },
 
   // Reset
   reset: () => set(initialState),
