@@ -2001,7 +2001,7 @@ export function buildAvaTools(
           .describe('One or more form steps. Multiple steps render as a wizard.'),
       }),
       execute: async ({ title, description, steps }) => {
-        const formId = `chat-form-${randomUUID().slice(0, 8)}`;
+        const formId = `chat-form-${randomUUID()}`;
         const timestamp = new Date().toISOString();
 
         // Broadcast the user_input_request event so the UI renders an inline form
@@ -2013,13 +2013,17 @@ export function buildAvaTools(
           timestamp,
         });
 
-        // Pause and await the user's form submission
+        // Pause and await the user's form submission (5-minute timeout)
+        const FORM_TIMEOUT_MS = 5 * 60 * 1000;
         return new Promise<unknown>((resolve) => {
+          let timeoutHandle: ReturnType<typeof setTimeout> | undefined;
+
           const unsub = eventsEmitter.on(
             'hitl:form-responded' as EventType,
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
             (payload: any) => {
               if (payload?.formId !== formId) return;
+              clearTimeout(timeoutHandle);
               unsub();
               if (payload.cancelled) {
                 resolve({ cancelled: true, message: 'The user cancelled the form.' });
@@ -2032,6 +2036,15 @@ export function buildAvaTools(
               }
             }
           );
+
+          timeoutHandle = setTimeout(() => {
+            unsub();
+            resolve({
+              cancelled: true,
+              message:
+                'The form was not submitted within the allowed time (5 minutes). The request has been abandoned.',
+            });
+          }, FORM_TIMEOUT_MS);
         });
       },
     });

@@ -5,9 +5,9 @@ relevantTo: [architecture]
 importance: 0.7
 relatedFiles: []
 usageStats:
-  loaded: 91
-  referenced: 34
-  successfulFeatures: 34
+  loaded: 96
+  referenced: 35
+  successfulFeatures: 35
 ---
 # architecture
 
@@ -4278,3 +4278,25 @@ usageStats:
 - **Situation:** Changing server URL requires both updating state AND closing/reconnecting the WebSocket to the new server
 - **Root cause:** State management (app-store) and I/O concerns (WebSocket reconnection) are separated. Store doesn't own HTTP client lifecycle, so it can't auto-reconnect. Explicit call required to bridge these layers
 - **How to avoid:** Explicit is easier to understand and debug (see exactly where reconnect happens) but easy to miss when refactoring. If someone adds another setServerUrlOverride call without invalidateHttpClient(), old WebSocket persists while HTTP client uses new URL—inconsistent connection state, hard to debug
+
+#### [Pattern] HTTP client singleton invalidation triggers WebSocket reconnection via `invalidateHttpClient()` which calls `httpApiClientInstance.reconnect()` before replacing singleton (2026-03-10)
+- **Problem solved:** When server URL override is set, both HTTP and WebSocket connections must reconnect to new URL
+- **Why this works:** Centralizes connection lifecycle management. Single invalidation point ensures both protocols resync atomically rather than having separate reconnect paths
+- **Trade-offs:** Easier: coupled lifecycle prevents partial reconnection. Harder: HTTP client must own WebSocket lifecycle awareness
+
+#### [Pattern] Server-to-client events in HITL tools must use broadcast() not emit() to reach WebSocket clients in the UI (2026-03-10)
+- **Problem solved:** Building a user input request feature in a HITL tool that needs to notify WebSocket clients of events
+- **Why this works:** emit() only fires server-side EventEmitter listeners; broadcast() pushes events to all connected WebSocket clients. UI consumption requires broadcast.
+- **Trade-offs:** broadcast() adds network I/O for every client; emit() is lighter but only reaches internal listeners. Trade off latency/bandwidth for UI responsiveness.
+
+#### [Pattern] UI client maintains deliberately narrowed EventType union (subset of server-side types) to express which events the UI actually consumes (2026-03-10)
+- **Problem solved:** The UI's base-http-client.ts defines its own EventType union rather than importing the full server-side union from libs/types/src/event.ts
+- **Why this works:** Provides explicit intent boundary: makes it clear which server events the UI cares about, reduces surface area of event handling code, and documents the UI→server contract
+- **Trade-offs:** Clarity and intent gained; synchronization burden introduced - developers must update two separate type definitions when adding events the UI needs
+
+### EventType is defined locally in base-http-client.ts rather than exported from libs/types, creating a synchronization point that must be manually maintained (2026-03-10)
+- **Context:** Server-side event.ts already defined 'chat:user-input-request' and its EventPayloadMap entry, but the UI client's separate EventType union missed it
+- **Why:** Separation allows UI to narrow the scope, but creates coordination risk: developers adding server events must remember to propagate to UI type definition
+- **Rejected:** Exporting EventType from libs/types for direct import - this removes the coordination burden but loses the narrowing intent and makes it unclear which events UI actually uses
+- **Trade-offs:** Current approach: explicit intent, clear narrow scope; cost is dual maintenance and risk of drift
+- **Breaking if changed:** If EventType moves to libs/types export, the UI no longer documents its event consumption contract; if removed entirely, no type safety on event dispatch

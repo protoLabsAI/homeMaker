@@ -836,12 +836,32 @@ export class ExecutionService {
       // Determine final status based on testing mode:
       // - skipTests=false (automated testing): go directly to 'verified' (no manual verify needed)
       // - skipTests=true (manual verification): go to 'waiting_approval' for manual review
-      const finalStatus = feature.skipTests ? 'waiting_approval' : 'verified';
+      //
+      // Safety gate: auto-verification requires PR evidence. Reload the feature from the
+      // database to pick up any prNumber/prMergedAt set by the git workflow. If neither is
+      // present, the agent ran but nothing was pushed — do NOT auto-verify. Leave the
+      // feature in its current state for manual review or re-execution.
+      const freshFeature = await this.featureLoader.get(projectPath, featureId);
+      const hasPrEvidence = !!(freshFeature?.prMergedAt ?? freshFeature?.prNumber);
+      const finalStatus = feature.skipTests
+        ? 'waiting_approval'
+        : hasPrEvidence
+          ? 'verified'
+          : null; // no PR evidence — skip auto-verify
+
+      if (!hasPrEvidence && finalStatus === null) {
+        logger.warn(
+          `[AutoVerify] Skipping auto-verify for ${featureId} — no PR evidence (prNumber or prMergedAt). ` +
+            `Feature left in current state for manual review.`
+        );
+      }
 
       // Ensure worktree is clean before marking as verified
       await ensureCleanWorktree(workDir, featureId, feature.branchName ?? 'main');
 
-      await this.callbacks.updateFeatureStatus(projectPath, featureId, finalStatus);
+      if (finalStatus !== null) {
+        await this.callbacks.updateFeatureStatus(projectPath, featureId, finalStatus);
+      }
 
       // Record success to reset consecutive failure tracking
       this.callbacks.recordSuccessForProject(projectPath, feature?.branchName ?? null);

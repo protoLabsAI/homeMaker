@@ -531,3 +531,10 @@ usageStats:
 - **Rejected:** Alternative: always allow CORS (security risk). Alternative: check origin header at runtime (more flexible but more expensive, per-request logic)
 - **Trade-offs:** Simple configuration (one flag at startup) vs runtime flexibility (can't toggle without restart). If hivemind flag is accidentally left true during deployment, CORS stays wide open until next restart with no runtime warning
 - **Breaking if changed:** Removing allowAllOrigins breaks local development clients on different ports (can't make cross-origin requests). Hivemind development scenarios entirely blocked
+
+### Server applies `allowAllOrigins: true` to CORS middleware only when `hivemind.enabled` from config is true (2026-03-10)
+- **Context:** Default would reject cross-origin requests; peer-to-peer hivemind mode needs to accept requests from any browser origin
+- **Why:** Hivemind mode implies distributed, autonomous operation where clients connect from unknown origins. Default-deny (when hivemind disabled) follows principle of least privilege
+- **Rejected:** Always allow all origins (default permissive); whitelist specific origins (inflexible for distributed mode)
+- **Trade-offs:** Easier: one boolean toggle. Harder: tight coupling between CORS policy and hivemind feature—cannot enable hivemind without exposing CORS
+- **Breaking if changed:** If hivemind.enabled check removed, server becomes CORS-permissive in all modes—exposes to CSRF from any origin. If check inverted, hivemind mode blocks own clients

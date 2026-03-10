@@ -281,3 +281,8 @@ usageStats:
 - **Problem solved:** The processedContent useMemo and stable remarkPlugins/rehypePlugins arrays ensure ReactMarkdown only re-renders when content actually changes. The old code assumed dangerouslySetInnerHTML was needed to prevent re-renders, but the memoization layer was already preventing them
 - **Why this works:** Once processedContent changes are memoized and plugin arrays are stable, React only reconciles when necessary. Adding dangerouslySetInnerHTML to avoid reconciliation becomes a second-order optimization that adds complexity for minimal gain
 - **Trade-offs:** Simpler mental model (one render path) vs. false sense of control from explicit dangerouslySetInnerHTML. The memoization is less obvious in the code but actually more reliable because it's maintained by React's dependency system
+
+#### [Gotcha] WebSocket reconnection is synchronous within HTTP client invalidation, not async queued. This blocks other pending requests during reconnect window (2026-03-10)
+- **Situation:** When URL override is set, reconnect() is called immediately before replacing singleton
+- **Root cause:** Synchronous approach is simpler to reason about—no race where request hits old client before reconnect completes. But synchronicity means UI freezes if reconnect slow
+- **How to avoid:** Easier: simpler control flow. Harder: poor UX if server slow to respond to reconnect

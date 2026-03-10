@@ -5,9 +5,9 @@ relevantTo: [auth]
 importance: 0.7
 relatedFiles: []
 usageStats:
-  loaded: 33
-  referenced: 8
-  successfulFeatures: 8
+  loaded: 38
+  referenced: 9
+  successfulFeatures: 9
 ---
 # auth
 
@@ -61,3 +61,10 @@ usageStats:
 - **Rejected:** Alternative: separate config service (requires dependency injection everywhere) or URL params (not persistent, verbose). Could store on server (requires auth + network call, complexity)
 - **Trade-offs:** Simple and automatic for consumers, but tightly couples auth layer to runtime config concerns. localStorage is per-origin, won't work across different ports/domains without CORS setup
 - **Breaking if changed:** Removing localStorage check removes override capability. Persisting auth state across page reloads relies on getServerUrl() being called at startup before any connections are made
+
+### Override mechanism uses localStorage key `'automaker:serverUrlOverride'` checked first in `getServerUrl()` fallback chain before environment variables (2026-03-10)
+- **Context:** Need to allow runtime server URL changes without environment redeploy or page reload
+- **Why:** localStorage survives page reload but is volatile (cleared on browser data clear), so it's safe for transient overrides. Key-based lookup is faster than parsing config objects
+- **Rejected:** Session storage (lost on tab close); IndexedDB (overkill); URL params (exposed in history)
+- **Trade-offs:** Easier: simple string key, no serialization. Harder: no version control, survives across sessions unintentionally
+- **Breaking if changed:** If localStorage key is renamed without migration, users lose saved override. If storage cleared (browser settings), override disappears silently
