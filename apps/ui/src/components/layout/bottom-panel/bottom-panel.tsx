@@ -1,24 +1,19 @@
-import { useState, useEffect, useRef } from "react";
-import { useAppStore } from "@/store/app-store";
-import { useChatStore } from "@/store/chat-store";
-import { useIsMobile } from "@/hooks/use-media-query";
-import { useProjectHealth } from "@/hooks/use-project-health";
-import { useSystemHealth } from "@/hooks/queries/use-metrics";
-import { isElectron, getOverlayAPI } from "@/lib/electron";
-import { cn } from "@/lib/utils";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "@protolabsai/ui/atoms";
+import { useState, useEffect, useRef } from 'react';
+import { useAppStore } from '@/store/app-store';
+import { useChatStore } from '@/store/chat-store';
+import { useIsMobile } from '@/hooks/use-media-query';
+import { useProjectHealth } from '@/hooks/use-project-health';
+import { useSystemHealth } from '@/hooks/queries/use-metrics';
+import { isElectron, getOverlayAPI } from '@/lib/electron';
+import { cn } from '@/lib/utils';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@protolabsai/ui/atoms';
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from "@protolabsai/ui/atoms";
+} from '@protolabsai/ui/atoms';
 import {
   Bot,
   ListTodo,
@@ -30,13 +25,12 @@ import {
   HeartPulse,
   Server,
   Check,
-} from "lucide-react";
-import { getServerUrlSync } from "@/lib/http-api-client";
+} from 'lucide-react';
+import { getServerUrlSync } from '@/lib/http-api-client';
 
 function formatBytes(bytes: number): string {
   if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(0)} KB`;
-  if (bytes < 1024 * 1024 * 1024)
-    return `${(bytes / (1024 * 1024)).toFixed(0)} MB`;
+  if (bytes < 1024 * 1024 * 1024) return `${(bytes / (1024 * 1024)).toFixed(0)} MB`;
   return `${(bytes / (1024 * 1024 * 1024)).toFixed(1)} GB`;
 }
 
@@ -69,7 +63,7 @@ function StatItem({
   icon: Icon,
   value,
   highlight,
-  highlightColor = "text-blue-500",
+  highlightColor = 'text-blue-500',
   tooltip,
 }: StatItemProps) {
   return (
@@ -77,11 +71,7 @@ function StatItem({
       <TooltipTrigger asChild>
         <button className="flex items-center gap-1 cursor-default bg-transparent border-none p-0 focus:outline-none">
           <Icon className="h-3.5 w-3.5" />
-          <span
-            className={
-              highlight && value > 0 ? `${highlightColor} font-medium` : ""
-            }
-          >
+          <span className={highlight && value > 0 ? `${highlightColor} font-medium` : ''}>
             {value}
           </span>
         </button>
@@ -147,25 +137,24 @@ export function BottomPanel() {
 
   const peakPercent = Math.max(memPercent, cpuPercent, heapPercent);
 
-  let systemStatus: "ok" | "warn" | "error" = "ok";
-  if (peakPercent > 90) systemStatus = "error";
-  else if (peakPercent > 75) systemStatus = "warn";
+  let systemStatus: 'ok' | 'warn' | 'error' = 'ok';
+  if (peakPercent > 90) systemStatus = 'error';
+  else if (peakPercent > 75) systemStatus = 'warn';
 
   const systemStatusColor = {
-    ok: "text-emerald-500",
-    warn: "text-yellow-500",
-    error: "text-red-500",
+    ok: 'text-emerald-500',
+    warn: 'text-yellow-500',
+    error: 'text-red-500',
   }[systemStatus];
 
   // Derive display label: instanceName > hostname of current URL > 'Server'
   const currentServerUrl = serverUrlOverride ?? getServerUrlSync();
   const displayLabel =
-    instanceName ??
-    (currentServerUrl ? getHostname(currentServerUrl) : "Server");
+    instanceName ?? (currentServerUrl ? getHostname(currentServerUrl) : 'Server');
 
   // Online hivemind peers with a known URL (for quick-switch)
   const peerEntries = peers
-    .filter((p) => p.identity.status !== "offline" && p.identity.url)
+    .filter((p) => p.identity.status !== 'offline' && p.identity.url)
     .map((p) => ({
       label: p.identity.name ?? p.identity.instanceId,
       url: p.identity.url!,
@@ -216,14 +205,14 @@ export function BottomPanel() {
               <div className="space-y-1">
                 <p className="font-medium">Agents: {agentCount} running</p>
                 <p>
-                  Auto-mode:{" "}
+                  Auto-mode:{' '}
                   <span
                     className={cn(
-                      autoModeStatus === "running"
-                        ? "text-emerald-400"
-                        : autoModeStatus === "idle"
-                          ? "text-yellow-400"
-                          : "text-muted-foreground",
+                      autoModeStatus === 'running'
+                        ? 'text-emerald-400'
+                        : autoModeStatus === 'idle'
+                          ? 'text-yellow-400'
+                          : 'text-muted-foreground'
                     )}
                   >
                     {autoModeStatus}
@@ -237,8 +226,7 @@ export function BottomPanel() {
             value={backlog}
             tooltip={
               <p>
-                <span className="font-medium">{backlog}</span> features in
-                backlog
+                <span className="font-medium">{backlog}</span> features in backlog
               </p>
             }
           />
@@ -249,8 +237,7 @@ export function BottomPanel() {
             highlightColor="text-green-500"
             tooltip={
               <p>
-                <span className="font-medium">{inProgress}</span> features in
-                progress
+                <span className="font-medium">{inProgress}</span> features in progress
               </p>
             }
           />
@@ -261,8 +248,7 @@ export function BottomPanel() {
             highlightColor="text-purple-500"
             tooltip={
               <p>
-                <span className="font-medium">{review}</span> features in review
-                (PR open)
+                <span className="font-medium">{review}</span> features in review (PR open)
               </p>
             }
           />
@@ -282,8 +268,8 @@ export function BottomPanel() {
             <TooltipTrigger asChild>
               <button
                 className={cn(
-                  "flex items-center gap-1 cursor-default bg-transparent border-none p-0 focus:outline-none",
-                  systemStatusColor,
+                  'flex items-center gap-1 cursor-default bg-transparent border-none p-0 focus:outline-none',
+                  systemStatusColor
                 )}
               >
                 <HeartPulse className="h-3.5 w-3.5" />
@@ -292,21 +278,15 @@ export function BottomPanel() {
             <TooltipContent side="top" className="text-xs">
               {systemHealth ? (
                 <div className="space-y-1.5 min-w-[180px]">
-                  <p className="font-medium border-b border-border pb-1">
-                    System Health
-                  </p>
+                  <p className="font-medium border-b border-border pb-1">System Health</p>
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">Memory</span>
                     <span
                       className={
-                        memPercent > 90
-                          ? "text-red-400"
-                          : memPercent > 75
-                            ? "text-yellow-400"
-                            : ""
+                        memPercent > 90 ? 'text-red-400' : memPercent > 75 ? 'text-yellow-400' : ''
                       }
                     >
-                      {memPercent.toFixed(0)}%{" "}
+                      {memPercent.toFixed(0)}%{' '}
                       <span className="text-muted-foreground/70">
                         ({formatBytes(systemHealth.memory.systemUsed)})
                       </span>
@@ -316,14 +296,10 @@ export function BottomPanel() {
                     <span className="text-muted-foreground">CPU</span>
                     <span
                       className={
-                        cpuPercent > 90
-                          ? "text-red-400"
-                          : cpuPercent > 75
-                            ? "text-yellow-400"
-                            : ""
+                        cpuPercent > 90 ? 'text-red-400' : cpuPercent > 75 ? 'text-yellow-400' : ''
                       }
                     >
-                      {cpuPercent.toFixed(0)}%{" "}
+                      {cpuPercent.toFixed(0)}%{' '}
                       <span className="text-muted-foreground/70">
                         ({systemHealth.cpu.cores} cores)
                       </span>
@@ -334,14 +310,13 @@ export function BottomPanel() {
                     <span
                       className={
                         heapPercent > 90
-                          ? "text-red-400"
+                          ? 'text-red-400'
                           : heapPercent > 75
-                            ? "text-yellow-400"
-                            : ""
+                            ? 'text-yellow-400'
+                            : ''
                       }
                     >
-                      {formatBytes(systemHealth.heap.used)} /{" "}
-                      {formatBytes(systemHealth.heap.total)}
+                      {formatBytes(systemHealth.heap.used)} / {formatBytes(systemHealth.heap.total)}
                     </span>
                   </div>
                   <div className="flex justify-between">
@@ -350,19 +325,14 @@ export function BottomPanel() {
                   </div>
                 </div>
               ) : (
-                <p className="text-muted-foreground">
-                  Loading system health...
-                </p>
+                <p className="text-muted-foreground">Loading system health...</p>
               )}
             </TooltipContent>
           </Tooltip>
 
           {/* Server / instance badge */}
           <div className="h-4 w-px bg-border" />
-          <DropdownMenu
-            open={serverDropdownOpen}
-            onOpenChange={setServerDropdownOpen}
-          >
+          <DropdownMenu open={serverDropdownOpen} onOpenChange={setServerDropdownOpen}>
             <Tooltip>
               <TooltipTrigger asChild>
                 <DropdownMenuTrigger asChild>
@@ -371,17 +341,13 @@ export function BottomPanel() {
                     aria-label="Switch server connection"
                   >
                     <Server className="h-3.5 w-3.5" />
-                    <span className="max-w-[120px] truncate">
-                      {displayLabel}
-                    </span>
+                    <span className="max-w-[120px] truncate">{displayLabel}</span>
                   </button>
                 </DropdownMenuTrigger>
               </TooltipTrigger>
               <TooltipContent side="top" className="text-xs">
                 <div className="space-y-1 min-w-[160px]">
-                  <p className="font-medium border-b border-border pb-1">
-                    Server Connection
-                  </p>
+                  <p className="font-medium border-b border-border pb-1">Server Connection</p>
                   <div className="flex justify-between gap-4">
                     <span className="text-muted-foreground">URL</span>
                     <span className="font-mono text-[10px] max-w-[140px] truncate">
@@ -392,17 +358,11 @@ export function BottomPanel() {
                     <span className="text-muted-foreground">Status</span>
                     <span className="text-emerald-400">connected</span>
                   </div>
-                  <p className="text-muted-foreground/70 pt-0.5">
-                    Click to switch server
-                  </p>
+                  <p className="text-muted-foreground/70 pt-0.5">Click to switch server</p>
                 </div>
               </TooltipContent>
             </Tooltip>
-            <DropdownMenuContent
-              side="top"
-              align="start"
-              className="w-56 text-xs"
-            >
+            <DropdownMenuContent side="top" align="start" className="w-56 text-xs">
               <div className="px-2 py-1.5 text-xs font-medium text-muted-foreground">
                 Switch Server
               </div>
@@ -418,8 +378,8 @@ export function BottomPanel() {
               >
                 <Check
                   className={cn(
-                    "h-3 w-3 shrink-0",
-                    serverUrlOverride ? "opacity-0" : "text-emerald-500",
+                    'h-3 w-3 shrink-0',
+                    serverUrlOverride ? 'opacity-0' : 'text-emerald-500'
                   )}
                 />
                 <div className="flex flex-col min-w-0">
@@ -434,30 +394,24 @@ export function BottomPanel() {
               {peerEntries.length > 0 && (
                 <>
                   <DropdownMenuSeparator />
-                  <div className="px-2 py-1 text-[10px] text-muted-foreground/70">
-                    Online peers
-                  </div>
+                  <div className="px-2 py-1 text-[10px] text-muted-foreground/70">Online peers</div>
                   {peerEntries.map((entry) => {
                     const isCurrent = entry.url === currentServerUrl;
                     return (
                       <DropdownMenuItem
                         key={entry.url}
                         className="flex items-center gap-2 text-xs"
-                        onClick={() =>
-                          !isCurrent && handleSwitchServer(entry.url)
-                        }
+                        onClick={() => !isCurrent && handleSwitchServer(entry.url)}
                         disabled={isCurrent}
                       >
                         <Check
                           className={cn(
-                            "h-3 w-3 shrink-0",
-                            isCurrent ? "text-emerald-500" : "opacity-0",
+                            'h-3 w-3 shrink-0',
+                            isCurrent ? 'text-emerald-500' : 'opacity-0'
                           )}
                         />
                         <div className="flex flex-col min-w-0">
-                          <span className="truncate font-medium">
-                            {entry.label}
-                          </span>
+                          <span className="truncate font-medium">{entry.label}</span>
                           <span className="text-muted-foreground/70 font-mono text-[10px] truncate">
                             {entry.url}
                           </span>
@@ -477,24 +431,20 @@ export function BottomPanel() {
               {recentEntries.length > 0 && (
                 <>
                   <DropdownMenuSeparator />
-                  <div className="px-2 py-1 text-[10px] text-muted-foreground/70">
-                    Recent
-                  </div>
+                  <div className="px-2 py-1 text-[10px] text-muted-foreground/70">Recent</div>
                   {recentEntries.map((entry) => {
                     const isCurrent = entry.url === currentServerUrl;
                     return (
                       <DropdownMenuItem
                         key={entry.url}
                         className="flex items-center gap-2 text-xs"
-                        onClick={() =>
-                          !isCurrent && handleSwitchServer(entry.url)
-                        }
+                        onClick={() => !isCurrent && handleSwitchServer(entry.url)}
                         disabled={isCurrent}
                       >
                         <Check
                           className={cn(
-                            "h-3 w-3 shrink-0",
-                            isCurrent ? "text-emerald-500" : "opacity-0",
+                            'h-3 w-3 shrink-0',
+                            isCurrent ? 'text-emerald-500' : 'opacity-0'
                           )}
                         />
                         <div className="flex flex-col min-w-0">
@@ -520,7 +470,7 @@ export function BottomPanel() {
                 className="text-xs text-muted-foreground"
                 onClick={() => {
                   setServerDropdownOpen(false);
-                  useAppStore.getState().setCurrentView("settings");
+                  useAppStore.getState().setCurrentView('settings');
                 }}
               >
                 <Server className="h-3 w-3 mr-2" />
@@ -536,23 +486,23 @@ export function BottomPanel() {
         {/* Clock */}
         <span className="relative group text-xs tabular-nums text-muted-foreground cursor-default">
           {time.toLocaleTimeString([], {
-            hour: "2-digit",
-            minute: "2-digit",
+            hour: '2-digit',
+            minute: '2-digit',
             hour12: false,
           })}
           <span className="absolute bottom-full right-0 mb-2 px-2.5 py-1.5 rounded-lg bg-popover text-popover-foreground text-xs font-medium border border-border shadow-lg opacity-0 group-hover:opacity-100 transition-opacity duration-150 whitespace-nowrap pointer-events-none tabular-nums">
             <span className="font-semibold">
               {time.toLocaleDateString([], {
-                weekday: "short",
-                month: "short",
-                day: "numeric",
+                weekday: 'short',
+                month: 'short',
+                day: 'numeric',
               })}
             </span>
             <span className="mx-1 text-muted-foreground/50">|</span>
             {time.toLocaleTimeString([], {
-              hour: "numeric",
-              minute: "2-digit",
-              second: "2-digit",
+              hour: 'numeric',
+              minute: '2-digit',
+              second: '2-digit',
             })}
           </span>
         </span>
@@ -580,7 +530,7 @@ export function BottomPanel() {
           title="Toggle Terminal"
         >
           <Terminal
-            className={`h-3.5 w-3.5 ${bottomPanelOpen ? "text-foreground" : "text-muted-foreground"}`}
+            className={`h-3.5 w-3.5 ${bottomPanelOpen ? 'text-foreground' : 'text-muted-foreground'}`}
           />
         </button>
       </div>
