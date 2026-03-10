@@ -240,6 +240,9 @@ export interface Project {
 
   /** Feedback from last "request changes" review */
   reviewFeedback?: string;
+
+  /** Ceremony cadence configuration */
+  cadence?: CadenceConfig;
 }
 
 /**
@@ -723,6 +726,70 @@ export interface ProjectSummary {
     escalations: ArtifactIndexEntry[];
   };
   recentTimeline: unknown[];
+}
+
+/**
+ * Entry type for the ceremony timeline
+ */
+export type TimelineEntryType =
+  | 'standup'
+  | 'retro'
+  | 'status_report'
+  | 'decision'
+  | 'escalation'
+  | 'milestone_complete';
+
+/**
+ * Author role for a timeline entry
+ */
+export type TimelineEntryAuthor = 'pm' | 'ava' | 'operator' | 'lead-engineer';
+
+/**
+ * A single entry in the project ceremony timeline
+ */
+export interface TimelineEntry {
+  /** Unique entry ID */
+  id: string;
+
+  /** Entry type */
+  type: TimelineEntryType;
+
+  /** Markdown content */
+  content: string;
+
+  /** Author role */
+  author: TimelineEntryAuthor;
+
+  /** ISO 8601 timestamp */
+  timestamp: string;
+
+  /** Optional metadata */
+  metadata?: Record<string, unknown>;
+}
+
+/**
+ * Persistent file format for the project timeline (stored as timeline.json)
+ */
+export interface ProjectTimelineFile {
+  version: 1;
+  entries: TimelineEntry[];
+}
+
+/**
+ * Cadence configuration for project ceremonies
+ */
+export interface CadenceConfig {
+  /** How often standups occur (default: 'daily') */
+  standupFrequency: 'daily' | 'weekly' | 'never';
+
+  /** How often retros occur (default: 'per-milestone') */
+  retroFrequency: 'per-milestone' | 'weekly' | 'monthly' | 'never';
+
+  /** ISO date of last standup */
+  lastStandupAt?: string;
+
+  /** ISO date of last retro */
+  lastRetroAt?: string;
 }
 
 /**
