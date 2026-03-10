@@ -519,3 +519,22 @@ usageStats:
 - **Rejected:** Always-open CORS, or removing CORS check—would expose all instances by default. Strict CORS for all—would break hivemind use case.
 - **Trade-offs:** Requires config to be loaded and passed to middleware setup. If config loading fails silently, CORS remains restrictive (safe) but feature doesn't work. Extra layer of indirection (config → option → middleware), but pays off in safety.
 - **Breaking if changed:** If config is loaded after middleware is set up, CORS won't reflect the flag. If config parsing breaks, middleware defaults to restrictive (safe). If someone removes the flag check, all servers become permissive (bad).
+
+#### [Gotcha] CORS allowAllOrigins gated by hivemind feature flag. Server URL override silently fails in production if flag is disabled. (2026-03-10)
+- **Situation:** Clients attempt cross-origin request to overridden server URL. Browser blocks with CORS error only if hijemind flag is false.
+- **Root cause:** Intentional security boundary: permissive CORS is only enabled when override feature is explicitly opted-in. Prevents accidental CORS exposure in environments where override shouldn't be available.
+- **How to avoid:** Single feature flag elegantly gates both capability AND permissions. But coupling is implicit—easy to debug override failures as 'CORS blocked' without realizing hivemind must be enabled.
+
+### CORS allowAllOrigins is only enabled when hivemind feature flag is true, configured at server startup (2026-03-10)
+- **Context:** Supporting local development with multiple origins (different ports) while keeping CORS restrictive in production
+- **Why:** Hivemind is the local development mode. Dev requires cross-origin access (e.g., localhost:3000 calling localhost:5000 for hivemind). CORS policy should only relax in dev. Gating on hivemind flag separates development flexibility from production security
+- **Rejected:** Alternative: always allow CORS (security risk). Alternative: check origin header at runtime (more flexible but more expensive, per-request logic)
+- **Trade-offs:** Simple configuration (one flag at startup) vs runtime flexibility (can't toggle without restart). If hivemind flag is accidentally left true during deployment, CORS stays wide open until next restart with no runtime warning
+- **Breaking if changed:** Removing allowAllOrigins breaks local development clients on different ports (can't make cross-origin requests). Hivemind development scenarios entirely blocked
+
+### Server applies `allowAllOrigins: true` to CORS middleware only when `hivemind.enabled` from config is true (2026-03-10)
+- **Context:** Default would reject cross-origin requests; peer-to-peer hivemind mode needs to accept requests from any browser origin
+- **Why:** Hivemind mode implies distributed, autonomous operation where clients connect from unknown origins. Default-deny (when hivemind disabled) follows principle of least privilege
+- **Rejected:** Always allow all origins (default permissive); whitelist specific origins (inflexible for distributed mode)
+- **Trade-offs:** Easier: one boolean toggle. Harder: tight coupling between CORS policy and hivemind feature—cannot enable hivemind without exposing CORS
+- **Breaking if changed:** If hivemind.enabled check removed, server becomes CORS-permissive in all modes—exposes to CSRF from any origin. If check inverted, hivemind mode blocks own clients

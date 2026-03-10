@@ -1215,3 +1215,25 @@ usageStats:
 - **Situation:** Implementation included a note: 'Playwright test cannot meaningfully verify that Ava's language model behavior changes correctly — that requires live inference.' Build/lint checks cannot validate that LLM now correctly routes `delegate_to_pm` in new contexts.
 - **Root cause:** LLM behavior is probabilistic and context-dependent. A test can verify that a tool exists and is callable, but cannot verify that the model will actually call it in the right scenarios. Behavior validation requires human judgment of actual responses.
 - **How to avoid:** Accept manual acceptance testing as part of verification gates for LLM prompts vs. full automation coverage. More expensive to verify but more reliable.
+
+#### [Gotcha] Server-side WebSocket event emission changes don't have meaningful Playwright/UI test coverage because the change lives in the event infrastructure layer, not UI routes (2026-03-10)
+- **Situation:** Verifying that chat:user-input-request event reaches WebSocket clients requires infrastructure-level testing, not page/route testing
+- **Root cause:** Playwright drives the browser and tests UI flows. Event emission is below the UI layer—it's part of the server transport mechanism. Playwright cannot verify what gets sent over WebSocket unless the UI consumes and displays it.
+- **How to avoid:** Build pass + code review + git history suffices for low-risk surgical changes, but infrastructure tests (integration/e2e with real WebSocket connection) would be more thorough
+
+#### [Gotcha] In automerge-repo, checking `handle.doc()?.field !== undefined` does not guarantee the DocHandle has reached its internal "ready" state. Content availability and handle readiness are decoupled. (2026-03-10)
+- **Situation:** CRDT conflict test: after `pollUntil(() => handleB.doc()?.title === 'Base')` returned true, immediate `storeB.change()` calls threw 'Document ... is unavailable' because the handle's state machine had not yet transitioned to 'ready'.
+- **Root cause:** automerge-repo's DocHandle has an async state machine separate from document content propagation. Polling content checks data arrival but not handle readiness. The two happen at different timescales, especially over network syncs.
+- **How to avoid:** Using `waitForDocumentReady` + `pollUntil` together is more verbose than content-only polling, but eliminates the race. Trade readability for reliability.
+
+#### [Pattern] Use a wrapper helper like `waitForDocumentReady(handle, timeout)` in distributed sync tests that wraps `handle.whenReady()` with a timeout fallback, ensuring both proper state-machine semantics and CI reliability. (2026-03-10)
+- **Problem solved:** Multi-node CRDT tests where handles are received from peer syncs and must be mutated. Need to distinguish between 'document content arrived' and 'handle is ready for mutations'.
+- **Why this works:** The pattern captures the correct precondition (state-machine ready) while also being defensive against missing or broken `whenReady()` implementations via timeout. Prevents both false negatives (flaky tests) and false positives (ignoring missing readiness checks).
+- **Trade-offs:** Requires defining and maintaining the helper, but eliminates entire class of flaky distributed test bugs. Cost is minimal; pattern is reusable across all multi-node sync tests.
+
+### Increase polling/wait timeouts when migrating tests to CI (e.g., 1000ms → 2000ms for pollUntil). CI environments have higher latency and jitter; local timeouts are often too aggressive. (2026-03-10)
+- **Context:** Test passed locally with 1000ms timeout but became flaky in CI, where network and resource contention add latency.
+- **Why:** Local dev machines have low-latency in-process state transitions. CI runners are shared, slower, and may have network I/O delays. Static timeouts optimized for local speed fail under realistic conditions.
+- **Rejected:** Keeping timeout aggressive; adding retries without timeout increase.
+- **Trade-offs:** Longer test runtime (acceptable; prevents false failures). Better to wait a bit longer than to flake randomly.
+- **Breaking if changed:** Tests may pass locally but still flake in CI if timeouts are not padded for CI conditions. Leads to 'works on my machine' syndrome.

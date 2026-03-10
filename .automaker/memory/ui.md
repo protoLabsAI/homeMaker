@@ -665,3 +665,8 @@ usageStats:
 - **Rejected:** Keeping form editable after submission (allows resubmission, creates ambiguity about which response is the real one). Removing the form entirely (loses context of what was asked).
 - **Trade-offs:** Clear UX vs. no recovery if submission had side effects the user wants to undo. Form stays visible vs. could hide/archive it.
 - **Breaking if changed:** Removing the lock allows users to resubmit the form multiple times, which could trigger multiple tool executions and confused state.
+
+#### [Pattern] Recent server URLs persisted in app-store state, deduplicated on every change, and capped at 10 items in localStorage (2026-03-10)
+- **Problem solved:** UI needs to show history of tried servers without clutter
+- **Why this works:** Deduplication prevents stale entries when user retries same URL multiple times. Cap at 10 prevents unbounded growth. State→localStorage sync keeps history across sessions
+- **Trade-offs:** Easier: dedup+cap logic is straightforward. Harder: must sync on every change, O(n) dedup operation for small list

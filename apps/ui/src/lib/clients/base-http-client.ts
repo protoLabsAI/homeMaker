@@ -40,6 +40,7 @@ export type EventType =
   | 'actionable-item:created'
   | 'actionable-item:status-changed'
   | 'chat:tool-progress'
+  | 'chat:user-input-request'
   | 'scheduler:task-failed'
   | 'feature:created'
   | 'feature:updated'

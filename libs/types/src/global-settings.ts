@@ -349,6 +349,12 @@ export interface GlobalSettings {
   enableDependencyBlocking: boolean;
   /** Skip verification requirement in auto-mode (treat 'completed' same as 'verified') */
   skipVerificationInAutoMode: boolean;
+  /**
+   * Cooldown period (in milliseconds) after feature creation before auto-mode may pick it up.
+   * Gives creators time to set dependencies, adjust properties, or batch-create related features.
+   * Default: 30000 (30 seconds). Set to 0 to disable.
+   */
+  autoModePickupCooldownMs?: number;
   /** Default: use git worktrees for feature branches */
   useWorktrees: boolean;
   /** Default: planning approach (skip/lite/spec/full) */

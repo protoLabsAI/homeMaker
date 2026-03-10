@@ -40,6 +40,8 @@ async function makeStore(
 
 /**
  * Poll until predicate returns true or timeout expires.
+ * Exceptions thrown by the predicate are swallowed so transient "document
+ * unavailable" errors from automerge-repo do not abort the poll early.
  */
 async function pollUntil(
   predicate: () => boolean,
@@ -48,10 +50,47 @@ async function pollUntil(
 ): Promise<boolean> {
   const deadline = Date.now() + timeoutMs;
   while (Date.now() < deadline) {
-    if (predicate()) return true;
+    try {
+      if (predicate()) return true;
+    } catch {
+      // document may not be ready yet — keep polling
+    }
     await new Promise((r) => setTimeout(r, intervalMs));
   }
-  return predicate();
+  try {
+    return predicate();
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Wait for an automerge-repo DocHandle to become ready (document loaded from
+ * storage or synced from a peer).  Uses the handle's own `whenReady()` method
+ * when available; falls back to polling `handle.doc()` otherwise.
+ */
+async function waitForDocumentReady<T>(
+  handle: { doc: () => T | undefined },
+  timeoutMs = 5000
+): Promise<void> {
+  type MaybeReady = { whenReady?: () => Promise<void> };
+  if (typeof (handle as MaybeReady).whenReady === 'function') {
+    await Promise.race([
+      (handle as MaybeReady).whenReady!(),
+      new Promise<void>((_, reject) =>
+        setTimeout(
+          () => reject(new Error(`waitForDocumentReady: timed out after ${timeoutMs}ms`)),
+          timeoutMs
+        )
+      ),
+    ]);
+    return;
+  }
+  // Fallback: poll until doc() returns a value
+  const ok = await pollUntil(() => handle.doc() !== undefined, timeoutMs);
+  if (!ok) {
+    throw new Error(`waitForDocumentReady: document still unavailable after ${timeoutMs}ms`);
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -417,9 +456,15 @@ describe('CRDTStore — two-node sync', () => {
     const url = storeA.getDocumentUrl('projects', 'conflict-proj')!;
     storeB.registerDocumentUrl('projects', 'conflict-proj', url);
 
-    // Wait for B to sync the initial doc
+    // Wait for B to sync the initial doc — use waitForDocumentReady to ensure
+    // the automerge-repo DocHandle is fully ready before issuing changes from B.
+    // pollUntil alone only checks doc() content; it does not guarantee the
+    // handle's internal state machine has reached "ready", which can cause
+    // "Document ... is unavailable" on the subsequent storeB.change() call.
     const handleB = await storeB.findByUrl<ProjectDocument>(url);
-    await pollUntil(() => handleB.doc()?.title === 'Base', 1000);
+    await waitForDocumentReady(handleB, 5000);
+    const synced = await pollUntil(() => handleB.doc()?.title === 'Base', 2000);
+    expect(synced).toBe(true);
 
     // Concurrent updates: A changes title, B changes goal
     await Promise.all([

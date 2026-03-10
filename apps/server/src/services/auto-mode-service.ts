@@ -1667,17 +1667,13 @@ export class AutoModeService {
     }
 
     // Normal resume flow for non-pipeline features
-    // Check if context exists in .automaker directory
+    // Use contextExists() which includes stale-session detection: if agent-output.md
+    // is older than STALE_SESSION_THRESHOLD_MS (default 5 min), it's renamed to .stale
+    // and we start fresh without incrementing failureCount.
     const featureDir = getFeatureDir(projectPath, featureId);
     const contextPath = path.join(featureDir, 'agent-output.md');
 
-    let hasContext = false;
-    try {
-      await secureFs.access(contextPath);
-      hasContext = true;
-    } catch {
-      // No context
-    }
+    const hasContext = await this.contextExists(projectPath, featureId);
 
     if (hasContext) {
       // Load previous context and continue
@@ -1685,7 +1681,8 @@ export class AutoModeService {
       return this.executeFeatureWithContext(projectPath, featureId, context, useWorktrees);
     }
 
-    // No context, start fresh - executeFeature will handle adding to runningFeatures
+    // No context (or stale context was renamed to .stale) — start fresh.
+    // executeFeature will handle adding to runningFeatures.
     return this.executeFeature(projectPath, featureId, useWorktrees, false);
   }
 
@@ -1713,19 +1710,15 @@ export class AutoModeService {
     const featureId = feature.id;
     logger.info(`Resuming feature ${featureId} from pipeline step ${pipelineInfo.stepId}`);
 
-    // Check for context file
+    // Check for context file — use contextExists() for stale-session detection.
+    // If agent-output.md is older than STALE_SESSION_THRESHOLD_MS (default 5 min),
+    // contextExists() renames it to .stale and returns false, triggering a fresh start.
     const featureDir = getFeatureDir(projectPath, featureId);
     const contextPath = path.join(featureDir, 'agent-output.md');
 
-    let hasContext = false;
-    try {
-      await secureFs.access(contextPath);
-      hasContext = true;
-    } catch {
-      // No context
-    }
+    const hasContext = await this.contextExists(projectPath, featureId);
 
-    // Edge Case 1: No context file - restart entire pipeline from beginning
+    // Edge Case 1: No context file (or stale context renamed to .stale) — restart pipeline
     if (!hasContext) {
       logger.warn(`No context found for pipeline feature ${featureId}, restarting from beginning`);
 
@@ -2796,23 +2789,30 @@ Address the follow-up instructions above. Review the previous work and make the 
    * Check if context exists for a feature.
    *
    * Guards against the stale context trap: if agent-output.md exists but
-   * hasn't been written to in over 2 hours, the session that created it is
+   * hasn't been written to in over 5 minutes, the session that created it is
    * gone. Rename it to .stale so the next run starts fresh instead of trying
    * to resume a dead Claude session (which handshakes, fails silently, and
-   * exits immediately).
+   * exits immediately — and would otherwise count as a failure).
+   *
+   * A live session writes to agent-output.md continuously, so a file older
+   * than STALE_SESSION_THRESHOLD_MS indicates no live session exists.
    */
   async contextExists(projectPath: string, featureId: string): Promise<boolean> {
     const featureDir = getFeatureDir(projectPath, featureId);
     const contextPath = path.join(featureDir, 'agent-output.md');
+
+    // Sessions that haven't written output in this window are considered dead.
+    // Configurable via AUTOMAKER_STALE_SESSION_THRESHOLD_MS env var (default: 5 minutes).
+    const STALE_SESSION_THRESHOLD_MS =
+      parseInt(process.env.AUTOMAKER_STALE_SESSION_THRESHOLD_MS ?? '', 10) || 5 * 60 * 1000;
 
     try {
       await secureFs.access(contextPath);
 
       const stats = await secureFs.stat(contextPath);
       const ageMs = Date.now() - stats.mtime.getTime();
-      const TWO_HOURS_MS = 2 * 60 * 60 * 1000;
 
-      if (ageMs > TWO_HOURS_MS) {
+      if (ageMs > STALE_SESSION_THRESHOLD_MS) {
         logger.warn(
           `[contextExists] agent-output.md for ${featureId} is ${Math.round(ageMs / 60000)}m old — stale session, renaming to .stale`
         );

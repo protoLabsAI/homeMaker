@@ -5,9 +5,9 @@ relevantTo: [auth]
 importance: 0.7
 relatedFiles: []
 usageStats:
-  loaded: 32
-  referenced: 7
-  successfulFeatures: 7
+  loaded: 38
+  referenced: 9
+  successfulFeatures: 9
 ---
 # auth
 
@@ -54,3 +54,17 @@ usageStats:
 - **Problem solved:** App must support user-set overrides (dev/testing) while maintaining safe defaults (prod, Electron context).
 - **Why this works:** Resilience: if one source is unavailable/corrupted, app doesn't crash. User preference (localStorage) is checked first, so user can override env vars. Graceful degradation.
 - **Trade-offs:** Simple to implement, but source of truth shifts at runtime. Code cannot assume `getServerUrl()` takes the same path twice (localStorage might be cleared between calls). Potential for subtle bugs if caller assumes consistency.
+
+### Server URL override checked in auth layer before falling back to cached/env values (2026-03-10)
+- **Context:** Need to support runtime server URL override that survives page reloads while maintaining fallback to default config
+- **Why:** localStorage provides client-side persistence without network round trips. Placing override check in auth.ts getServerUrl() ensures any caller automatically gets override if set, without needing to thread it through component props
+- **Rejected:** Alternative: separate config service (requires dependency injection everywhere) or URL params (not persistent, verbose). Could store on server (requires auth + network call, complexity)
+- **Trade-offs:** Simple and automatic for consumers, but tightly couples auth layer to runtime config concerns. localStorage is per-origin, won't work across different ports/domains without CORS setup
+- **Breaking if changed:** Removing localStorage check removes override capability. Persisting auth state across page reloads relies on getServerUrl() being called at startup before any connections are made
+
+### Override mechanism uses localStorage key `'automaker:serverUrlOverride'` checked first in `getServerUrl()` fallback chain before environment variables (2026-03-10)
+- **Context:** Need to allow runtime server URL changes without environment redeploy or page reload
+- **Why:** localStorage survives page reload but is volatile (cleared on browser data clear), so it's safe for transient overrides. Key-based lookup is faster than parsing config objects
+- **Rejected:** Session storage (lost on tab close); IndexedDB (overkill); URL params (exposed in history)
+- **Trade-offs:** Easier: simple string key, no serialization. Harder: no version control, survives across sessions unintentionally
+- **Breaking if changed:** If localStorage key is renamed without migration, users lose saved override. If storage cleared (browser settings), override disappears silently

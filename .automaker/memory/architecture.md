@@ -5,9 +5,9 @@ relevantTo: [architecture]
 importance: 0.7
 relatedFiles: []
 usageStats:
-  loaded: 90
-  referenced: 33
-  successfulFeatures: 33
+  loaded: 96
+  referenced: 35
+  successfulFeatures: 35
 ---
 # architecture
 
@@ -4256,3 +4256,47 @@ usageStats:
 - **Problem solved:** UX pattern: show user a history of servers they've recently switched to, enable quick re-selection without typing.
 - **Why this works:** Small, bounded history prevents unbounded growth while keeping common case (switch between 3-5 servers) instant. Deduplication avoids cluttering the list with repeated entries.
 - **Trade-offs:** Logic is straightforward but order-dependent: deduplication must happen before truncation. If someone adds this pattern elsewhere, they must remember this order.
+
+#### [Pattern] Configuration changes that invalidate connections use two-step pattern: invalidateHttpClient() then reconnect(). Not just reconnect(). (2026-03-10)
+- **Problem solved:** When server URL override is set at runtime, WebSocket connection to old server becomes stale and causes silent failures if not properly cleaned
+- **Why this works:** invalidateHttpClient() removes old client instance from state. Only then does reconnect() create fresh connection. Sequential ensures old connection doesn't persist alongside new one, preventing resource leaks and state inconsistency from conflicting message handlers on both connections.
+- **Trade-offs:** Two-step explicit API is clear but verbose. Synchronous ordering prevents bugs but limits any future parallelization.
+
+### Server URL determination centralized in getServerUrl() function, checks runtime override before returning default. Not scattered at call sites. (2026-03-10)
+- **Context:** Could implement override logic at every location that needs server URL, or create single authoritative function
+- **Why:** Single source of truth: all call sites inherit override behavior automatically. Reduces bug surface from conditional-check misses. New code using getServerUrl() doesn't need knowledge of override mechanism.
+- **Rejected:** Conditional checks at each call site (maintenance burden, easy to forget, inconsistent behavior across codebase)
+- **Trade-offs:** Requires disciplined use of getServerUrl() function. If code caches result at init time, runtime override changes are invisible.
+- **Breaking if changed:** If caller caches getServerUrl() result instead of calling repeatedly, they bypass override mechanism completely.
+
+#### [Pattern] Recent server URLs stored in localStorage with max 10 entries, deduplicated on add (remove old occurrence before prepend), not appended. (2026-03-10)
+- **Problem solved:** User needs quick access to previously-used servers, but localStorage is bounded (5-10MB) and array can grow unbounded
+- **Why this works:** Dedup-on-add (prepend new, remove old occurrence) preserves recency order and prevents duplicates with single O(n) operation (n max 10). Bounded size prevents storage exhaustion.
+- **Trade-offs:** O(n) dedup operation per add, but n capped at 10. List always reflects most-recently-used order.
+
+#### [Gotcha] setServerUrlOverride() must explicitly call invalidateHttpClient() to trigger WebSocket reconnection—this is not automatic (2026-03-10)
+- **Situation:** Changing server URL requires both updating state AND closing/reconnecting the WebSocket to the new server
+- **Root cause:** State management (app-store) and I/O concerns (WebSocket reconnection) are separated. Store doesn't own HTTP client lifecycle, so it can't auto-reconnect. Explicit call required to bridge these layers
+- **How to avoid:** Explicit is easier to understand and debug (see exactly where reconnect happens) but easy to miss when refactoring. If someone adds another setServerUrlOverride call without invalidateHttpClient(), old WebSocket persists while HTTP client uses new URL—inconsistent connection state, hard to debug
+
+#### [Pattern] HTTP client singleton invalidation triggers WebSocket reconnection via `invalidateHttpClient()` which calls `httpApiClientInstance.reconnect()` before replacing singleton (2026-03-10)
+- **Problem solved:** When server URL override is set, both HTTP and WebSocket connections must reconnect to new URL
+- **Why this works:** Centralizes connection lifecycle management. Single invalidation point ensures both protocols resync atomically rather than having separate reconnect paths
+- **Trade-offs:** Easier: coupled lifecycle prevents partial reconnection. Harder: HTTP client must own WebSocket lifecycle awareness
+
+#### [Pattern] Server-to-client events in HITL tools must use broadcast() not emit() to reach WebSocket clients in the UI (2026-03-10)
+- **Problem solved:** Building a user input request feature in a HITL tool that needs to notify WebSocket clients of events
+- **Why this works:** emit() only fires server-side EventEmitter listeners; broadcast() pushes events to all connected WebSocket clients. UI consumption requires broadcast.
+- **Trade-offs:** broadcast() adds network I/O for every client; emit() is lighter but only reaches internal listeners. Trade off latency/bandwidth for UI responsiveness.
+
+#### [Pattern] UI client maintains deliberately narrowed EventType union (subset of server-side types) to express which events the UI actually consumes (2026-03-10)
+- **Problem solved:** The UI's base-http-client.ts defines its own EventType union rather than importing the full server-side union from libs/types/src/event.ts
+- **Why this works:** Provides explicit intent boundary: makes it clear which server events the UI cares about, reduces surface area of event handling code, and documents the UI→server contract
+- **Trade-offs:** Clarity and intent gained; synchronization burden introduced - developers must update two separate type definitions when adding events the UI needs
+
+### EventType is defined locally in base-http-client.ts rather than exported from libs/types, creating a synchronization point that must be manually maintained (2026-03-10)
+- **Context:** Server-side event.ts already defined 'chat:user-input-request' and its EventPayloadMap entry, but the UI client's separate EventType union missed it
+- **Why:** Separation allows UI to narrow the scope, but creates coordination risk: developers adding server events must remember to propagate to UI type definition
+- **Rejected:** Exporting EventType from libs/types for direct import - this removes the coordination burden but loses the narrowing intent and makes it unclear which events UI actually uses
+- **Trade-offs:** Current approach: explicit intent, clear narrow scope; cost is dual maintenance and risk of drift
+- **Breaking if changed:** If EventType moves to libs/types export, the UI no longer documents its event consumption contract; if removed entirely, no type safety on event dispatch

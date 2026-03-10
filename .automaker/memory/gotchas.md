@@ -5,9 +5,9 @@ relevantTo: [gotchas]
 importance: 0.7
 relatedFiles: []
 usageStats:
-  loaded: 986
-  referenced: 277
-  successfulFeatures: 277
+  loaded: 1022
+  referenced: 282
+  successfulFeatures: 282
 ---
 # gotchas
 
@@ -675,3 +675,13 @@ usageStats:
 - **Situation:** App startup sequence: store initialization, HTTP client creation, first API call. Order matters.
 - **Root cause:** localStorage is async in some contexts (though typically sync in browsers); if hydration is deferred, early requests use old URL.
 - **How to avoid:** Hydration adds small startup cost. If not handled carefully, can cause race conditions. The summary doesn't specify how hydration is guaranteed to complete before first request.
+
+#### [Gotcha] emit() and broadcast() coexist on the same EventEmitter object, making it easy to pick the wrong method when handling events that cross server-client boundaries (2026-03-10)
+- **Situation:** Developer modifying event emission in ava-tools.ts has two methods available with similar names but different scopes
+- **Root cause:** EventEmitter surface area is large. Without explicit documentation/comments, caller doesn't know their event audience (server-only vs broadcast).
+- **How to avoid:** Generic EventEmitter is reusable across projects but requires developer knowledge of when to use emit vs broadcast. Specificity would reduce confusion but reduce reusability.
+
+#### [Gotcha] WebSocket events that don't match the UI's narrowed EventType union are silently dropped (never dispatched to callbacks), with no error or warning (2026-03-10)
+- **Situation:** When 'chat:user-input-request' was missing from the UI's EventType union, the server was sending these events but the client was discarding them without trace
+- **Root cause:** The EventHandler filters incoming messages by type-checking against the union; unmatched types fail the type guard and are never delivered to registered callbacks
+- **How to avoid:** Silent dropping is less disruptive than runtime errors, but makes debugging much harder - events disappear with no signal to developer
