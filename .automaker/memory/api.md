@@ -110,3 +110,13 @@ usageStats:
 - **Problem solved:** Resolving multiple server URL sources with different specificity levels
 - **Why this works:** Precedence chain implements proper specificity: user intent (override) > transient state (cache) > static config (env). Prevents static config from shadowing user choice.
 - **Trade-offs:** Gained: Clean override semantics without code changes. Lost: Hidden state machine - source of truth is precedence-dependent, complicates debugging
+
+#### [Pattern] Activation deactivates on any space in input (`!input.includes(' ')`), limiting to single-word search queries (2026-03-11)
+- **Problem solved:** Need simple rule to detect slash-command mode vs regular text input
+- **Why this works:** Simple binary check; avoids complex command parsing logic. Prevents confusion between `/command arg1 arg2` (command execution) vs `/quer` (autocomplete search)
+- **Trade-offs:** Simpler activation logic vs limited search capability (can't search multi-word command names like 'Create New File'); clear UX boundary
+
+#### [Gotcha] Case-insensitive filtering requires toLowerCase() on both query and field, but natural include() is case-sensitive (2026-03-11)
+- **Situation:** Spec requires 'case-insensitive substring match' but naive implementation would use case-sensitive includes()
+- **Root cause:** JavaScript's includes() is case-sensitive; case-insensitive search requires normalizing both sides to same case
+- **How to avoid:** toLowerCase() on every filter call is cheap; adds minimal complexity; regex alternative more powerful but harder to read and maintain

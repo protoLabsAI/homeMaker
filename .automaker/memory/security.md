@@ -151,3 +151,8 @@ usageStats:
 - **Problem solved:** Agents need guidance to self-correct when guard blocks a tool call. Silent failures lead to confusion and retry loops.
 - **Why this works:** Actionable errors teach agents the constraint (worktree isolation exists) and show the correct path to use. Reduces adversarial feel, aids agent learning.
 - **Trade-offs:** More verbose error messages but improve agent behavior and transparency. Could leak internal path info but guard's purpose is visible anyway.
+
+#### [Pattern] description field is required in SlashCommandSummary type, enabling null-check-free filtering (2026-03-11)
+- **Problem solved:** Filter logic iterates description without defensive null checks
+- **Why this works:** Type system enforces description always exists; reduces boilerplate and risk of null-reference bugs in filter predicate
+- **Trade-offs:** Cleaner code vs tight API contract coupling; if description becomes optional later, all filter code breaks silently (no TS error if not careful with narrowing)

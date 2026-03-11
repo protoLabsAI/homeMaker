@@ -6,8 +6,8 @@ importance: 0.9
 relatedFiles: []
 usageStats:
   loaded: 173
-  referenced: 55
-  successfulFeatures: 55
+  referenced: 56
+  successfulFeatures: 56
 ---
 <!-- domain: Architecture Decisions | System-wide structural decisions that have breaking consequences if changed -->
 
@@ -194,3 +194,10 @@ usageStats:
 - **Problem solved:** Worktree isolation needed for multiple SDK consumer types. Could apply guard only to agent execution but that leaves chat mode vulnerable.
 - **Why this works:** Defense in depth across all contexts that can spawn agents or tools. Single vulnerability surface (one guard implementation) applied universally.
 - **Trade-offs:** Slightly broader hook surface (some overhead in non-agent chat) but uniform security posture. Simpler to maintain and audit.
+
+### Used @tanstack/react-query with 5-minute stale time instead of SWR (spec suggested SWR pattern) (2026-03-11)
+- **Context:** Hook needed SWR-like caching behavior for command list
+- **Why:** Project standardizes on React Query. 5-minute stale time approximates SWR's revalidation strategy while using the established data-fetching library
+- **Rejected:** Implement SWR directly; useEffect + useState fetch pattern
+- **Trade-offs:** React Query adds dependency but provides consistent patterns across codebase; 5min stale time is slower revalidation than SWR's default ~2s, reducing server load but potentially stale command data
+- **Breaking if changed:** Switching to SWR would require rewriting hook entirely; changing stale time affects how often command list refreshes

@@ -6,8 +6,8 @@ importance: 0.7
 relatedFiles: []
 usageStats:
   loaded: 1136
-  referenced: 313
-  successfulFeatures: 313
+  referenced: 314
+  successfulFeatures: 314
 ---
 <!-- domain: Gotchas & Pitfalls | Known traps, anti-patterns, and hard-won lessons across all domains -->
 
