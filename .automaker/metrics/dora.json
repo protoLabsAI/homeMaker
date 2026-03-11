@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "updatedAt": "2026-03-11T01:32:07.882Z",
+  "updatedAt": "2026-03-11T07:10:01.002Z",
   "entries": [
     {
       "timestamp": "2026-03-10T23:27:16.307Z",
@@ -183,6 +183,27 @@
         "featureCreatedAt": "2026-03-10T22:48:09.383Z",
         "prMergedAt": "2026-03-11T01:32:07.868Z",
         "leadTimeMs": 9838485
+      },
+      "changeFailRate": {
+        "totalMerges": 1,
+        "totalFailures": 0,
+        "ratio": 0
+      },
+      "recoveryTime": null
+    },
+    {
+      "timestamp": "2026-03-11T07:10:00.990Z",
+      "deploymentFrequency": {
+        "mergesPerDay": 1,
+        "mergesPerWeek": 1,
+        "dayBucket": "2026-03-11"
+      },
+      "changeLeadTime": {
+        "featureId": "feature-1773209857101-lvyib3ju3",
+        "featureTitle": "Command Discovery API Endpoint",
+        "featureCreatedAt": "2026-03-11T06:17:37.102Z",
+        "prMergedAt": "2026-03-11T07:10:00.990Z",
+        "leadTimeMs": 3143888
       },
       "changeFailRate": {
         "totalMerges": 1,
