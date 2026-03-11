@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "updatedAt": "2026-03-10T23:48:40.165Z",
+  "updatedAt": "2026-03-11T00:18:03.489Z",
   "entries": [
     {
       "timestamp": "2026-03-10T23:27:16.307Z",
@@ -78,6 +78,48 @@
         "featureCreatedAt": "2026-03-10T23:15:28.261Z",
         "prMergedAt": "2026-03-10T23:48:40.156Z",
         "leadTimeMs": 1991895
+      },
+      "changeFailRate": {
+        "totalMerges": 2,
+        "totalFailures": 0,
+        "ratio": 0
+      },
+      "recoveryTime": null
+    },
+    {
+      "timestamp": "2026-03-11T00:18:03.039Z",
+      "deploymentFrequency": {
+        "mergesPerDay": 1,
+        "mergesPerWeek": 1,
+        "dayBucket": "2026-03-11"
+      },
+      "changeLeadTime": {
+        "featureId": "feature-1773182889373-tk032c59v",
+        "featureTitle": "Fix shell injection in run-command job actions",
+        "featureCreatedAt": "2026-03-10T22:48:09.373Z",
+        "prMergedAt": "2026-03-11T00:18:03.039Z",
+        "leadTimeMs": 5393666
+      },
+      "changeFailRate": {
+        "totalMerges": 1,
+        "totalFailures": 0,
+        "ratio": 0
+      },
+      "recoveryTime": null
+    },
+    {
+      "timestamp": "2026-03-11T00:18:03.478Z",
+      "deploymentFrequency": {
+        "mergesPerDay": 2,
+        "mergesPerWeek": 2,
+        "dayBucket": "2026-03-11"
+      },
+      "changeLeadTime": {
+        "featureId": "feature-1773184807748-9zxaqipbf",
+        "featureTitle": "Server URL override in auth layer + app store",
+        "featureCreatedAt": "2026-03-10T23:20:07.748Z",
+        "prMergedAt": "2026-03-11T00:18:03.478Z",
+        "leadTimeMs": 3475730
       },
       "changeFailRate": {
         "totalMerges": 2,
