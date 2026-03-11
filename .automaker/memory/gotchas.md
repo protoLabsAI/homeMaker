@@ -5,9 +5,9 @@ relevantTo: [gotchas]
 importance: 0.7
 relatedFiles: []
 usageStats:
-  loaded: 1113
-  referenced: 311
-  successfulFeatures: 311
+  loaded: 1122
+  referenced: 312
+  successfulFeatures: 312
 ---
 <!-- domain: Gotchas & Pitfalls | Known traps, anti-patterns, and hard-won lessons across all domains -->
 
@@ -793,3 +793,9 @@ usageStats:
 - **Situation:** SignalIntakeService defers incoming signals to deferredQueue when capacity or error-budget checks fail. Queue is not persisted.
 - **Root cause:** Simpler initial implementation; assumption is that deferred signals are low-priority and will be re-submitted by users if important.
 - **How to avoid:** Users must re-submit deferred signals after server restart. Add persistence if deferral rate increases.
+
+
+#### [Gotcha] recentServerUrls deduplication on add: if user re-selects same server URL, old entry is removed and new one appended (maintains insertion order, prevents duplicates) (2026-03-11)
+- **Situation:** Maintaining recent server history without duplicates. User might frequently switch between 2-3 servers.
+- **Root cause:** Prevents cluttering the dropdown with repeated URLs. Moving to end of list (LRU-like behavior) makes recently-used servers more discoverable.
+- **How to avoid:** More intuitive UX (recent = at bottom) but requires O(n) search to find and remove existing entry before append. For max-10 list, negligible.

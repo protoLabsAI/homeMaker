@@ -115,3 +115,10 @@ usageStats:
 - **Problem solved:** Balancing developer convenience in local testing with production security lockdown
 - **Why this works:** hivemind is explicit development feature; tying CORS to it ensures CORS exposure is never accidental in production. Fail-secure default.
 - **Trade-offs:** Gained: Impossible to accidentally expose permissive CORS in production. Lost: CORS availability is implicit in feature flag, adds discovery burden
+
+### Conditional CORS: setupMiddleware() accepts allowAllOrigins parameter, set to true only when hivemind is enabled (2026-03-11)
+- **Context:** Hivemind (multi-peer mesh) requires Access-Control-Allow-Origin: * for cross-peer requests. Single-node deployment should restrict CORS.
+- **Why:** CORS policy should match deployment topology. Hivemind peers communicate directly, so need permissive CORS. Single-node is isolated behind reverse proxy, so restrictive CORS is safer. Configuration-driven behavior avoids hardcoding policy.
+- **Rejected:** Always allow all origins - security issue. Always restrict origins - breaks hivemind mesh communication.
+- **Trade-offs:** Deployment must correctly set hivemind config flag. If misconfigured (e.g., CORS enabled in single-node mode), security posture is weakened.
+- **Breaking if changed:** If allowAllOrigins parameter is removed and hardcoded to false, hivemind deployments will fail with CORS errors. If hardcoded to true, single-node deployments lose CORS protection.
