@@ -125,3 +125,10 @@ usageStats:
 - **Problem solved:** Multiple sources of server URL truth: user selection (override), deployment config (env), browser location. Need predictable resolution.
 - **Why this works:** Explicit chain makes precedence obvious and testable. User's explicit choice wins, deployment config is fallback, browser is last resort.
 - **Trade-offs:** Flat chain is less DRY than config object, but more readable and harder to get wrong
+
+### Hook result mapped through normalizer before passing to ChatInput: extracts {name, description, source, argHint} only (2026-03-11)
+- **Context:** useSlashCommands returns SlashCommand with internal structure; ChatInput receives UseSlashCommandsResult with normalized subset
+- **Why:** Decouples ChatInput from hook's internal structure. ChatInput only needs to know what it displays (name, description, etc.). If hook internals change, ChatInput remains unaffected. Contract is explicit via UseSlashCommandsResult type.
+- **Rejected:** Passing raw hook commands directly to ChatInput; exporting full SlashCommand type through the boundary
+- **Trade-offs:** One-line map() adds minimal overhead, but enforces encapsulation. Prevents accidental coupling to hook internals. Adding new display property requires explicit map update (good: catches intent).
+- **Breaking if changed:** Removing the map and passing raw commands tightly couples ChatInput to hook's SlashCommand shape. Hook refactors could break ChatInput unexpectedly.

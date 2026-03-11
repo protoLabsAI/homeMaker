@@ -5,9 +5,9 @@ relevantTo: [architecture]
 importance: 0.9
 relatedFiles: []
 usageStats:
-  loaded: 267
-  referenced: 59
-  successfulFeatures: 59
+  loaded: 420
+  referenced: 60
+  successfulFeatures: 60
 ---
 <!-- domain: Architecture Decisions | System-wide structural decisions that have breaking consequences if changed -->
 
@@ -242,3 +242,8 @@ usageStats:
 - **Problem solved:** Supporting multiple override sources (users switching servers at runtime, CI passing config, platform-specific storage) without conflicts
 - **Why this works:** Allows high-priority runtime changes (localStorage) to shadow build-time config without requiring env var updates. Each layer has appropriate lifetime and trust level.
 - **Trade-offs:** Gained: flexibility across deployment models; lost: potential confusion about which source is active
+
+#### [Pattern] Context-bridging wrapper component: ChatInputWithSlashCommands placed inside PromptInputProvider to bridge useSlashCommands hook (context-dependent) to ChatInput's component-prop interface (2026-03-11)
+- **Problem solved:** useSlashCommands needs input value from context, but ChatInput expects props; mismatch between hook and component APIs
+- **Why this works:** Keeps context dependencies localized within provider scope. Alternatives (prop-drilling value/setValue down) would create prop tunneling and tight coupling between parent and ChatInput. Wrapper makes the context dependency explicit and contained.
+- **Trade-offs:** One extra wrapper component adds indirection, but clear separation of concerns—PromptInputProvider owns state, wrapper owns the bridge logic
