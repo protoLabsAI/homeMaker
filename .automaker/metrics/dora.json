@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "updatedAt": "2026-03-11T00:57:32.880Z",
+  "updatedAt": "2026-03-11T01:16:11.794Z",
   "entries": [
     {
       "timestamp": "2026-03-10T23:27:16.307Z",
@@ -141,6 +141,27 @@
         "featureCreatedAt": "2026-03-10T22:48:09.376Z",
         "prMergedAt": "2026-03-11T00:57:32.850Z",
         "leadTimeMs": 7763474
+      },
+      "changeFailRate": {
+        "totalMerges": 1,
+        "totalFailures": 0,
+        "ratio": 0
+      },
+      "recoveryTime": null
+    },
+    {
+      "timestamp": "2026-03-11T01:16:11.783Z",
+      "deploymentFrequency": {
+        "mergesPerDay": 1,
+        "mergesPerWeek": 1,
+        "dayBucket": "2026-03-11"
+      },
+      "changeLeadTime": {
+        "featureId": "feature-1773182889379-bgtpd0n85",
+        "featureTitle": "Ceremony-to-calendar integration",
+        "featureCreatedAt": "2026-03-10T22:48:09.380Z",
+        "prMergedAt": "2026-03-11T01:16:11.783Z",
+        "leadTimeMs": 8882403
       },
       "changeFailRate": {
         "totalMerges": 1,
