@@ -64,6 +64,9 @@ export function useSlashCommands(input: string): UseSlashCommandsReturn {
   });
 
   // Derive activation state and query string from the raw input.
+  // The dropdown is active only while the user is typing the command name
+  // (before any space). Once a space appears, the command is "locked in"
+  // and the user is typing arguments — the dropdown closes.
   const { isActive, query } = useMemo<{ isActive: boolean; query: string }>(() => {
     if (!input.startsWith('/')) {
       return { isActive: false, query: '' };
@@ -77,12 +80,9 @@ export function useSlashCommands(input: string): UseSlashCommandsReturn {
       return { isActive: true, query: afterSlash };
     }
 
-    // A space was typed. Stay active only if the text before the space is an
-    // exact match for a registered command (the user is entering arguments).
-    const prefix = afterSlash.slice(0, spaceIdx);
-    const prefixMatchesCommand = allCommands.some((c) => c.name === prefix);
-    return { isActive: prefixMatchesCommand, query: prefix };
-  }, [input, allCommands]);
+    // A space was typed — the user is entering arguments. Close the dropdown.
+    return { isActive: false, query: '' };
+  }, [input]);
 
   // Filter commands by case-insensitive substring match on name or description.
   const commands = useMemo<SlashCommandSummary[]>(() => {
