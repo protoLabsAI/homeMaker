@@ -5,9 +5,9 @@ relevantTo: [gotchas]
 importance: 0.7
 relatedFiles: []
 usageStats:
-  loaded: 1388
-  referenced: 319
-  successfulFeatures: 319
+  loaded: 1389
+  referenced: 320
+  successfulFeatures: 320
 ---
 <!-- domain: Gotchas & Pitfalls | Known traps, anti-patterns, and hard-won lessons across all domains -->
 
@@ -858,3 +858,9 @@ usageStats:
 - **Situation:** If you recreate HTTP client without closing previous WebSocket, stale connections persist and can interfere with routing
 - **Root cause:** WebSocket close is not automatic on object destruction; browser keeps connection alive until explicitly terminated
 - **How to avoid:** Gained: clean connection lifecycle; lost: ability to assume cleanup on object disposal
+
+
+#### [Gotcha] Turbo cache in monorepo worktrees replays old cached output rather than recompiling modified files; 'npm run build:packages' appeared to succeed but didn't validate worktree type changes (2026-03-12)
+- **Situation:** Running build command in isolated worktree with TypeScript changes to verify compilation
+- **Root cause:** Turbo cache is shared across worktrees and main repo; it doesn't detect that an isolated worktree's files are different from the main repo source
+- **How to avoid:** Must use explicit workspace builds (npm run build --workspace=libs/types) instead of aggregate commands, adds extra verification step

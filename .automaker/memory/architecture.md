@@ -5,9 +5,9 @@ relevantTo: [architecture]
 importance: 0.9
 relatedFiles: []
 usageStats:
-  loaded: 425
-  referenced: 61
-  successfulFeatures: 61
+  loaded: 426
+  referenced: 62
+  successfulFeatures: 62
 ---
 <!-- domain: Architecture Decisions | System-wide structural decisions that have breaking consequences if changed -->
 
@@ -341,3 +341,10 @@ usageStats:
 - **Problem solved:** Similar constants/methods across services can mask that they solve different problems with different timing requirements.
 - **Why this works:** Services have different claim semantics (work-intake is multi-step workflow, automerge is local feature ownership). Unifying constants would break both.
 - **Trade-offs:** Code duplication, but each service can optimize for its actual constraints. Prevents accidental coupling.
+
+### Left JSON wire format string 'feature_event' unchanged while renaming TypeScript type CrdtFeatureEvent → CrdtSyncWireMessage (2026-03-12)
+- **Context:** Refactoring type name for semantic clarity (type carries all wire messages, not just feature events), but need to maintain wire protocol stability for remote peer compatibility
+- **Why:** Wire format is a JSON protocol contract over WebSocket; TypeScript identifiers are internal. Decoupling them prevents breaking remote peers running older code
+- **Rejected:** Renaming wire format string to 'sync_wire_message' would achieve naming consistency but breaks peers on old versions
+- **Trade-offs:** Slightly confusing having a type named 'SyncWireMessage' with wire value 'feature_event', but gains backwards compatibility
+- **Breaking if changed:** If wire format string is changed, any remote peer with old code fails to deserialize the message
