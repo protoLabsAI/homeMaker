@@ -5,9 +5,9 @@ relevantTo: [architecture]
 importance: 0.9
 relatedFiles: []
 usageStats:
-  loaded: 424
-  referenced: 60
-  successfulFeatures: 60
+  loaded: 425
+  referenced: 61
+  successfulFeatures: 61
 ---
 <!-- domain: Architecture Decisions | System-wide structural decisions that have breaking consequences if changed -->
 
@@ -323,3 +323,21 @@ usageStats:
 - **Context:** Tool execution errors previously propagated as exceptions that could crash the agent session. `ToolRegistry.execute()` now wraps all tool calls in an error boundary (commit befe3e279).
 - **Why:** The LLM should receive structured error context (toolName, errorMessage, recoveryHint) to attempt recovery rather than the session crashing. Always resolves; never throws.
 - **Breaking if changed:** If error boundary is removed, tool errors crash the agent session rather than giving the LLM a chance to recover. If recoveryHint is removed from metadata, LLM has less guidance on how to proceed after a failure.
+
+
+#### [Gotcha] CLAIM_VERIFY_DELAY_MS (200ms setTimeout/re-read pattern in claim()) was based on false assumption that remote peers could mutate the Automerge doc. Features are strictly local-only; only the owning instance mutates the doc. (2026-03-12)
+- **Situation:** Inherited synchronization pattern from distributed system design that didn't match actual architecture.
+- **Root cause:** Code assumed distributed consensus settling was needed for claim ownership. Actually unnecessary because features never receive remote mutations.
+- **How to avoid:** Claim operations became instant instead of 200ms+ delayed. Safe because local-only semantics eliminate race conditions.
+
+### Removed applyRemoteChanges() and getDocBinary() methods — part of abandoned cross-instance CRDT sync model from db8801061. (2026-03-12)
+- **Context:** Dead code that persisted years after the feature-sync model was abandoned, never called from production.
+- **Why:** Dead code accumulates technical debt and obscures actual system behavior. Historical commit analysis confirms model is abandoned.
+- **Rejected:** Keeping for 'future compatibility' or gradual deprecation period.
+- **Trade-offs:** Cleaner, smaller surface area. But requires confidence in git history and grep verification before removal.
+- **Breaking if changed:** If code was being called via reflection/dynamic dispatch or in untested code paths, removal would break those.
+
+#### [Pattern] Scope boundary pattern: CLAIM_VERIFY_DELAY_MS exists in both AutomergeFeatureStore AND work-intake-service.ts with different values/purposes. Each service has own claim logic. (2026-03-12)
+- **Problem solved:** Similar constants/methods across services can mask that they solve different problems with different timing requirements.
+- **Why this works:** Services have different claim semantics (work-intake is multi-step workflow, automerge is local feature ownership). Unifying constants would break both.
+- **Trade-offs:** Code duplication, but each service can optimize for its actual constraints. Prevents accidental coupling.

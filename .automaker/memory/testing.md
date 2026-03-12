@@ -108,3 +108,8 @@ usageStats:
 - **Problem solved:** Integration tests verify data flow through three layers with failure scenarios. Code is heavily interface-driven with multiple collaboration points.
 - **Why this works:** Inline stubs make interface contracts explicit in test code and provide fine-grained control over each layer's behavior independently. Mock libraries abstract away the contract.
 - **Trade-offs:** More test setup boilerplate but better visibility. Easier to debug stub behavior. Less 'magic' in test infrastructure.
+
+#### [Gotcha] applyRemoteChanges integration tests existed and compiled, but were dead code — never ran in CI/normal workflows, hid design evolution. (2026-03-12)
+- **Situation:** Tests for abandoned features tend to rot while still compiling, creating false sense of coverage.
+- **Root cause:** When feature-sync model was abandoned, tests weren't marked as deprecated or removed. They became invisible maintenance debt.
+- **How to avoid:** Removing tests forces test suite to shrink and stay current. But loses historical documentation of why sync model existed.
