@@ -128,3 +128,8 @@ usageStats:
 - **Problem solved:** Services can write to disk (updatePhaseClaim) or read from doc (getProject), causing test flakiness if both operate on different state stores
 - **Why this works:** Automerge document sync between instances adds complexity; disk-only state is deterministic for testing. Core CRDT logic is still tested via event propagation simulation.
 - **Trade-offs:** Simpler, faster tests vs. not testing actual Automerge document consistency. Compensated by testing event wiring (EventBus → persistRemoteProject) which is the sync mechanism.
+
+#### [Pattern] Unit tests verified broadcast() calls using Jest mocks and actual Express server on ephemeral port (2026-03-12)
+- **Problem solved:** Route code needed verification that categories:updated events are broadcast correctly and files persist
+- **Why this works:** Mock events.broadcast() to verify correct event signatures; real Express server to verify HTTP behavior and file I/O together without stubbing filesystem
+- **Trade-offs:** Gained confidence in integration between routes and events; test setup more complex than pure unit tests

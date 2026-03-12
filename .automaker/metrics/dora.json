@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "updatedAt": "2026-03-12T17:51:35.646Z",
+  "updatedAt": "2026-03-12T18:18:32.691Z",
   "entries": [
     {
       "timestamp": "2026-03-10T23:27:16.307Z",
@@ -519,6 +519,27 @@
         "featureCreatedAt": "2026-03-12T17:39:25.694Z",
         "prMergedAt": "2026-03-12T17:51:35.643Z",
         "leadTimeMs": 729949
+      },
+      "changeFailRate": {
+        "totalMerges": 1,
+        "totalFailures": 0,
+        "ratio": 0
+      },
+      "recoveryTime": null
+    },
+    {
+      "timestamp": "2026-03-12T18:18:32.689Z",
+      "deploymentFrequency": {
+        "mergesPerDay": 1,
+        "mergesPerWeek": 1,
+        "dayBucket": "2026-03-12"
+      },
+      "changeLeadTime": {
+        "featureId": "feature-1773334176289-qsbmfnjax",
+        "featureTitle": "Categories via event bridge",
+        "featureCreatedAt": "2026-03-12T16:49:36.289Z",
+        "prMergedAt": "2026-03-12T18:18:32.689Z",
+        "leadTimeMs": 5336400
       },
       "changeFailRate": {
         "totalMerges": 1,

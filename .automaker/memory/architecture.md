@@ -5,9 +5,9 @@ relevantTo: [architecture]
 importance: 0.9
 relatedFiles: []
 usageStats:
-  loaded: 432
-  referenced: 66
-  successfulFeatures: 66
+  loaded: 433
+  referenced: 67
+  successfulFeatures: 67
 ---
 <!-- domain: Architecture Decisions | System-wide structural decisions that have breaking consequences if changed -->
 
@@ -413,3 +413,20 @@ usageStats:
 - **Problem solved:** Full WebSocket transport testing would require multi-instance setup and async coordination
 - **Why this works:** Decouples sync logic from transport. EventBus mocks are faster and deterministic. Real transport is tested in e2e/staging.
 - **Trade-offs:** Unit-level sync logic confidence vs. transport-layer coverage. Transport bugs won't be caught here; rely on e2e tests.
+
+#### [Pattern] Reused existing CRDT event bridge pattern for categories sync instead of creating new synchronization mechanism (2026-03-12)
+- **Problem solved:** Multi-instance category state needed to propagate from one server to remote peers without implementing new cross-instance communication
+- **Why this works:** Event bridge already intercepts broadcast() calls and filters against CRDT_SYNCED_EVENT_TYPES before forwarding to remotes; avoids duplicating setRemoteBroadcaster logic
+- **Trade-offs:** Gained zero-overhead reuse of proven sync pattern; traded away ability to customize remote propagation semantics per-event-type
+
+### Remote handler writes to container.repoRoot, not payload.projectPath, when receiving categories:updated from peer (2026-03-12)
+- **Context:** CRDT sync handler needs to write categories.json to correct filesystem after receiving remote event
+- **Why:** Remote handlers execute in receiving server's context; container.repoRoot is that server's canonical project root. Using payload.projectPath would write to wrong location on multi-instance setup
+- **Rejected:** Could naively use payload.projectPath for all handlers; would work single-instance but fail in distributed deployments
+- **Trade-offs:** Correct location guaranteed; requires discipline that all remote handlers understand they receive events about OTHER servers' changes
+- **Breaking if changed:** If handler uses payload.projectPath instead of container.repoRoot, multi-instance sync writes to wrong filesystem and data diverges
+
+#### [Gotcha] Categories route exists but unreachable because not registered in apps/server/src/server/routes.ts (2026-03-12)
+- **Situation:** Route module created with POST endpoints but no HTTP server actually serves it
+- **Root cause:** Intentional scope discipline: 'files to modify' list didn't include routes.ts, preventing scope creep from route->routes registration
+- **How to avoid:** Clear task boundaries and prevented scope expansion; feature incomplete without separate routes.ts registration step
