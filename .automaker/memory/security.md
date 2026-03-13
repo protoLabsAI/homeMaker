@@ -5,9 +5,9 @@ relevantTo: [security]
 importance: 0.7
 relatedFiles: []
 usageStats:
-  loaded: 77
-  referenced: 21
-  successfulFeatures: 21
+  loaded: 82
+  referenced: 23
+  successfulFeatures: 23
 ---
 <!-- domain: Security | Auth guards, input validation, secure file operations, HMAC verification -->
 
@@ -185,3 +185,10 @@ usageStats:
 - **Problem solved:** Research findings conditionally appended to prompt: `${researchFindings ? ... : ''}`
 - **Why this works:** Prevents empty research section from appearing in prompt (cleaner output); silent failure on missing file avoids error cascading
 - **Trade-offs:** Optional becomes truly optional (graceful), but loses visibility into missing research; no feedback on file corruption
+
+### promptFile path is resolved relative to projectPath using path.join(), read via secureFs (not arbitrary fs). No validation that promptFile stays within projectPath. (2026-03-13)
+- **Context:** Role configuration files live inside the project directory structure. Path could theoretically escape via ../../../etc/passwd if not controlled.
+- **Why:** secureFs.readFile is a sandboxed wrapper that prevents arbitrary file system access. Using projectPath as root is the natural containment.
+- **Rejected:** Could explicitly validate that resolved path is within projectPath before reading, but secureFs is already the sandbox.
+- **Trade-offs:** Relying on secureFs sandbox vs explicit path validation. Current approach assumes secureFs is sufficient; validation would be defense-in-depth.
+- **Breaking if changed:** If secureFs.readFile is replaced with raw fs.readFile, path traversal becomes possible. If projectPath is set incorrectly, role files could become inaccessible or wrong files could be read.

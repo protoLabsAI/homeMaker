@@ -84,6 +84,7 @@ import { gitWorkflowService } from '../git-workflow-service.js';
 import type { KnowledgeStoreService } from '../knowledge-store-service.js';
 import { writeLock } from '../../lib/worktree-lock.js';
 import { getReactiveSpawnerService } from '../reactive-spawner-service.js';
+import { getAgentManifestService } from '../agent-manifest-service.js';
 
 import { TypedEventBus } from './typed-event-bus.js';
 import { PostExecutionMiddleware } from './post-execution-middleware.js';
@@ -634,7 +635,13 @@ export class ExecutionService {
       // When autoLoadClaudeMd is enabled, filter out CLAUDE.md to avoid duplication
       // (SDK handles CLAUDE.md via settingSources), but keep other context files like CODE_QUALITY.md
       // Note: contextResult.formattedPrompt now includes both context AND memory
-      const combinedSystemPrompt = filterClaudeMdFromContext(contextResult, autoLoadClaudeMd);
+      const baseSystemPrompt = filterClaudeMdFromContext(contextResult, autoLoadClaudeMd);
+
+      // Prepend role-specific prompt when the feature has an assignedRole with a promptFile
+      const rolePromptPrefix = await this.loadRolePromptPrefix(projectPath, feature);
+      const combinedSystemPrompt = rolePromptPrefix
+        ? rolePromptPrefix + (baseSystemPrompt || '')
+        : baseSystemPrompt;
 
       if (options?.continuationPrompt) {
         // Continuation prompt is used when recovering from a plan approval
@@ -675,6 +682,44 @@ export class ExecutionService {
       const imagePaths = feature.imagePaths?.map((img) =>
         typeof img === 'string' ? img : img.path
       );
+
+      // Auto-assign agent role via manifest match rules (if not already assigned)
+      if (!feature.assignedRole && workflowSettings.agentConfig?.autoAssignEnabled !== false) {
+        try {
+          const agentManifestService = getAgentManifestService();
+          const matched = await agentManifestService.matchFeature(projectPath, {
+            category: feature.category,
+            title: feature.title ?? '',
+            description: feature.description,
+            filesToModify: feature.filesToModify,
+          });
+          if (matched) {
+            const assignedRole = matched.name as import('@protolabsai/types').AgentRole;
+            const routingSuggestion = {
+              role: assignedRole,
+              confidence: 1.0,
+              reasoning: `Auto-assigned via manifest match rule (agent: ${matched.name})`,
+              autoAssigned: true,
+              suggestedAt: new Date().toISOString(),
+            };
+            feature = {
+              ...feature,
+              assignedRole,
+              routingSuggestion,
+            };
+            await this.featureLoader.update(projectPath, featureId, {
+              assignedRole,
+              routingSuggestion,
+            });
+            logger.info(
+              `Auto-assigned role "${assignedRole}" to feature ${featureId} via manifest match`
+            );
+          }
+        } catch (matchError) {
+          // Non-fatal: log and proceed with default execution
+          logger.warn(`Match rule auto-assign failed for feature ${featureId}:`, matchError);
+        }
+      }
 
       // Get model based on feature complexity and failure count
       const modelResult = await this.getModelForFeature(feature, projectPath);
@@ -1069,8 +1114,7 @@ export class ExecutionService {
       // PR-evidence gate: runs AFTER git workflow so prNumber/prMergedAt are populated.
       // - skipTests=true (manual verification): go to 'waiting_approval'
       // - skipTests=false + PR evidence: go to 'verified' (auto-verify)
-      // - skipTests=false + no PR evidence + no changes: go to 'done' (no-op completion)
-      // - skipTests=false + no PR evidence + had changes: go to 'review' (agent ran but no PR yet)
+      // - skipTests=false + no PR evidence: go to 'review' (agent ran but no PR yet)
       const postGitFeature = await this.featureLoader.get(projectPath, featureId);
       const hasPrEvidence = !!(
         postGitFeature?.prMergedAt ??
@@ -1089,14 +1133,6 @@ export class ExecutionService {
           finalStatus = 'waiting_approval';
         } else if (hasPrEvidence) {
           finalStatus = 'verified';
-        } else if (!gitWorkflowResult) {
-          // Agent completed successfully but made zero changes (no commits, no PR).
-          // This happens when the work was already done on the base branch before the
-          // feature branch was created. Transition to 'done' — there's nothing to review.
-          finalStatus = 'done';
-          logger.info(
-            `[AutoVerify] No changes made for ${featureId} (git workflow returned null) — marking as done.`
-          );
         } else {
           finalStatus = 'review';
           logger.warn(
@@ -1608,7 +1644,13 @@ export class ExecutionService {
         description: feature.description ?? '',
       },
     });
-    const contextFilesPrompt = filterClaudeMdFromContext(contextResult, autoLoadClaudeMd);
+    const baseContextFilesPrompt = filterClaudeMdFromContext(contextResult, autoLoadClaudeMd);
+
+    // Prepend role-specific prompt when the feature has an assignedRole with a promptFile
+    const pipelineRolePromptPrefix = await this.loadRolePromptPrefix(projectPath, feature);
+    const contextFilesPrompt = pipelineRolePromptPrefix
+      ? pipelineRolePromptPrefix + (baseContextFilesPrompt || '')
+      : baseContextFilesPrompt;
 
     // Load previous agent output for context continuity
     const featureDir = getFeatureDir(projectPath, featureId);
@@ -3359,20 +3401,58 @@ After generating the revised spec, output:
    * Priority: explicit feature.model > failure escalation > architectural > settings > complexity
    */
   private async getModelForFeature(
-    feature: { model?: string; complexity?: string; failureCount?: number },
+    feature: { model?: string; complexity?: string; failureCount?: number; assignedRole?: string },
     projectPath?: string
   ): Promise<{ model: string; providerId?: string }> {
+    // 1. Explicit per-feature model override
     if (feature.model) {
       return { model: resolveModelString(feature.model, DEFAULT_MODELS.autoMode) };
     }
+    // 2. Failure escalation: 2+ failures → opus
     if (feature.failureCount && feature.failureCount >= 2) {
       logger.info(`Escalating to opus after ${feature.failureCount} failures`);
       return { model: DEFAULT_MODELS.claude };
     }
+    // 3. Architectural complexity → opus
     if (feature.complexity === 'architectural') {
       logger.info('Using opus for architectural feature');
       return { model: DEFAULT_MODELS.claude };
     }
+    // 4. AssignedRole model override (manifest takes precedence over settings)
+    if (feature.assignedRole && projectPath) {
+      try {
+        const agentManifestService = getAgentManifestService();
+        const agent = await agentManifestService.getAgent(projectPath, feature.assignedRole);
+        if (agent?.model) {
+          logger.info(
+            `Using manifest model override "${agent.model}" for role "${feature.assignedRole}"`
+          );
+          return { model: resolveModelString(agent.model, DEFAULT_MODELS.autoMode) };
+        }
+      } catch (err) {
+        logger.warn(
+          `Failed to read agent manifest model for role "${feature.assignedRole}": ${err}`
+        );
+      }
+      // 4b. Settings roleModelOverrides fallback
+      try {
+        const workflowSettings = await getWorkflowSettings(projectPath, this.settingsService);
+        const roleOverride =
+          workflowSettings.agentConfig?.roleModelOverrides?.[feature.assignedRole];
+        if (roleOverride?.model) {
+          logger.info(
+            `Using settings roleModelOverride "${roleOverride.model}" for role "${feature.assignedRole}"`
+          );
+          return {
+            model: resolveModelString(roleOverride.model, DEFAULT_MODELS.autoMode),
+            providerId: roleOverride.providerId,
+          };
+        }
+      } catch (err) {
+        logger.warn(`Failed to read roleModelOverrides for role "${feature.assignedRole}": ${err}`);
+      }
+    }
+    // 5. phaseModels.agentExecutionModel from settings
     try {
       const { phaseModel } = await getPhaseModelWithOverrides(
         'agentExecutionModel',
@@ -3388,6 +3468,7 @@ After generating the revised spec, output:
     } catch (err) {
       logger.warn(`Failed to read agentExecutionModel setting, using fallback: ${err}`);
     }
+    // 6. Complexity fallback
     if (feature.complexity === 'small') {
       logger.info('Using haiku for small feature');
       return { model: DEFAULT_MODELS.trivial };
@@ -3421,5 +3502,50 @@ After generating the revised spec, output:
       branchName,
       content,
     });
+  }
+
+  /**
+   * Build a role-specific prompt prefix when the feature has an assignedRole with a
+   * promptFile defined in the agent manifest.
+   *
+   * Format:
+   * ```
+   * ## Agent Role: {agent.name}
+   * {agent.description}
+   *
+   * {contents of agent.promptFile}
+   *
+   * ---
+   * ```
+   *
+   * Returns an empty string when no role prompt applies.
+   * Logs a warning and returns empty string if the promptFile cannot be read.
+   */
+  private async loadRolePromptPrefix(projectPath: string, feature: Feature): Promise<string> {
+    if (!feature.assignedRole) {
+      return '';
+    }
+    try {
+      const agentManifestService = getAgentManifestService();
+      const agent = await agentManifestService.getAgent(projectPath, feature.assignedRole);
+      if (!agent?.promptFile) {
+        return '';
+      }
+      const promptFilePath = path.join(projectPath, agent.promptFile);
+      let promptFileContents: string;
+      try {
+        promptFileContents = (await secureFs.readFile(promptFilePath, 'utf-8')) as string;
+      } catch (err) {
+        logger.warn(
+          `Role prompt file not found for role "${feature.assignedRole}" at ${promptFilePath}: ${err}`
+        );
+        return '';
+      }
+      const description = agent.description ? `${agent.description}\n\n` : '';
+      return `## Agent Role: ${agent.name}\n${description}${promptFileContents}\n\n---\n`;
+    } catch (err) {
+      logger.warn(`Failed to load role prompt for role "${feature.assignedRole}": ${err}`);
+      return '';
+    }
   }
 }

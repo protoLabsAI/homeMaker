@@ -5,9 +5,9 @@ relevantTo: [gotchas]
 importance: 0.7
 relatedFiles: []
 usageStats:
-  loaded: 1422
-  referenced: 337
-  successfulFeatures: 337
+  loaded: 1435
+  referenced: 343
+  successfulFeatures: 343
 ---
 <!-- domain: Gotchas & Pitfalls | Known traps, anti-patterns, and hard-won lessons across all domains -->
 
@@ -931,3 +931,18 @@ usageStats:
 - **Situation:** gtm-signal-intelligence-project.md in the worktree was already more up-to-date (Linear marked DEPRECATED, monitor/OAuth pattern updated) than main repo version. Discover this via read operations, not assumptions.
 - **Root cause:** Previous agent had already made updates in the worktree but those haven't been merged back to main yet. This reveals the workflow: agents work in feature branches/worktrees, and state diverges until merge.
 - **How to avoid:** Agents must always check worktree state before deciding what edits to make; adds a verification step but prevents duplicate work
+
+#### [Gotcha] Worktree file path vs main repo path: initial edit targeted main repo, had to correct to worktree path (2026-03-13)
+- **Situation:** During feature development, both /Users/kj/dev/automaker/ and .worktrees/ paths exist, making it easy to edit the wrong location
+- **Root cause:** Muscle memory targeting the standard project path; worktree paths are less familiar
+- **How to avoid:** Explicit worktree path prevents accidental commits to wrong branch; requires extra awareness
+
+#### [Gotcha] secureFs.readFile returns Buffer | string but requires `as string` type assertion. The function was exported as a namespace, not with explicit typings. (2026-03-13)
+- **Situation:** When reading promptFile contents via secureFs, TypeScript raised type mismatch errors even though runtime returns string.
+- **Root cause:** secureFs is a wrapper around fs operations that can return different types depending on encoding. With 'utf-8' encoding, it returns string, but TypeScript cannot narrow this without a helper.
+- **How to avoid:** Type assertion is concise but unsafely disables type checking. Helper function would be safer but adds indirection for a well-known pattern.
+
+#### [Gotcha] assignedRole being pre-set is semantically 'do not auto-match', not 'prefer this role'. ManualAssignment short-circuits matchFeature entirely. (2026-03-13)
+- **Situation:** Code checks `if (feature.assignedRole) { return }` — if a role exists, matching is skipped completely
+- **Root cause:** Treats assignedRole as a declaration of user intent ('I have chosen'), not as a preference hint. This respects the UX model where users set roles deliberately.
+- **How to avoid:** Current approach respects user autonomy completely; alternative would enable 'smart override' but risks surprising users when match overrides their choice
