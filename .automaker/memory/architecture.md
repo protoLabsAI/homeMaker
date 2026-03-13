@@ -5,9 +5,9 @@ relevantTo: [architecture]
 importance: 0.9
 relatedFiles: []
 usageStats:
-  loaded: 459
-  referenced: 79
-  successfulFeatures: 79
+  loaded: 467
+  referenced: 81
+  successfulFeatures: 81
 ---
 <!-- domain: Architecture Decisions | System-wide structural decisions that have breaking consequences if changed -->
 
@@ -693,3 +693,39 @@ usageStats:
 - **Rejected:** Single filter state (requires parent to manage local UI state); no supported-types gate (leaks invalid types into UI)
 - **Trade-offs:** Slightly more code (two separate filters), but each dimension is independently controllable. Harder to reason about if not documented.
 - **Breaking if changed:** Removing SUPPORTED gate allows invalid types into the component; removing typeFilter state removes user control
+
+#### [Gotcha] Two independent code paths (executeFeature and executePipelineSteps) both assemble system prompts but operate independently. Role prompt injection had to be implemented in both locations. (2026-03-13)
+- **Situation:** When adding role prompt prefix support, discovered that context files were loaded in two separate flows with no shared helper.
+- **Root cause:** Features can be executed via two different routes, each with its own context assembly logic. No abstraction to unify prompt building.
+- **How to avoid:** Current approach: easier to implement locally, harder to maintain (changes must be applied twice). Shared function: more DRY, but adds an abstraction layer that could complicate context passing.
+
+### Auto-assignment is opt-OUT, not opt-IN: autoAssignEnabled defaults to true, match logic only skips on explicit false (2026-03-13)
+- **Context:** Feature flag for disabling auto-assignment in workflow settings
+- **Why:** Assumes auto-assignment is beneficial by default; requires explicit action to disable. This makes auto-routing the primary product behavior, manual assignment the override.
+- **Rejected:** Opt-IN model (default false, require explicit true) would make auto-assignment secondary, require explicit enablement per workflow
+- **Trade-offs:** Opt-out encourages adoption and intelligent routing; opt-in requires users to discover and enable feature
+- **Breaking if changed:** Changing to opt-IN would require backwards migration of existing workflows and shifts routing from automatic to manual-first
+
+#### [Pattern] Cascading precedence guards: Manual assignedRole → Feature flag → Match call. Each level short-circuits lower levels. (2026-03-13)
+- **Problem solved:** Need to respect user intent (manual assignment) while supporting both feature-gating and auto-matching
+- **Why this works:** Respects intent hierarchy: explicit user assignment > organizational configuration > algorithmic suggestion. Avoids expensive match calls unnecessarily.
+- **Trade-offs:** Early exits optimize for manual/disabled case; requires understanding guard order to modify behavior
+
+### Match errors are non-fatal: caught, logged, execution continues. Manifest parsing/matching failures never block feature execution. (2026-03-13)
+- **Context:** AgentManifestService.matchFeature() can throw parsing errors or fail gracefully
+- **Why:** Feature execution is critical path; role assignment is enhancement. Graceful degradation ensures routing never prevents work from starting.
+- **Rejected:** Fail-fast on match error would catch malformed manifests early but would block feature execution entirely
+- **Trade-offs:** Non-fatal enables execution continuity at cost of potentially missing role misassignment signals. Requires good logging/monitoring.
+- **Breaking if changed:** Fail-fast would require manifest validation before execution and would break any execution when AgentManifestService is unavailable or misconfigured
+
+#### [Pattern] Null from matchFeature signals 'no match found' and triggers no assignedRole update (defensive: does not mutate on null) (2026-03-13)
+- **Problem solved:** AgentManifestService.matchFeature() returns null when no rule matches confidence threshold, or a match object with role+metadata
+- **Why this works:** Null is explicit sentinel for 'no match' — cleaner than empty object or success-but-no-role. Defensive null-check before update prevents silent noop mutations.
+- **Trade-offs:** Requires explicit null-handling in code; explicit defensive prevents accidental mutations of assignedRole to undefined
+
+### routingSuggestion populated with full metadata (confidence, reasoning, autoAssigned flag, suggestedAt timestamp) creating audit trail of auto vs manual assignments (2026-03-13)
+- **Context:** Need to track origin and confidence of role assignment for observability and debugging
+- **Why:** Audit trail enables: (1) tracing why a role was assigned, (2) measuring match confidence distribution, (3) retroactively identifying auto-assigned vs manually-assigned features. Autoassigned flag is semantic marker.
+- **Rejected:** Could only store assignedRole without metadata; would lose traceability and confidence signal needed for threshold tuning
+- **Trade-offs:** Adds payload to Feature; enables rich observability and potential future ML feedback loops on assignment quality
+- **Breaking if changed:** Removing metadata would eliminate ability to distinguish high-confidence from low-confidence auto-assignments, making manifest tuning impossible

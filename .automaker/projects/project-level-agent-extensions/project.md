@@ -4,7 +4,7 @@ Make agent roles extensible at the project level — discoverable from .automake
 
 **Status:** active
 **Created:** 2026-03-13T18:25:10.033Z
-**Updated:** 2026-03-13T18:32:20.305Z
+**Updated:** 2026-03-13T19:36:50.952Z
 
 ## PRD
 
@@ -59,7 +59,7 @@ Make AgentRole extensible and define the agent manifest data model. This is the 
 
 Server-side service that discovers, parses, validates, and caches agent manifests from .automaker/agents/. Exposes via API for the UI.
 
-**Status:** pending
+**Status:** completed
 
 #### Phases
 
@@ -70,7 +70,7 @@ Server-side service that discovers, parses, validates, and caches agent manifest
 
 Wire the agent manifest into the actual execution path — model selection, prompt injection, and auto-assignment on feature pickup.
 
-**Status:** pending
+**Status:** completed
 
 #### Phases
 

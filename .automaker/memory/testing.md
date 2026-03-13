@@ -144,3 +144,8 @@ usageStats:
 - **Situation:** Attempted to verify dialog functionality with Playwright. Tests reused main repo dev server instead of worktree code.
 - **Root cause:** Dev server configured with fixed paths (main repo). Worktrees are isolated git copies but share same dev server infrastructure.
 - **How to avoid:** Gain: single dev server reduces resource overhead. Loss: can't test worktree changes in isolation without running separate server or static analysis.
+
+#### [Gotcha] Turbo build cache was replaying old results. Direct tsc invocation (tsc --noEmit) was needed to verify type changes, bypassing the cached build. (2026-03-13)
+- **Situation:** After code edits, npm run build:server returned cached results without recompiling the changed file.
+- **Root cause:** Turbo aggressively caches task outputs. Incremental changes don't trigger cache invalidation if task hash hasn't changed fundamentally.
+- **How to avoid:** Using tsc directly is faster for validation but doesn't test the full build pipeline (bundling, optimization). Full build catches more issues but is slower.
