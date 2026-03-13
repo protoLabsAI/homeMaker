@@ -63,6 +63,12 @@ COPY apps/server ./apps/server
 # Build packages in dependency order, then build server
 RUN npm run build:libs && npm run build --workspace=apps/server
 
+# Copy non-TS assets (.md, .json) into dist so readFileSync(__dirname) works
+RUN cd apps/server && find src -name '*.md' -o -name '*.json' | while read f; do \
+      dest="dist/apps/server/$f"; \
+      mkdir -p "$(dirname "$dest")" && cp "$f" "$dest"; \
+    done
+
 # =============================================================================
 # SERVER PRODUCTION STAGE
 # =============================================================================
