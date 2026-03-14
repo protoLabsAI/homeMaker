@@ -9,14 +9,19 @@
  * completion — no polling required.
  */
 
+import { exec } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
 import readline from 'node:readline';
+import { promisify } from 'node:util';
 import { createLogger } from '@protolabsai/utils';
 import type { EventEmitter } from '../lib/events.js';
 import type { FeatureLoader } from './feature-loader.js';
 import type { ProjectService } from './project-service.js';
+import type { SettingsService } from './settings-service.js';
 import type { Feature, Milestone } from '@protolabsai/types';
+
+const execAsync = promisify(exec);
 
 const logger = createLogger('CompletionDetector');
 
@@ -48,6 +53,7 @@ export class CompletionDetectorService {
   private emitter: EventEmitter | null = null;
   private featureLoader: FeatureLoader | null = null;
   private projectService: ProjectService | null = null;
+  private settingsService: SettingsService | null = null;
   private unsubscribe: (() => void) | null = null;
   private dataDir: string | null = null;
 
@@ -134,11 +140,13 @@ export class CompletionDetectorService {
     emitter: EventEmitter,
     featureLoader: FeatureLoader,
     projectService: ProjectService,
-    dataDir?: string
+    dataDir?: string,
+    settingsService?: SettingsService
   ): void {
     this.emitter = emitter;
     this.featureLoader = featureLoader;
     this.projectService = projectService;
+    this.settingsService = settingsService ?? null;
     this.dataDir = dataDir ?? null;
 
     // Load ledger asynchronously to pre-populate dedup Sets from disk
@@ -173,6 +181,7 @@ export class CompletionDetectorService {
     this.emitter = null;
     this.featureLoader = null;
     this.projectService = null;
+    this.settingsService = null;
     this.dataDir = null;
     this.emittedEpics.clear();
     this.emittedMilestones.clear();
@@ -221,7 +230,12 @@ export class CompletionDetectorService {
   }
 
   /**
-   * Check if all children of an epic are done. If so, mark the epic done.
+   * Check if all children of an epic are done. If the epic has a branch,
+   * create a PR from the epic branch to dev (or the configured base branch)
+   * and move the epic to "review". The epic only reaches "done" when the
+   * GitHub webhook detects that the epic-to-dev PR has merged.
+   *
+   * If the epic has no branch (manual or non-git epic), mark done directly.
    */
   private async checkEpicCompletion(projectPath: string, epicId: string): Promise<void> {
     const dedupeKey = `${projectPath}:${epicId}`;
@@ -236,12 +250,49 @@ export class CompletionDetectorService {
     if (!allDone) return;
 
     const epic = allFeatures.find((f) => f.id === epicId);
-    if (!epic || epic.status === 'done') return;
+    if (!epic || epic.status === 'done' || epic.status === 'review') return;
 
+    // Claim dedup slot before async work to prevent race conditions
     this.emittedEpics.add(dedupeKey);
     this.appendLedgerEntry('epic', dedupeKey);
     this.completionCounts.epics++;
-    logger.info(`All children of epic "${epic.title}" are done — marking epic done`);
+
+    // If the epic has a branch, create the epic-to-dev PR instead of marking done
+    if (epic.branchName) {
+      const result = await this.createEpicToDevPR(projectPath, epicId, epic);
+      if (result) {
+        // PR created successfully — move epic to review
+        await this.featureLoader!.update(projectPath, epicId, {
+          status: 'review',
+          prNumber: result.prNumber,
+          prUrl: result.prUrl,
+          statusChangeReason: `All ${children.length} child features completed — epic-to-dev PR #${result.prNumber} created with auto-merge`,
+        });
+        this.emitter!.emit('epic:pr-created', {
+          epicFeatureId: epicId,
+          projectPath,
+          epicBranchName: epic.branchName,
+          prNumber: result.prNumber,
+          prUrl: result.prUrl,
+        });
+        logger.info(
+          `Epic "${epic.title}" moved to review — PR #${result.prNumber} created to merge ${epic.branchName} into dev`
+        );
+        return;
+      }
+      // PR creation failed — fall through to block the epic
+      await this.featureLoader!.update(projectPath, epicId, {
+        status: 'blocked',
+        statusChangeReason: `All child features done but epic-to-dev PR creation failed for branch ${epic.branchName}. Manual intervention required — create PR from ${epic.branchName} to dev.`,
+      });
+      logger.warn(
+        `Epic "${epic.title}" blocked — failed to create epic-to-dev PR for ${epic.branchName}`
+      );
+      return;
+    }
+
+    // No branch — mark done directly (manual or non-git epic)
+    logger.info(`All children of epic "${epic.title}" are done — marking epic done (no branch)`);
     await this.featureLoader!.update(projectPath, epicId, { status: 'done' });
 
     this.emitter!.emit('feature:completed', {
@@ -255,6 +306,98 @@ export class CompletionDetectorService {
     // Epic completion may itself trigger milestone/project checks
     if (epic.projectSlug && epic.milestoneSlug) {
       await this.checkMilestoneCompletion(projectPath, epic.projectSlug, epic.milestoneSlug);
+    }
+  }
+
+  /**
+   * Create a PR from the epic branch to the project's base branch (default: dev)
+   * and enable auto-merge with --merge strategy.
+   *
+   * Returns { prNumber, prUrl } on success, or null on failure.
+   */
+  private async createEpicToDevPR(
+    projectPath: string,
+    epicId: string,
+    epic: Feature
+  ): Promise<{ prNumber: number; prUrl: string } | null> {
+    const epicBranch = epic.branchName!;
+
+    // Resolve the base branch from settings (default: dev)
+    let baseBranch = 'dev';
+    if (this.settingsService) {
+      try {
+        const settings = await this.settingsService.getGlobalSettings();
+        baseBranch = settings.gitWorkflow?.prBaseBranch ?? 'dev';
+      } catch {
+        // fall back to dev
+      }
+    }
+
+    try {
+      // Check if an open PR from this epic branch already exists
+      const { stdout: existingPrs } = await execAsync(
+        `gh pr list --head ${epicBranch} --base ${baseBranch} --state open --json number,url --limit 1`,
+        { cwd: projectPath, timeout: 15000 }
+      );
+      const existing = JSON.parse(existingPrs.trim() || '[]') as Array<{
+        number: number;
+        url: string;
+      }>;
+
+      if (existing.length > 0) {
+        // PR already exists — ensure auto-merge is enabled and return it
+        const pr = existing[0];
+        await execAsync(`gh pr merge ${pr.number} --merge --auto`, {
+          cwd: projectPath,
+          timeout: 15000,
+        }).catch(() => {
+          // auto-merge may already be enabled, ignore
+        });
+        logger.info(
+          `Epic "${epic.title}" — reusing existing PR #${pr.number} from ${epicBranch} to ${baseBranch}`
+        );
+        return { prNumber: pr.number, prUrl: pr.url };
+      }
+
+      // Build child feature summary for PR body
+      const allFeatures = await this.featureLoader!.getAll(projectPath);
+      const children = allFeatures.filter((f) => f.epicId === epicId && f.id !== epicId);
+      const childList = children
+        .map((f) => `- ${f.title}${f.prUrl ? ` (${f.prUrl})` : ''}`)
+        .join('\n');
+
+      const body = `## Epic: ${epic.title}\n\nAll child features completed. This PR merges the epic branch into ${baseBranch}.\n\n### Features included:\n${childList}\n\n---\nAuto-generated by CompletionDetectorService.`;
+
+      // Create the PR
+      const { stdout: prOutput } = await execAsync(
+        `gh pr create --base ${baseBranch} --head ${epicBranch} --title "epic: ${epic.title}" --body "${body.replace(/"/g, '\\"')}"`,
+        { cwd: projectPath, timeout: 30000 }
+      );
+      const prUrl = prOutput.trim();
+
+      // Extract PR number from URL (https://github.com/org/repo/pull/123)
+      const prNumberMatch = prUrl.match(/\/pull\/(\d+)/);
+      if (!prNumberMatch) {
+        logger.error(`Failed to parse PR number from: ${prUrl}`);
+        return null;
+      }
+      const prNumber = parseInt(prNumberMatch[1], 10);
+
+      // Enable auto-merge with --merge strategy (never squash on promotion PRs)
+      await execAsync(`gh pr merge ${prNumber} --merge --auto`, {
+        cwd: projectPath,
+        timeout: 15000,
+      }).catch((err) => {
+        logger.warn(`Failed to enable auto-merge on epic PR #${prNumber} (non-fatal):`, err);
+      });
+
+      logger.info(
+        `Created epic-to-dev PR #${prNumber}: ${epicBranch} → ${baseBranch} with auto-merge`
+      );
+      return { prNumber, prUrl };
+    } catch (err) {
+      logger.error(`Failed to create epic-to-dev PR for ${epicBranch}:`, err);
+      return null;
     }
   }
 

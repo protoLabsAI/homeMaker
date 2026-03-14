@@ -443,27 +443,9 @@ export function createGitHubWebhookHandler(events: EventEmitter, settingsService
           `Feature "${feature.title}" moved from "${currentFeature.status}" to "done" after PR #${prNumber} was merged`
         );
 
-        // Epic auto-promotion: if all siblings are done/review, promote the parent epic immediately.
-        try {
-          const updatedFeature = await featureLoader.get(projectPath, feature.featureId);
-          if (updatedFeature?.epicId) {
-            const allFeatures = await featureLoader.getAll(projectPath);
-            const doneStatuses = new Set(['done', 'completed', 'verified', 'review']);
-            const siblings = allFeatures.filter((f) => f.epicId === updatedFeature.epicId);
-            const allSiblingsDone = siblings.every((s) => doneStatuses.has(s.status ?? ''));
-            if (allSiblingsDone) {
-              const epic = allFeatures.find((f) => f.id === updatedFeature.epicId);
-              if (epic && !doneStatuses.has(epic.status ?? '')) {
-                await featureLoader.update(projectPath, epic.id, { status: 'done' });
-                logger.info(
-                  `Epic "${epic.title}" auto-promoted to done (all ${siblings.length} children done after PR #${prNumber})`
-                );
-              }
-            }
-          }
-        } catch (epicErr) {
-          logger.warn('Epic auto-promotion check failed (non-fatal):', epicErr);
-        }
+        // Epic completion is handled by CompletionDetectorService which reacts to
+        // the feature:status-changed event emitted by featureLoader.update() above.
+        // It creates an epic-to-dev PR instead of marking the epic done prematurely.
 
         // Emit event for UI notification
         events.emit('feature:pr-merged', {
@@ -495,6 +477,52 @@ export function createGitHubWebhookHandler(events: EventEmitter, settingsService
           logger.info(
             `Staging promotion candidate created for feature "${feature.featureId}" (commit: ${candidate.commitSha})`
           );
+        }
+      }
+
+      // Epic-to-dev merge detection: when an epic branch merges into dev,
+      // mark the epic feature as done and clean up the branch. This completes
+      // the epic lifecycle started by CompletionDetectorService.createEpicToDevPR().
+      if (baseBranch === 'dev' && branchName.startsWith('epic/')) {
+        try {
+          const allFeatures = await featureLoader.getAll(projectPath);
+          const epicFeature = allFeatures.find((f) => f.isEpic && f.branchName === branchName);
+          if (epicFeature && epicFeature.status !== 'done') {
+            const now = new Date().toISOString();
+            await featureLoader.update(projectPath, epicFeature.id, {
+              status: 'done',
+              prMergedAt: now,
+              completedAt: now,
+              statusChangeReason: `Epic branch merged to dev (PR #${prNumber})`,
+            });
+            events.emit('feature:completed', {
+              featureId: epicFeature.id,
+              featureTitle: epicFeature.title,
+              projectPath,
+              isEpic: true,
+            });
+            logger.info(
+              `Epic "${epicFeature.title}" marked done after epic-to-dev PR #${prNumber} merged`
+            );
+
+            // Clean up epic branch (fire-and-forget)
+            exec(
+              `git push origin --delete ${branchName}`,
+              {
+                cwd: projectPath,
+                timeout: 15000,
+              },
+              (err) => {
+                if (err) {
+                  logger.debug(
+                    `Epic branch cleanup skipped (may already be deleted): ${err.message}`
+                  );
+                }
+              }
+            );
+          }
+        } catch (epicErr) {
+          logger.warn('Epic-to-dev merge detection failed (non-fatal):', epicErr);
         }
       }
 
