@@ -544,7 +544,7 @@ export class MergeProcessor implements StateProcessor {
           { cwd: ctx.projectPath, timeout: 15000 }
         );
         const baseBranch = stdout.trim();
-        if (baseBranch === 'staging' || baseBranch === 'main') {
+        if (baseBranch === 'staging' || baseBranch === 'main' || baseBranch.startsWith('epic/')) {
           logger.info(
             `[MERGE] PR #${ctx.prNumber} targets ${baseBranch} — forcing --merge strategy`
           );
