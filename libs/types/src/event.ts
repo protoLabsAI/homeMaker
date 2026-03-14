@@ -25,9 +25,11 @@ export type EventType =
   | 'feature:follow-up-started'
   | 'feature:follow-up-completed'
   | 'feature:reflection:complete'
+  | 'feature:goal-verification:complete'
   | 'feature:committed'
   | 'feature:retry'
   | 'feature:recovery'
+  | 'epic:pr-created'
   | 'feature:pr-merged'
   | 'feature:pr-closed-unmerged'
   | 'feature:verify-pending'
@@ -508,6 +510,15 @@ export interface EventPayloadMap {
   'github:pr:checks-updated': GitHubPRChecksUpdatedPayload;
   'github:pr:approved': GitHubPRApprovedPayload;
   'github:pr:changes-requested': GitHubPRChangesRequestedPayload;
+
+  // Epic lifecycle
+  'epic:pr-created': {
+    epicFeatureId: string;
+    projectPath: string;
+    epicBranchName: string;
+    prNumber: number;
+    prUrl: string;
+  };
 
   // Feature lifecycle
   'feature:started': { featureId: string; featureTitle?: string; projectPath?: string };

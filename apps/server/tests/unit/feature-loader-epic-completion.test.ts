@@ -1,16 +1,18 @@
 /**
- * Unit tests for FeatureLoader epic auto-completion
+ * Unit tests for FeatureLoader epic completion behavior
  *
- * When the last child feature of an epic transitions to 'done',
- * the epic should automatically transition to 'done' as well.
+ * Epic auto-completion has been moved to CompletionDetectorService.
+ * FeatureLoader no longer directly marks epics as done when children complete.
+ * Instead, it emits feature:status-changed events that CompletionDetectorService
+ * listens to, which then creates an epic-to-dev PR and manages the lifecycle.
+ *
+ * These tests verify that FeatureLoader does NOT auto-complete epics itself.
  *
  * Coverage:
- * - Auto-completes epic when all children are done
- * - Does NOT auto-complete when some children are still pending
- * - Does NOT auto-complete when epic is already done
- * - Sets completedAt and status history entry on the epic
- * - Handles missing epic gracefully (warn + no crash)
+ * - Does NOT auto-complete epic in FeatureLoader (delegated to CompletionDetectorService)
  * - Does NOT trigger for features without epicId
+ * - Handles missing epic gracefully (warn + no crash)
+ * - Does NOT trigger for blocked children
  */
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
@@ -132,7 +134,7 @@ function captureWrites(): { getWritten: (featureId: string) => Feature | undefin
 
 // --- Tests ---
 
-describe('FeatureLoader — epic auto-completion', () => {
+describe('FeatureLoader — epic completion delegation', () => {
   let loader: FeatureLoader;
 
   beforeEach(() => {
@@ -140,44 +142,12 @@ describe('FeatureLoader — epic auto-completion', () => {
     loader = new FeatureLoader();
   });
 
-  it('auto-completes the epic when the last child transitions to done', async () => {
+  it('does NOT auto-complete epic in FeatureLoader when last child transitions to done', async () => {
     const epic = makeFeature({ id: 'epic-1', isEpic: true, status: 'in_progress' });
     const child1 = makeFeature({ id: 'child-1', epicId: 'epic-1', status: 'done' });
     const child2 = makeFeature({ id: 'child-2', epicId: 'epic-1', status: 'in_progress' });
 
-    // Start: child2 is about to become done
-    mockFeatureStore([epic, child1, child2]);
-    const { getWritten } = captureWrites();
-
-    // Update child2 to done — this should trigger epic auto-completion
-    // We must re-stub readdir to allow getAll() to work
-    const secureFs = await import('../../src/lib/secure-fs.js');
-    vi.mocked(secureFs.readdir).mockResolvedValue(
-      [epic, child1, child2].map((f) => ({
-        name: f.id,
-        isDirectory: () => true,
-      })) as unknown as Awaited<ReturnType<typeof secureFs.readdir>>
-    );
-
-    // After child2 is written as 'done', getAll should reflect the updated state
-    // We need the feature store to return child2 as done when re-queried
-    const child2Done = { ...child2, status: 'done' as const };
-    mockFeatureStore([epic, child1, child2Done]);
-
-    await loader.update(PROJECT_PATH, 'child-2', { status: 'done' });
-
-    // The epic should have been written with status 'done'
-    const writtenEpic = getWritten('epic-1');
-    expect(writtenEpic).toBeDefined();
-    expect(writtenEpic?.status).toBe('done');
-    expect(writtenEpic?.completedAt).toBeDefined();
-  });
-
-  it('adds "All child features completed" to epic status history', async () => {
-    const epic = makeFeature({ id: 'epic-1', isEpic: true, status: 'in_progress' });
-    const child1 = makeFeature({ id: 'child-1', epicId: 'epic-1', status: 'done' });
-    const child2 = makeFeature({ id: 'child-2', epicId: 'epic-1', status: 'in_progress' });
-
+    // child2 is about to become done — all children will be done after this
     const child2Done = { ...child2, status: 'done' as const };
     mockFeatureStore([epic, child1, child2Done]);
 
@@ -193,10 +163,9 @@ describe('FeatureLoader — epic auto-completion', () => {
 
     await loader.update(PROJECT_PATH, 'child-2', { status: 'done' });
 
+    // FeatureLoader should NOT write the epic as done — that's CompletionDetectorService's job
     const writtenEpic = getWritten('epic-1');
-    const lastTransition = writtenEpic?.statusHistory?.[writtenEpic.statusHistory.length - 1];
-    expect(lastTransition?.reason).toBe('All child features completed');
-    expect(lastTransition?.to).toBe('done');
+    expect(writtenEpic?.status).not.toBe('done');
   });
 
   it('does NOT auto-complete epic when some children are still in progress', async () => {
@@ -220,9 +189,7 @@ describe('FeatureLoader — epic auto-completion', () => {
 
     await loader.update(PROJECT_PATH, 'child-1', { status: 'done' });
 
-    // Epic should NOT be written with done status
     const writtenEpic = getWritten('epic-1');
-    // If epic was written (e.g. for some reason), it should not be 'done'
     expect(writtenEpic?.status).not.toBe('done');
   });
 
