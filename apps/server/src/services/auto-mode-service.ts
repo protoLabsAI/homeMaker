@@ -203,6 +203,8 @@ export class AutoModeService {
   private autoModeCoordinator!: AutoModeCoordinator;
   /** Guards against TOCTOU race in startAutoLoopForProject: keys claimed synchronously before any await */
   private readonly pendingLoopStarts = new Set<string>();
+  /** Event subscriptions that must be cleaned up on shutdown */
+  private eventSubscriptions: Array<{ unsubscribe: () => void }> = [];
   private featureLoader = new FeatureLoader();
   // Legacy single-project properties (kept for backward compatibility during transition)
   private autoLoopRunning = false;
@@ -332,7 +334,7 @@ export class AutoModeService {
     // Stop running agents when their feature reaches a terminal state.
     // This prevents zombie agents from continuing to run (and consume API budget)
     // after a feature is marked done/verified externally (MCP, manual update, epic merge).
-    this.events.on('feature:status-changed', (data) => {
+    const statusSub = this.events.on('feature:status-changed', (data) => {
       if (data.featureId && (data.newStatus === 'done' || data.newStatus === 'verified')) {
         if (this.runningFeatures.has(data.featureId)) {
           logger.info(
@@ -342,9 +344,12 @@ export class AutoModeService {
         }
 
         // Auto-unblock: Check if any features were waiting on this as a human-blocked dependency
-        void this.handleFeatureCompletion(data.featureId, data.projectPath);
+        void this.handleFeatureCompletion(data.featureId, data.projectPath).catch((err) =>
+          logger.error(`Failed to auto-unblock after feature ${data.featureId} completed:`, err)
+        );
       }
     });
+    this.eventSubscriptions.push(statusSub);
   }
 
   /**
@@ -1459,6 +1464,12 @@ export class AutoModeService {
       logger.info(`[Shutdown] Aborted feature: ${featureId}`);
     }
     this.runningFeatures.clear();
+
+    // Unsubscribe all event listeners to prevent leaks on restart
+    for (const sub of this.eventSubscriptions) {
+      sub.unsubscribe();
+    }
+    this.eventSubscriptions = [];
   }
 
   /**

@@ -1456,7 +1456,11 @@ export class ExecutionService {
             });
           } else {
             // Exponential backoff: 30s → 60s → 120s … max 5min
-            const backoffMs = Math.min(30_000 * Math.pow(2, newFailureCount - 1), 300_000);
+            // Cap exponent to prevent overflow when failureCount is unexpectedly large
+            const backoffMs = Math.min(
+              30_000 * Math.pow(2, Math.min(newFailureCount - 1, 10)),
+              300_000
+            );
             logger.warn(
               `[GitCommitFailure] Feature ${featureId} git commit failed ` +
                 `(attempt ${newFailureCount}), retrying in ${Math.round(backoffMs / 1000)}s`
@@ -1625,7 +1629,7 @@ export class ExecutionService {
     // Capture values for closure before setTimeout
     const currentRetryCount = tempRunningFeature.retryCount;
     const currentPreviousErrors = tempRunningFeature.previousErrors;
-    const backoffMs = Math.min(1000 * Math.pow(2, currentRetryCount), 30_000);
+    const backoffMs = Math.min(1000 * Math.pow(2, Math.min(currentRetryCount, 10)), 30_000);
     const retryTimer = setTimeout(() => {
       this.retryTimers.delete(featureId);
       this.executeFeature(
