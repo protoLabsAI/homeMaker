@@ -37,6 +37,9 @@ import type { DiscordBotService } from '../../services/discord-bot-service.js';
 import type { CalendarService } from '../../services/calendar-service.js';
 import type { HealthMonitorService } from '../../services/health-monitor-service.js';
 import type { CeremonyService } from '../../services/ceremony-service.js';
+import type { InventoryService } from '../../services/inventory-service.js';
+import type { VendorService } from '../../services/vendor-service.js';
+import type { MaintenanceService } from '../../services/maintenance-service.js';
 import type { ToolProgressEmitter } from './tool-progress.js';
 import { githubMergeService } from '../../services/github-merge-service.js';
 import { getPRWatcherService } from '../../services/pr-watcher-service.js';
@@ -110,6 +113,12 @@ export interface AvaToolsServices {
   calendarService?: CalendarService;
   /** Health monitor service — optional, used for health tool group */
   healthMonitorService?: HealthMonitorService;
+  /** Inventory service — optional, used for home inventory tools */
+  inventoryService?: InventoryService;
+  /** Vendor service — optional, used for vendor/contractor tools */
+  vendorService?: VendorService;
+  /** Maintenance service — optional, used for maintenance schedule tools */
+  maintenanceService?: MaintenanceService;
 }
 
 export interface AvaToolsConfig {
@@ -160,6 +169,8 @@ export interface AvaToolsConfig {
   delegateToPm?: boolean;
   /** Enable delegation tool group (delegate_to_pm) — preferred alias for delegateToPm */
   delegation?: boolean;
+  /** Enable home management tools (inventory, vendors, maintenance) */
+  homeManagement?: boolean;
 }
 
 // Re-use the same status literals that the Feature type exposes
@@ -1903,6 +1914,167 @@ export function buildAvaTools(
         }
       },
     });
+  }
+
+  // -----------------------------------------------------------------------
+  // homeManagement – inventory, vendor, and maintenance tools
+  // -----------------------------------------------------------------------
+  if (config.homeManagement) {
+    if (services.inventoryService) {
+      const inventoryService = services.inventoryService;
+
+      tools['search_inventory'] = makeTool({
+        description:
+          'Search home inventory assets by name, manufacturer, model number, serial number, location, or notes. ' +
+          'Use this when the user asks about a specific appliance or asset, e.g. "Find my water heater", ' +
+          '"Do I have a dishwasher?", "When does my refrigerator warranty expire?"',
+        inputSchema: z.object({
+          query: z
+            .string()
+            .describe(
+              'Search term to match against asset name, manufacturer, model, serial, location, or notes'
+            ),
+        }),
+        execute: async ({ query }) => {
+          const assets = inventoryService.search(query);
+          return { count: assets.length, assets };
+        },
+      });
+
+      tools['get_warranty_report'] = makeTool({
+        description:
+          'Return a warranty status report grouped into: active, expiring soon (within 90 days), expired, and no warranty. ' +
+          'Use this when the user asks about warranties, e.g. "What warranties are expiring soon?", "What items have expired warranties?"',
+        inputSchema: z.object({}),
+        execute: async () => {
+          const report = inventoryService.getWarrantyReport();
+          return {
+            active: report.active.length,
+            expiringSoon: report.expiringSoon.length,
+            expired: report.expired.length,
+            noWarranty: report.noWarranty.length,
+            details: report,
+          };
+        },
+      });
+
+      tools['get_asset_value'] = makeTool({
+        description:
+          'Return the total replacement cost of home assets grouped by category. ' +
+          'Use this when the user asks about asset value, e.g. "How much are my home assets worth?", ' +
+          '"What is the total value of my appliances?"',
+        inputSchema: z.object({}),
+        execute: async () => {
+          const report = inventoryService.getTotalValue();
+          return {
+            totalReplacementCostCents: report.totalReplacementCost,
+            totalReplacementCostUsd: (report.totalReplacementCost / 100).toFixed(2),
+            byCategory: report.byCategory.map((c) => ({
+              category: c.category,
+              assetCount: c.assetCount,
+              totalReplacementCostCents: c.totalReplacementCost,
+              totalReplacementCostUsd: (c.totalReplacementCost / 100).toFixed(2),
+            })),
+          };
+        },
+      });
+    }
+
+    if (services.vendorService) {
+      const vendorService = services.vendorService;
+
+      tools['find_vendor'] = makeTool({
+        description:
+          'Search vendor/contractor directory by name, company, notes, or trade category. ' +
+          'Use this when the user asks about a service provider, e.g. "Who\'s my plumber?", ' +
+          '"Find an electrician", "Who do I call for HVAC?"',
+        inputSchema: z.object({
+          query: z
+            .string()
+            .describe('Search term to match against vendor name, company, notes, or category'),
+        }),
+        execute: async ({ query }) => {
+          const vendors = vendorService.search(query);
+          return { count: vendors.length, vendors };
+        },
+      });
+
+      tools['find_vendor_for_asset'] = makeTool({
+        description:
+          'Find vendors linked to a specific home asset by asset ID. ' +
+          'Use this when the user asks who services a specific appliance, e.g. "Who services my HVAC?", ' +
+          '"Who installed my water heater?"',
+        inputSchema: z.object({
+          assetId: z.string().describe('The asset ID to look up linked vendors for'),
+        }),
+        execute: async ({ assetId }) => {
+          const vendors = vendorService.getForAsset(assetId);
+          return { count: vendors.length, vendors };
+        },
+      });
+    }
+
+    if (services.maintenanceService) {
+      const maintenanceService = services.maintenanceService;
+
+      tools['get_overdue_maintenance'] = makeTool({
+        description:
+          'Return all overdue maintenance schedules (past their nextDueAt date). ' +
+          'Use this when the user asks what maintenance is overdue, e.g. "What maintenance am I behind on?", ' +
+          '"What\'s overdue?"',
+        inputSchema: z.object({}),
+        execute: async () => {
+          const schedules = maintenanceService.getOverdue();
+          return { count: schedules.length, schedules };
+        },
+      });
+
+      tools['get_upcoming_maintenance'] = makeTool({
+        description:
+          'Return maintenance schedules due within the next N days. ' +
+          'Use this when the user asks about upcoming maintenance, e.g. "What\'s due this month?", ' +
+          '"What maintenance is coming up in the next 2 weeks?"',
+        inputSchema: z.object({
+          days: z.number().int().min(1).max(365).describe('Number of days to look ahead'),
+        }),
+        execute: async ({ days }) => {
+          const schedules = maintenanceService.getUpcoming(days);
+          return { count: schedules.length, schedules };
+        },
+      });
+
+      tools['get_maintenance_summary'] = makeTool({
+        description:
+          'Return a high-level summary of maintenance status: overdue count, due this week, due this month, up to date. ' +
+          'Use this when the user asks for a maintenance overview, e.g. "How\'s my home maintenance?", ' +
+          '"Give me a maintenance status report."',
+        inputSchema: z.object({}),
+        execute: async () => {
+          return maintenanceService.getDueSummary();
+        },
+      });
+
+      tools['complete_maintenance'] = makeTool({
+        description:
+          'Mark a maintenance schedule as completed and advance the next due date. ' +
+          'Use this when the user says they completed a task, e.g. "Mark HVAC filter as done", ' +
+          '"I just changed the furnace filter."',
+        inputSchema: z.object({
+          scheduleId: z.string().describe('The maintenance schedule ID to mark as complete'),
+          completedBy: z.string().describe('Name of who completed the task'),
+          notes: z.string().optional().describe('Optional notes about the completion'),
+        }),
+        execute: async ({ scheduleId, completedBy, notes }) => {
+          try {
+            const result = maintenanceService.complete(scheduleId, { completedBy, notes });
+            return { success: true, schedule: result.schedule, completion: result.completion };
+          } catch (err) {
+            const message = err instanceof Error ? err.message : String(err);
+            return { success: false, error: message };
+          }
+        },
+      });
+    }
   }
 
   return tools;
