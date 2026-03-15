@@ -278,6 +278,17 @@ export function register(container: ServiceContainer): void {
       );
       await container.dailyStandupService.registerCronTask();
 
+      // Register weather polling — fetches current conditions and 5-day forecast every 30 minutes.
+      // start() is idempotent and disables gracefully if OPENWEATHERMAP_API_KEY is not set.
+      container.weatherService.start();
+      await schedulerService.registerTask(
+        'weather:poll',
+        'Weather Poll',
+        '*/30 * * * *',
+        () => container.weatherService.fetchAndReport(),
+        true
+      );
+
       // Apply taskOverrides from global settings after all tasks are registered
       await schedulerService.applySettingsOverrides();
     })
