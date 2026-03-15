@@ -6,6 +6,7 @@ import {
   Settings,
   NotebookPen,
   CalendarDays,
+  CalendarClock,
   ListTodo,
   MessageSquare,
   Home,
@@ -109,6 +110,11 @@ export function useNavigation({
         label: 'Notes',
         icon: NotebookPen,
         shortcut: shortcuts.notes,
+      },
+      {
+        id: 'maintenance',
+        label: 'Maintenance',
+        icon: CalendarClock,
       },
       {
         id: 'chat',
