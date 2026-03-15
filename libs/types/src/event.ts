@@ -78,6 +78,8 @@ export type EventType =
   | 'scheduler:task_completed'
   | 'scheduler:task-failed'
   | 'maintenance'
+  | 'maintenance:tick'
+  | 'maintenance:overdue'
   | 'recovery_analysis'
   | 'recovery_started'
   | 'recovery_completed'

@@ -1008,6 +1008,13 @@ export type {
   TotalValueReport,
 } from './inventory.js';
 
+// Maintenance schedule types (recurring household maintenance tasks)
+export type {
+  MaintenanceSchedule,
+  CreateMaintenanceScheduleInput,
+  UpdateMaintenanceScheduleInput,
+} from './maintenance.js';
+
 // PenFile types (vector graphics format v2.8)
 export type {
   PenColor,

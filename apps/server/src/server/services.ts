@@ -113,6 +113,7 @@ import { ProjectSlugResolver } from '../services/project-slug-resolver.js';
 import { DeviationRuleService } from '../services/deviation-rule-service.js';
 import { BudgetService } from '../services/budget-service.js';
 import { InventoryService } from '../services/inventory-service.js';
+import { MaintenanceService } from '../services/maintenance-service.js';
 import { getHomemakerDb } from '../lib/homemaker-db.js';
 
 const logger = createLogger('Server:Services');
@@ -297,6 +298,9 @@ export interface ServiceContainer {
 
   // Inventory tracking (household asset management, warranty reports, value aggregation)
   inventoryService: InventoryService;
+
+  // Maintenance schedule tracking (recurring household maintenance tasks, scheduler queries)
+  maintenanceService: MaintenanceService;
 
   // Drift detection interval (set by wireServices, cleared by shutdown)
   driftCheckInterval: ReturnType<typeof setInterval> | null;
@@ -722,6 +726,9 @@ export async function createServices(dataDir: string, repoRoot: string): Promise
   // Inventory Service — household asset tracking (CRUD, search, warranty reports, value aggregation)
   const inventoryService = new InventoryService(getHomemakerDb());
 
+  // Maintenance Service — recurring household maintenance schedule tracking
+  const maintenanceService = new MaintenanceService(getHomemakerDb());
+
   // Register Ava cron tasks (daily board health, PR triage, staging ping)
   void registerAvaCronTasks({ schedulerService, reactiveSpawnerService, projectPath: repoRoot });
 
@@ -923,6 +930,7 @@ export async function createServices(dataDir: string, repoRoot: string): Promise
     deviationRuleService,
     budgetService,
     inventoryService,
+    maintenanceService,
     driftCheckInterval: null,
   };
 }
