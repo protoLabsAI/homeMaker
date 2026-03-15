@@ -92,6 +92,7 @@ import { createBackfillLedgerProjectSlugHandler } from '../routes/ledger/routes/
 import { createHivemindRoutes } from '../routes/hivemind/index.js';
 import { createDoraRoutes } from '../routes/dora/index.js';
 import { createAgentRoutes } from '../routes/agents.js';
+import { createBudgetRoutes } from '../routes/budget/index.js';
 
 const logger = createLogger('Server:Routes');
 
@@ -441,6 +442,10 @@ export function registerRoutes(app: Express, services: ServiceContainer): void {
   // Agent manifest routes (list, get, match)
   app.use('/api/agents', createAgentRoutes(featureLoader));
   logger.info('Agent routes mounted at /api/agents');
+
+  // Budget tracking routes (household budget categories, transactions, summaries)
+  app.use('/api/budget', createBudgetRoutes(services.budgetService));
+  logger.info('Budget routes mounted at /api/budget');
 
   // Note: Sentry v8 automatically captures Express errors - no manual error handler needed
 }
