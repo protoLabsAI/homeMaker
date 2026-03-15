@@ -282,18 +282,40 @@ export class GamificationService {
     }
   }
 
-  /** Return all achievements with their earned status. */
+  /** Return all achievements with their earned status.
+   *
+   * Hidden achievements (secret category with hidden: true) are returned with
+   * title and description redacted until earned, so their existence is hinted
+   * at but their details remain a surprise.
+   */
   getAchievements(): AchievementWithStatus[] {
     const earned = this.getEarnedAchievements();
     const earnedMap = new Map(earned.map((a) => [a.id, a]));
 
     return ACHIEVEMENT_CATALOG.map((def) => {
       const earnedEntry = earnedMap.get(def.id);
+      const isHidden = def.hidden === true;
+      const isEarned = !!earnedEntry;
+
+      // Mask hidden achievements until earned
+      if (isHidden && !isEarned) {
+        return {
+          ...def,
+          title: '???',
+          description: 'This secret achievement is hidden until unlocked.',
+          earned: false,
+          unlockedAt: null,
+          seen: false,
+          hidden: true,
+        };
+      }
+
       return {
         ...def,
-        earned: !!earnedEntry,
+        earned: isEarned,
         unlockedAt: earnedEntry?.unlockedAt ?? null,
         seen: earnedEntry?.seen ?? false,
+        hidden: isHidden,
       };
     });
   }

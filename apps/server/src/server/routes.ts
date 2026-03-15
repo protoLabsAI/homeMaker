@@ -447,11 +447,11 @@ export function registerRoutes(app: Express, services: ServiceContainer): void {
   logger.info('Agent routes mounted at /api/agents');
 
   // Budget tracking routes (household budget categories, transactions, summaries)
-  app.use('/api/budget', createBudgetRoutes(services.budgetService));
+  app.use('/api/budget', createBudgetRoutes(services.budgetService, services.events));
   logger.info('Budget routes mounted at /api/budget');
 
   // Inventory tracking routes (household asset CRUD, search, warranty reports, value aggregation)
-  app.use('/api/inventory', createInventoryRoutes(services.inventoryService));
+  app.use('/api/inventory', createInventoryRoutes(services.inventoryService, services.events));
   logger.info('Inventory routes mounted at /api/inventory');
 
   // Maintenance scheduling routes (recurring home maintenance tasks and completion history)
