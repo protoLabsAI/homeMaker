@@ -111,6 +111,7 @@ import { CheckpointService } from '../services/checkpoint-service.js';
 import { DailyStandupService } from '../services/daily-standup-service.js';
 import { ProjectSlugResolver } from '../services/project-slug-resolver.js';
 import { DeviationRuleService } from '../services/deviation-rule-service.js';
+import { VaultService } from '../services/vault-service.js';
 import { BudgetService } from '../services/budget-service.js';
 import { InventoryService } from '../services/inventory-service.js';
 import { MaintenanceService } from '../services/maintenance-service.js';
@@ -294,6 +295,9 @@ export interface ServiceContainer {
 
   // Deviation rule evaluation (agent scope constraints)
   deviationRuleService: DeviationRuleService;
+
+  // Encrypted secrets vault (AES-256-GCM, SQLite-backed)
+  vaultService: VaultService;
 
   // Budget tracking (household budget categories, transactions, summaries)
   budgetService: BudgetService;
@@ -725,6 +729,10 @@ export async function createServices(dataDir: string, repoRoot: string): Promise
   // Deviation Rule Service — evaluates agent scope against per-feature constraints
   const deviationRuleService = new DeviationRuleService();
 
+  // Vault Service — encrypted secrets storage (AES-256-GCM, SQLite-backed)
+  // Throws at startup if HOMEMAKER_VAULT_KEY is missing or malformed.
+  const vaultService = new VaultService(dataDir);
+
   // Budget Service — household budget tracking (categories, transactions, summaries)
   const budgetService = new BudgetService(dataDir);
 
@@ -938,6 +946,7 @@ export async function createServices(dataDir: string, repoRoot: string): Promise
     checkpointService,
     projectSlugResolver,
     deviationRuleService,
+    vaultService,
     budgetService,
     inventoryService,
     maintenanceService,

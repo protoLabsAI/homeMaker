@@ -97,6 +97,7 @@ import { createBackfillLedgerProjectSlugHandler } from '../routes/ledger/routes/
 import { createHivemindRoutes } from '../routes/hivemind/index.js';
 import { createDoraRoutes } from '../routes/dora/index.js';
 import { createAgentRoutes } from '../routes/agents.js';
+import { createVaultRoutes } from '../routes/vault/index.js';
 import { createBudgetRoutes } from '../routes/budget/index.js';
 import { createInventoryRoutes } from '../routes/inventory/index.js';
 import { createMaintenanceRoutes } from '../routes/maintenance/index.js';
@@ -439,6 +440,10 @@ export function registerRoutes(app: Express, services: ServiceContainer): void {
   // Agent manifest routes (list, get, match)
   app.use('/api/agents', createAgentRoutes(featureLoader));
   logger.info('Agent routes mounted at /api/agents');
+
+  // Encrypted secrets vault routes (AES-256-GCM)
+  app.use('/api/vault', createVaultRoutes(services));
+  logger.info('Vault routes mounted at /api/vault');
 
   // Budget tracking routes (household budget categories, transactions, summaries)
   app.use('/api/budget', createBudgetRoutes(services.budgetService, services.events));
