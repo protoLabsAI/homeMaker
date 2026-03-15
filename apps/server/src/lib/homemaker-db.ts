@@ -27,22 +27,27 @@ function runMigrations(db: BetterSqlite3.Database): void {
     CREATE TABLE IF NOT EXISTS assets (
       id TEXT PRIMARY KEY,
       name TEXT NOT NULL,
-      category TEXT,
+      category TEXT NOT NULL,
       location TEXT,
       purchaseDate TEXT,
-      purchasePrice REAL,
+      purchasePrice INTEGER,
       warrantyExpiration TEXT,
       modelNumber TEXT,
       serialNumber TEXT,
       manufacturer TEXT,
       manualUrl TEXT,
-      replacementCost REAL,
+      replacementCost INTEGER,
       notes TEXT,
       sensorIds TEXT DEFAULT '[]',
       photoUrls TEXT DEFAULT '[]',
       createdAt TEXT NOT NULL,
       updatedAt TEXT NOT NULL
     );
+
+    CREATE INDEX IF NOT EXISTS idx_assets_name ON assets(name);
+    CREATE INDEX IF NOT EXISTS idx_assets_manufacturer ON assets(manufacturer);
+    CREATE INDEX IF NOT EXISTS idx_assets_category ON assets(category);
+    CREATE INDEX IF NOT EXISTS idx_assets_location ON assets(location);
 
     CREATE TABLE IF NOT EXISTS vendors (
       id TEXT PRIMARY KEY,
