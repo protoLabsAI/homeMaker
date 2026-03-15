@@ -91,6 +91,7 @@ import { createLeadEngineerRoutes } from '../routes/lead-engineer/index.js';
 import { createPrometheusRoute } from '../routes/metrics/prometheus.js';
 import { createAutomationsRoutes } from '../routes/automations/index.js';
 import { createSensorRoutes } from '../routes/sensors/index.js';
+import { createHARoutes } from '../routes/ha/index.js';
 import { createProjectPmRoutes } from '../routes/project-pm/index.js';
 import { createLedgerRoutes } from '../routes/ledger/index.js';
 import { createBackfillLedgerProjectSlugHandler } from '../routes/ledger/routes/backfill.js';
@@ -416,6 +417,10 @@ export function registerRoutes(app: Express, services: ServiceContainer): void {
   // Sensor registry routes (core sensor framework)
   app.use('/api/sensors', createSensorRoutes(sensorRegistryService));
   logger.info('Sensor routes mounted at /api/sensors');
+
+  // Home Assistant integration routes
+  app.use('/api/ha', createHARoutes(settingsService));
+  logger.info('Home Assistant routes mounted at /api/ha');
 
   // Project PM Agent routes
   app.use(
