@@ -104,6 +104,7 @@ import { createMaintenanceRoutes } from '../routes/maintenance/index.js';
 import { createVendorRoutes } from '../routes/vendors/index.js';
 import { createGamificationRoutes } from '../routes/gamification/index.js';
 import { createChatChannelRoutes } from '../routes/chat-channel/index.js';
+import { createHaRoutes } from '../routes/integrations/ha.js';
 
 const logger = createLogger('Server:Routes');
 
@@ -476,6 +477,10 @@ export function registerRoutes(app: Express, services: ServiceContainer): void {
   // Household chat channel routes (family chat with Ava AI)
   app.use('/api/chat-channel', createChatChannelRoutes(services.chatChannelService));
   logger.info('Chat channel routes mounted at /api/chat-channel');
+
+  // Home Assistant integration routes (WebSocket client status + entity list)
+  app.use('/api/integrations/ha', createHaRoutes(services.haClientService));
+  logger.info('Home Assistant routes mounted at /api/integrations/ha');
 
   // Note: Sentry v8 automatically captures Express errors - no manual error handler needed
 }

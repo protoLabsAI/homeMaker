@@ -1095,3 +1095,11 @@ export type {
   QuestStatus,
   XpAwardResult,
 } from './gamification.js';
+
+// Home Assistant integration types
+export type {
+  HaClientConfig,
+  HaConnectionStatus,
+  HaEntityState,
+  HaClientStatus,
+} from './ha-client.js';

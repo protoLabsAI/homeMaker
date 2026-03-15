@@ -125,6 +125,7 @@ import { AvaClassifier } from '../services/ava-classifier.js';
 import { AvaResponder } from '../services/ava-responder.js';
 import { AvaProactiveService } from '../services/ava-proactive.js';
 import { WeatherService } from '../services/weather-service.js';
+import { HAClientService } from '../services/ha-client-service.js';
 
 const logger = createLogger('Server:Services');
 
@@ -333,6 +334,9 @@ export interface ServiceContainer {
   // Weather context (current conditions + 5-day forecast via OpenWeatherMap)
   weatherService: WeatherService;
 
+  // Home Assistant WebSocket client (entity registration, state_changed events)
+  haClientService: HAClientService;
+
   // Drift detection interval (set by wireServices, cleared by shutdown)
   driftCheckInterval: ReturnType<typeof setInterval> | null;
 }
@@ -438,8 +442,11 @@ export async function createServices(dataDir: string, repoRoot: string): Promise
     settingsService,
     healthMonitorService
   );
+  // Shared homeMaker SQLite database (singleton — created once, reused by all homemaker services)
+  const homemakerDb = getHomemakerDb();
+
   // Sensor Registry (external sensor data ingestion)
-  const sensorRegistryService = new SensorRegistryService(events);
+  const sensorRegistryService = new SensorRegistryService(events, homemakerDb);
 
   // Context Aggregator (reads sensor readings → unified UserPresenceState)
   const contextAggregator = new ContextAggregator(sensorRegistryService);
@@ -759,7 +766,6 @@ export async function createServices(dataDir: string, repoRoot: string): Promise
   const budgetService = new BudgetService(dataDir);
 
   // Inventory Service — household asset tracking (CRUD, search, warranty reports, value aggregation)
-  const homemakerDb = getHomemakerDb();
   const inventoryService = new InventoryService(homemakerDb);
 
   // Maintenance Service — recurring home maintenance scheduling and completion tracking
@@ -800,6 +806,9 @@ export async function createServices(dataDir: string, repoRoot: string): Promise
 
   // Weather Service — fetches current conditions and 5-day forecast from OpenWeatherMap
   const weatherService = new WeatherService(sensorRegistryService);
+
+  // Home Assistant Client — WebSocket integration for entity state sync
+  const haClientService = new HAClientService(sensorRegistryService, events);
 
   // Register Ava cron tasks (daily board health, PR triage, staging ping)
   void registerAvaCronTasks({ schedulerService, reactiveSpawnerService, projectPath: repoRoot });
@@ -1010,6 +1019,7 @@ export async function createServices(dataDir: string, repoRoot: string): Promise
     chatChannelService,
     avaProactiveService,
     weatherService,
+    haClientService,
     driftCheckInterval: null,
   };
 }

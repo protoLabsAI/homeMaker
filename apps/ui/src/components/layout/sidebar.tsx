@@ -333,7 +333,7 @@ export function Sidebar() {
               <QuickActionsBar
                 onBugReport={() =>
                   getElectronAPI().openExternalLink(
-                    'https://github.com/protoLabsAI/protoMaker/issues'
+                    'https://github.com/homeMakerAI/homeMaker/issues'
                   )
                 }
                 onDocs={() => getElectronAPI().openExternalLink('https://docs.protolabs.studio')}
