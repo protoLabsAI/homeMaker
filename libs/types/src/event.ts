@@ -315,6 +315,7 @@ export type EventType =
   | 'sensor:registered'
   | 'sensor:data-received'
   | 'sensor:history-cleanup'
+  | 'sensor:command-queued'
   // Inventory mutation events (trigger gamification checks)
   | 'inventory:asset-created'
   | 'inventory:asset-updated'
@@ -858,6 +859,12 @@ export interface EventPayloadMap {
     receivedAt: string;
   };
   'sensor:history-cleanup': { deleted: number; timestamp: string };
+  'sensor:command-queued': {
+    commandId: string;
+    sensorId: string;
+    action: string;
+    queuedAt: string;
+  };
 
   // Subagent tool approval events (gated trust model)
   'subagent:tool-approval-request': {

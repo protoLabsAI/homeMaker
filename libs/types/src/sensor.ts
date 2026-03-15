@@ -71,6 +71,26 @@ export interface SensorHistoryAggregatedOptions {
   endDate?: string;
 }
 
+/** Valid actions that can be pushed to an IoT device */
+export type SensorCommandAction = 'set' | 'toggle' | 'reboot';
+
+/**
+ * A command queued for delivery to an IoT device.
+ * Devices retrieve pending commands by polling GET /api/sensors/:id/commands.
+ */
+export interface SensorCommand {
+  /** Unique command identifier */
+  id: string;
+  /** Target sensor that should execute this command */
+  sensorId: SensorId;
+  /** Action the device should perform */
+  action: SensorCommandAction;
+  /** Optional action-specific parameters */
+  payload?: Record<string, unknown>;
+  /** ISO-8601 timestamp when the command was queued */
+  queuedAt: string;
+}
+
 /** A single aggregated data point for a time period */
 export interface AggregatedSensorReading {
   /** Start of the aggregation period (ISO-8601) */

@@ -6,9 +6,13 @@
  * with reduced opacity to visually distinguish them from active ones.
  */
 
+import { useState } from 'react';
 import { cn } from '@/lib/utils';
+import { Button } from '@protolabsai/ui/atoms';
+import { Terminal } from 'lucide-react';
 import type { SensorState } from '@protolabsai/types';
 import type { SensorEntry } from './hooks/use-sensors';
+import { SendCommandDialog } from './send-command-dialog';
 
 // ============================================================================
 // State Badge
@@ -96,6 +100,7 @@ interface SensorCardProps {
 export function SensorCard({ entry }: SensorCardProps) {
   const { sensor, reading, state } = entry;
   const isOffline = state === 'offline';
+  const [commandDialogOpen, setCommandDialogOpen] = useState(false);
 
   return (
     <div
@@ -120,6 +125,26 @@ export function SensorCard({ entry }: SensorCardProps) {
 
       {/* Data payload key-value pairs */}
       {reading && <DataPayload data={reading.data} />}
+
+      {/* Send Command button */}
+      <div className="mt-3 pt-3 border-t border-border">
+        <Button
+          variant="outline"
+          size="sm"
+          className="w-full gap-1.5"
+          onClick={() => setCommandDialogOpen(true)}
+        >
+          <Terminal className="h-3.5 w-3.5" />
+          Send Command
+        </Button>
+      </div>
+
+      <SendCommandDialog
+        sensorId={sensor.id}
+        sensorName={sensor.name}
+        open={commandDialogOpen}
+        onOpenChange={setCommandDialogOpen}
+      />
     </div>
   );
 }

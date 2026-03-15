@@ -16,6 +16,7 @@
 
 import * as BetterSqlite3 from 'better-sqlite3';
 import { createLogger } from '@protolabsai/utils';
+import crypto from 'node:crypto';
 import type {
   SensorConfig,
   SensorReading,
@@ -23,6 +24,8 @@ import type {
   SensorHistoryOptions,
   SensorHistoryAggregatedOptions,
   AggregatedSensorReading,
+  SensorCommand,
+  SensorCommandAction,
 } from '@protolabsai/types';
 import type { EventEmitter } from '../lib/events.js';
 
@@ -59,6 +62,7 @@ interface AggregatedRow {
 export class SensorRegistryService {
   private sensors = new Map<string, SensorConfig>();
   private readings = new Map<string, SensorReading>();
+  private commandQueue = new Map<string, SensorCommand[]>();
   private events?: EventEmitter;
   private db?: BetterSqlite3.Database;
 
@@ -437,5 +441,66 @@ export class SensorRegistryService {
     }
 
     return { deleted };
+  }
+
+  /**
+   * Queue a command for delivery to an IoT device.
+   * The sensor must already be registered.
+   */
+  queueCommand(
+    sensorId: string,
+    commandData: { action: SensorCommandAction; payload?: Record<string, unknown> }
+  ): { success: boolean; command?: SensorCommand; error?: string } {
+    const sensor = this.sensors.get(sensorId);
+    if (!sensor) {
+      return {
+        success: false,
+        error: `Sensor "${sensorId}" is not registered`,
+      };
+    }
+
+    const command: SensorCommand = {
+      id: crypto.randomUUID(),
+      sensorId,
+      action: commandData.action,
+      payload: commandData.payload,
+      queuedAt: new Date().toISOString(),
+    };
+
+    const queue = this.commandQueue.get(sensorId) ?? [];
+    queue.push(command);
+    this.commandQueue.set(sensorId, queue);
+
+    logger.info(`Command queued for sensor "${sensorId}": ${command.action} (${command.id})`);
+
+    this.events?.emit('sensor:command-queued', {
+      commandId: command.id,
+      sensorId,
+      action: command.action,
+      queuedAt: command.queuedAt,
+    });
+
+    return { success: true, command };
+  }
+
+  /**
+   * Retrieve and clear all pending commands for a sensor.
+   * IoT devices call this endpoint to poll for work.
+   */
+  pollCommands(sensorId: string): { success: boolean; commands?: SensorCommand[]; error?: string } {
+    const sensor = this.sensors.get(sensorId);
+    if (!sensor) {
+      return {
+        success: false,
+        error: `Sensor "${sensorId}" is not registered`,
+      };
+    }
+
+    const commands = this.commandQueue.get(sensorId) ?? [];
+    this.commandQueue.set(sensorId, []);
+
+    logger.debug(`Polled ${commands.length} command(s) for sensor "${sensorId}"`);
+
+    return { success: true, commands };
   }
 }

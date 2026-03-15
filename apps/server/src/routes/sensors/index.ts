@@ -1,15 +1,21 @@
 /**
  * Sensor Registry API Routes
  *
- * - POST /api/sensors/register — Register a new sensor (or re-register an existing one)
- * - POST /api/sensors/report   — Report a sensor reading (requires API key auth)
- * - GET  /api/sensors          — List all registered sensors
- * - GET  /api/sensors/:id      — Get a single sensor by id
+ * - POST /api/sensors/register     — Register a new sensor (or re-register an existing one)
+ * - POST /api/sensors/report       — Report a sensor reading (requires API key auth)
+ * - GET  /api/sensors              — List all registered sensors
+ * - GET  /api/sensors/:id          — Get a single sensor by id
+ * - POST /api/sensors/:id/command  — Queue a command for delivery to an IoT device
+ * - GET  /api/sensors/:id/commands — Poll and clear pending commands for a device
  */
 
 import { Router } from 'express';
 import { createLogger } from '@protolabsai/utils';
+import type { SensorCommandAction } from '@protolabsai/types';
 import type { SensorRegistryService } from '../../services/sensor-registry-service.js';
+
+/** Allowed command actions for input validation */
+const VALID_COMMAND_ACTIONS: SensorCommandAction[] = ['set', 'toggle', 'reboot'];
 
 const logger = createLogger('SensorRoutes');
 
@@ -204,6 +210,88 @@ export function createSensorRoutes(sensorRegistryService: SensorRegistryService)
       res.status(500).json({
         success: false,
         error: 'Failed to get aggregated sensor history',
+        message: error instanceof Error ? error.message : String(error),
+      });
+    }
+  });
+
+  /**
+   * POST /api/sensors/:id/command
+   * Queue a command for delivery to an IoT device.
+   * Body: { action: 'set' | 'toggle' | 'reboot'; payload?: Record<string, unknown> }
+   */
+  router.post('/:id/command', (req, res) => {
+    try {
+      const { id } = req.params;
+      const { action, payload } = req.body as {
+        action?: string;
+        payload?: unknown;
+      };
+
+      if (
+        !action ||
+        typeof action !== 'string' ||
+        !VALID_COMMAND_ACTIONS.includes(action as SensorCommandAction)
+      ) {
+        res.status(400).json({
+          success: false,
+          error: `action is required and must be one of: ${VALID_COMMAND_ACTIONS.join(', ')}`,
+        });
+        return;
+      }
+
+      if (
+        payload !== undefined &&
+        (typeof payload !== 'object' || payload === null || Array.isArray(payload))
+      ) {
+        res.status(400).json({
+          success: false,
+          error: 'payload must be a non-array object when provided',
+        });
+        return;
+      }
+
+      const result = sensorRegistryService.queueCommand(id, {
+        action: action as SensorCommandAction,
+        payload: payload as Record<string, unknown> | undefined,
+      });
+
+      if (!result.success) {
+        res.status(404).json({ success: false, error: result.error });
+        return;
+      }
+
+      res.status(201).json({ success: true, commandId: result.command!.id });
+    } catch (error) {
+      logger.error('Failed to queue sensor command:', error);
+      res.status(500).json({
+        success: false,
+        error: 'Failed to queue sensor command',
+        message: error instanceof Error ? error.message : String(error),
+      });
+    }
+  });
+
+  /**
+   * GET /api/sensors/:id/commands
+   * IoT devices poll this to retrieve pending commands. The queue is cleared after retrieval.
+   */
+  router.get('/:id/commands', (req, res) => {
+    try {
+      const { id } = req.params;
+      const result = sensorRegistryService.pollCommands(id);
+
+      if (!result.success) {
+        res.status(404).json({ success: false, error: result.error });
+        return;
+      }
+
+      res.json({ success: true, commands: result.commands, total: result.commands!.length });
+    } catch (error) {
+      logger.error('Failed to poll sensor commands:', error);
+      res.status(500).json({
+        success: false,
+        error: 'Failed to poll sensor commands',
         message: error instanceof Error ? error.message : String(error),
       });
     }
