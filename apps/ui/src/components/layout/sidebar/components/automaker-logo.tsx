@@ -29,7 +29,7 @@ export function AutomakerLogo({ sidebarOpen, navigate }: AutomakerLogoProps) {
           xmlns="http://www.w3.org/2000/svg"
           viewBox="0 0 256 256"
           role="img"
-          aria-label="protoLabs Logo"
+          aria-label="homeMaker Logo"
           className="size-8 text-brand-500 group-hover:rotate-12 transition-transform duration-300 ease-out"
         >
           <rect x="16" y="16" width="224" height="224" rx="56" fill="currentColor" />
@@ -59,7 +59,7 @@ export function AutomakerLogo({ sidebarOpen, navigate }: AutomakerLogoProps) {
               xmlns="http://www.w3.org/2000/svg"
               viewBox="0 0 256 256"
               role="img"
-              aria-label="protoLabs"
+              aria-label="homeMaker"
               className="h-8 w-8 lg:h-[36.8px] lg:w-[36.8px] shrink-0 text-brand-500 group-hover:rotate-12 transition-transform duration-300 ease-out"
             >
               <rect x="16" y="16" width="224" height="224" rx="56" fill="currentColor" />
@@ -80,7 +80,7 @@ export function AutomakerLogo({ sidebarOpen, navigate }: AutomakerLogoProps) {
               </g>
             </svg>
             <span className="font-bold text-foreground text-xl lg:text-[1.7rem] tracking-tight leading-none translate-y-[-2px]">
-              proto<span className="text-brand-400">Labs</span>
+              home<span className="text-brand-400">Maker</span>
             </span>
           </div>
           <div className="flex items-center gap-1.5 ml-9 lg:ml-[38.8px]">
