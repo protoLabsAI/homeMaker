@@ -1052,3 +1052,18 @@ export type {
   PenNode,
   PenDocument,
 } from './pen.js';
+
+// Gamification types (XP, levels, achievements, streaks, quests, home health scoring)
+export type {
+  EarnedAchievement,
+  StreakState,
+  MonthlyStreakState,
+  HomeHealthScore,
+  GamificationProfile,
+  AchievementCategory,
+  AchievementDefinition,
+  AchievementWithStatus,
+  XpEvent,
+  Quest,
+  XpAwardResult,
+} from './gamification.js';

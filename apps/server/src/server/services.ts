@@ -114,6 +114,8 @@ import { DeviationRuleService } from '../services/deviation-rule-service.js';
 import { BudgetService } from '../services/budget-service.js';
 import { InventoryService } from '../services/inventory-service.js';
 import { MaintenanceService } from '../services/maintenance-service.js';
+import { GamificationService } from '../services/gamification-service.js';
+import { registerXpEventListeners } from '../listeners/xp-event-listeners.js';
 import { getHomemakerDb } from '../lib/homemaker-db.js';
 
 const logger = createLogger('Server:Services');
@@ -301,6 +303,9 @@ export interface ServiceContainer {
 
   // Maintenance scheduling (recurring home maintenance tasks and completion history)
   maintenanceService: MaintenanceService;
+
+  // Gamification engine (XP, levels, achievements, streaks, home health scoring)
+  gamificationService: GamificationService;
 
   // Drift detection interval (set by wireServices, cleared by shutdown)
   driftCheckInterval: ReturnType<typeof setInterval> | null;
@@ -730,6 +735,10 @@ export async function createServices(dataDir: string, repoRoot: string): Promise
   // Maintenance Service — recurring home maintenance scheduling and completion tracking
   const maintenanceService = new MaintenanceService(homemakerDb);
 
+  // Gamification Service — XP, levels, achievements, streaks, home health scoring
+  const gamificationService = new GamificationService(homemakerDb, events);
+  registerXpEventListeners(events, gamificationService);
+
   // Register Ava cron tasks (daily board health, PR triage, staging ping)
   void registerAvaCronTasks({ schedulerService, reactiveSpawnerService, projectPath: repoRoot });
 
@@ -932,6 +941,7 @@ export async function createServices(dataDir: string, repoRoot: string): Promise
     budgetService,
     inventoryService,
     maintenanceService,
+    gamificationService,
     driftCheckInterval: null,
   };
 }

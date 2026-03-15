@@ -78,6 +78,8 @@ export type EventType =
   | 'scheduler:task_completed'
   | 'scheduler:task-failed'
   | 'maintenance'
+  | 'maintenance:tick'
+  | 'maintenance:overdue'
   | 'recovery_analysis'
   | 'recovery_started'
   | 'recovery_completed'
@@ -348,7 +350,13 @@ export type EventType =
   // Categories sync events (lightweight LWW config sync via CRDT bridge)
   | 'categories:updated'
   // Research agent events (deep research pipeline)
-  | 'project:research:completed';
+  | 'project:research:completed'
+  // Gamification events (XP, levels, achievements, streaks, home health score)
+  | 'gamification:xp-gained'
+  | 'gamification:level-up'
+  | 'gamification:achievement-unlocked'
+  | 'gamification:streak-updated'
+  | 'gamification:health-score-changed';
 
 export type EventCallback = (type: EventType, payload: unknown) => void;
 
