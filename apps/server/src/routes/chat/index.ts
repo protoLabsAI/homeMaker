@@ -467,6 +467,9 @@ export function createChatRoutes(services: ServiceContainer): Router {
               discordBotService: services.discordBotService,
               calendarService: services.calendarService,
               healthMonitorService: services.healthMonitorService,
+              inventoryService: services.inventoryService,
+              vendorService: services.vendorService,
+              maintenanceService: services.maintenanceService,
             },
             {
               ...avaConfig.toolGroups,
