@@ -1,182 +1,141 @@
 <p align="center">
-  <img src="apps/ui/public/readme_logo.svg" alt="protoLabs Studio" height="80" />
+  <strong>homeMaker</strong>
 </p>
 
 <p align="center">
-  <strong>Your team of AI agents. Your codebase. Fully autonomous.</strong><br/>
-  Describe what you want built. Named agents implement it, create PRs, and ship — while you hold the merge button.
+  <strong>Your home, managed by AI.</strong><br/>
+  Track house projects, budgets, schedules, IoT sensors, and secrets — with AI agents that research, plan, and organize for you.
 </p>
 
 <p align="center">
-  <a href="https://github.com/protoLabsAI/protoMaker/actions/workflows/test.yml"><img src="https://github.com/protoLabsAI/protoMaker/actions/workflows/test.yml/badge.svg" alt="Build Status" /></a>
+  <a href="https://github.com/protoLabsAI/homeMaker/actions/workflows/checks.yml"><img src="https://github.com/protoLabsAI/homeMaker/actions/workflows/checks.yml/badge.svg" alt="Build Status" /></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-blue.svg" alt="MIT License" /></a>
-  <a href="https://discord.gg/3KtfEthCpk"><img src="https://img.shields.io/badge/Discord-Join-5865F2?logo=discord&logoColor=white" alt="Discord" /></a>
   <a href="https://nodejs.org/"><img src="https://img.shields.io/badge/node-%3E%3D22.0.0-brightgreen" alt="Node Version" /></a>
-  <a href="https://protolabs.studio"><img src="https://img.shields.io/badge/docs-protolabs.studio-blue" alt="Docs" /></a>
 </p>
 
-> **Alpha Software** --- protoLabs Studio is under active development. APIs change, rough edges exist. If you want to shape the future of autonomous development, you're in the right place.
+> **Alpha Software** --- homeMaker is under active development. Built on the protoLabs Studio platform, adapted for domestic use.
 
 ---
 
 ## The Idea
 
-Most AI coding tools give you a single agent in a single file. protoLabs gives you a **team**.
+Your household generates a constant stream of projects, purchases, maintenance schedules, and decisions. homeMaker gives you a single self-hosted interface to manage all of it — with AI agents that do the legwork.
 
-Specialized agents — frontend, backend, infrastructure, DevOps — each with domain expertise, memory, and their own isolated workspace. They read your codebase, follow your coding standards, and produce real PRs against real branches.
+Add a task to the board: "Research best smart thermostat for 2000 sq ft house." An AI agent picks it up, searches for options, compares features and prices, and delivers a summary with recommendations. You review and decide.
 
-You describe features on a Kanban board. Agents pick them up, implement them in isolated git worktrees, run verification, and create pull requests. CodeRabbit reviews the code. CI runs the tests. You merge when ready.
+The same system handles renovation planning (break a kitchen remodel into phased tasks with dependencies), recurring maintenance tracking (HVAC filters, gutter cleaning, lawn care), budget management, IoT sensor monitoring, and encrypted secrets storage.
 
-No copy-pasting prompts. No babysitting context windows. You set the rules once in context files, and every agent follows them every time.
+## Features
 
-![protoLabs UI](https://i.imgur.com/tsj0Bjw.png)
+### AI-Powered Task Management
+
+A Kanban board where AI agents pick up tasks and execute them autonomously. Unlike coding tools, homeMaker agents default to **research-and-report** mode — they gather information, summarize findings, and make recommendations.
+
+### IoT Sensor Dashboard
+
+Register smart home devices via REST API. Sensors report readings, the system tracks online/stale/offline status with TTL-based detection, and a context aggregator determines household presence (active, idle, away, headless).
+
+### Budget Tracking
+
+Track household income, expenses, and bills by category. Monthly summaries, category breakdowns, and budget targets — all stored locally in SQLite.
+
+### Secrets Vault
+
+Encrypted local storage for passwords, API keys, WiFi credentials, and home codes. AES-256-GCM encryption at rest. Values never exposed unless explicitly revealed.
+
+### Calendar and Scheduling
+
+Full event management with creation, editing, and detail views. Schedule home maintenance, family events, and project deadlines.
+
+### Notes and Todo Lists
+
+Household notes with tabs, and task lists for quick items that don't need the full board treatment.
 
 ## Get Started
 
-_Desktop releases coming soon. Run from source to try now._
-
-### Run from Source
-
 ```bash
-git clone https://github.com/protoLabsAI/protoMaker.git
-cd protoMaker
+git clone https://github.com/protoLabsAI/homeMaker.git
+cd homeMaker
 npm install
-npm run dev                 # Interactive launcher (choose web or electron)
 npm run dev:full            # Web mode — starts UI (localhost:3007) AND server (localhost:3008)
-npm run dev:electron        # Desktop app mode (bundles server automatically)
 ```
 
 Requires **Node.js 22+** and an [Anthropic API key](https://console.anthropic.com/).
 
-## What Makes It Different
+### Tailscale Deployment (Recommended)
 
-### Named Agent Teams
+homeMaker is designed to run on your home network behind Tailscale. No public internet exposure, no login screens — Tailscale handles access control at the network layer.
 
-Not "Agent 1" and "Agent 2" --- real personas with domain expertise. Matt handles React, Tailwind, and component architecture. Kai builds Express routes, services, and API design. Frank manages Docker, CI, and infrastructure. Each agent accumulates memory from prior work, getting better at your codebase over time.
+```bash
+# Set required environment variables
+export HOMEMAKER_VAULT_KEY=$(openssl rand -hex 32)  # For secrets vault encryption
+export ANTHROPIC_API_KEY=your-key-here
 
-### Worktree Isolation
-
-Every feature runs in its own git worktree. Three agents working simultaneously on different features --- zero conflicts. Each produces a clean, reviewable PR from an isolated branch. Main stays untouched until you merge.
-
-### Context Files = Your Rules
-
-Drop coding standards, architectural patterns, and project conventions into `.automaker/context/`. Every agent loads them before writing a single line. Your team, your rules --- enforced automatically across every agent session.
-
-### Auto-Mode
-
-Queue features with dependencies. Auto-mode resolves execution order and runs agents in parallel where possible. A 10-feature project with a dependency chain (DB schema -> API routes -> frontend) executes in the right order, maximizing throughput.
-
-### Real-Time Streaming
-
-Watch agents think and code in real time. Send instructions mid-flight --- "also add TypeScript types" or "use Tailwind instead" --- and agents adjust without starting over.
-
-### Full Project Orchestration
-
-For larger work: describe an idea, get a SPARC PRD, break it into milestones with sized phases, generate board features with dependencies, and launch. Research -> plan -> execute -> review -> merge -> done.
-
-### Claude Code Plugin
-
-159 MCP tools for full control from your terminal. Manage boards, start agents, set dependencies, review output --- without leaving Claude Code.
-
+# Run with Docker
+docker compose -f docker-compose.homemaker.yml up -d
 ```
-/board              View and manage your Kanban board
-/auto-mode          Start/stop autonomous feature processing
-/orchestrate        Manage feature dependencies
-/plan-project       Full project lifecycle pipeline
-/ava                Autonomous operator mode
-```
+
+Access from any Tailscale device at `http://homemaker:3007`.
 
 ## How It Works
 
 ```
-You describe a feature --> Agent claims it --> Works in isolated worktree --> Creates PR --> You review & merge
+You describe a task --> AI agent picks it up --> Researches/plans/organizes --> Reports back --> You review
 ```
 
-1. Add a feature to the board with a natural language description
-2. Auto-mode assigns the right agent based on domain and complexity
-3. Agent works in a git worktree --- reads codebase, implements, runs verification
-4. PR created with full diff, agent output, and CI checks
-5. CodeRabbit reviews. CI passes. You merge. Feature moves to done.
-
-For complex projects, protoLabs runs a full pipeline: idea -> codebase research -> SPARC PRD -> human review -> milestones -> parallel agent execution -> PR review -> ship.
-
-## Trust Architecture
-
-Autonomous agents writing code sounds risky. It is --- if you skip the discipline.
-
-protoLabs works because the guardrails are non-negotiable:
-
-- **Context files define the rules.** Your coding standards, architectural decisions, and conventions are injected into every agent session. Agents follow your rules because you wrote them.
-- **CodeRabbit reviews every PR.** Automated code review catches style violations, security issues, and logic errors before any human sees the diff.
-- **CI runs on every push.** TypeScript, linting, formatting, tests --- nothing merges without passing.
-- **You hold the merge button.** Agents create PRs. They do not push to production. Every change goes through your normal review process.
-- **Model tiering matches cost to complexity.** Haiku for formatting fixes. Sonnet for standard features. Opus for architecture. Auto-escalation after failures.
-
-Trust is earned, not assumed. You control the context files agents read, the review gates they pass through, and the branches they can touch.
+1. Add a task to the board with a natural language description
+2. Auto-mode assigns an AI agent based on task complexity
+3. Agent researches, compares, plans, or organizes — whatever the task requires
+4. Results delivered as a summary you can review and act on
+5. For code tasks (building new features for homeMaker itself), agents work the same way as protoLabs Studio
 
 ## Architecture
 
-TypeScript monorepo with a React frontend, Express backend, and 15 shared packages:
+TypeScript monorepo with a React frontend, Express backend, and shared packages:
 
 ```
-protolabs-studio/
+homeMaker/
 ├── apps/
-│   ├── ui/              # React + Vite + Electron (port 3007)
+│   ├── ui/              # React + Vite frontend (port 3007)
 │   └── server/          # Express + WebSocket backend (port 3008)
-├── libs/                # 15 shared packages (@protolabsai/*)
-│   ├── types/           # Core TypeScript definitions
-│   ├── utils/           # Logging, errors, context loading
-│   ├── git-utils/       # Git operations & worktree management
-│   ├── observability/   # Langfuse tracing & cost tracking
-│   ├── tools/           # Unified tool definition & registry
-│   ├── flows/           # LangGraph state graph primitives
-│   ├── prompts/         # AI prompt templates
-│   └── ...              # platform, model-resolver, dependency-resolver, etc.
-├── packages/
-│   └── mcp-server/      # Claude Code plugin (159 MCP tools)
-└── site/                # Landing page (protolabs.studio)
+└── libs/                # Shared packages
+    ├── types/           # Core TypeScript definitions
+    ├── utils/           # Logging, errors, context loading
+    ├── ui/              # Shared UI components (atoms, molecules, theme)
+    ├── prompts/         # AI prompt templates
+    ├── platform/        # Path management, security
+    ├── git-utils/       # Git operations
+    ├── flows/           # LangGraph state graph primitives
+    ├── tools/           # Tool definition and registry
+    └── ...              # model-resolver, dependency-resolver, observability
 ```
 
-**Key Stack**: React 19, Vite 7, Electron 39, Express 5, Claude Agent SDK, TanStack Router, Zustand 5, Tailwind CSS 4, Langfuse, Playwright, Vitest
+**Key Stack**: React 19, Vite 7, Express 5, Claude Agent SDK, TanStack Router, Zustand 5, Tailwind CSS 4, SQLite, Vitest, Playwright
 
-## Documentation
+## Environment Variables
 
-Full docs at **[protolabs.studio](https://protolabs.studio)**:
-
-- **[Getting Started](docs/getting-started/)** --- Installation, configuration, first feature
-- **[Agent System](docs/agents/)** --- How agents work, teams, prompt engineering
-- **[Self-Hosting](docs/infra/)** --- Docker, systemd, staging deployment
-- **[Integrations](docs/integrations/)** --- Discord, Claude Code plugin, MCP tools
-- **[Development](docs/dev/)** --- Contributing, architecture, shared packages
-
-## Community
-
-Join builders exploring agentic coding and autonomous development:
-
-**[Discord](https://discord.gg/3KtfEthCpk)** · **[protolabs.studio](https://protolabs.studio)** · **[GitHub](https://github.com/protoLabsAI)** · **[Code of Conduct](CODE_OF_CONDUCT.md)**
-
-## Contributing
-
-protoLabs uses an **ideas-only contribution model** --- AI agents implement all code.
-
-- **Submit an idea**: [Idea Submission](https://github.com/protoLabsAI/protoMaker/issues/new?template=idea_submission.yml)
-- **Report a bug**: [Bug Report](https://github.com/protoLabsAI/protoMaker/issues/new?template=bug_report.yml)
-- **Join the discussion**: [Discord](https://discord.gg/3KtfEthCpk)
-
-[Contributing Guidelines](CONTRIBUTING.md)
+| Variable | Required | Description |
+|----------|----------|-------------|
+| `ANTHROPIC_API_KEY` | Yes | Anthropic API key for AI agents |
+| `HOMEMAKER_VAULT_KEY` | For vault | 64-char hex key for secrets encryption |
+| `AUTOMAKER_API_KEY` | Optional | API key for server authentication |
+| `PORT` | No | Server port (default: 3008) |
+| `HOST` | No | Host to bind to (default: 0.0.0.0) |
+| `DATA_DIR` | No | Data storage directory (default: ./data) |
 
 ## Security
 
-This software uses AI agents that access your file system and execute commands. We recommend running in Docker or a VM for isolation. See the [full disclaimer](docs/disclaimer.md).
+homeMaker is designed for **self-hosted, Tailscale-only deployment**. It is NOT designed to be exposed to the public internet.
+
+- Secrets are encrypted with AES-256-GCM at rest
+- Tailscale provides network-level access control
+- API key authentication as a second factor
+- Rate limiting on sensitive endpoints
+
+See [SECURITY.md](SECURITY.md) for vulnerability reporting.
 
 ## License
 
 MIT --- see [LICENSE](LICENSE).
 
-Originally forked from [Automaker](https://github.com/AutoMaker-Org/automaker) (MIT). We are the actively maintained successor.
-
----
-
-<p align="center">
-  Built by <a href="https://protolabs.studio">protoLabs</a> --- an AI-native development agency.
-</p>
+Built on [protoLabs Studio](https://github.com/protoLabsAI/protoMaker) (MIT).
