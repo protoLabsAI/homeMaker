@@ -1,0 +1,443 @@
+/**
+ * GamificationService — core gamification engine for homeMaker.
+ *
+ * Persists all state to the shared homemaker.db:
+ *   - gamification_profile  (single row, JSON fields for streaks + health score)
+ *   - earned_achievements   (id, unlockedAt, seen)
+ *   - xp_history            (append-only XP ledger)
+ *   - active_quests         (short-term goals)
+ *
+ * Public API:
+ *   getProfile()               → full GamificationProfile
+ *   awardXp(source, amount)    → XpAwardResult + emits events
+ *   checkAchievements()        → evaluates catalog, unlocks new ones
+ *   updateStreaks(type, done)   → maintenance or budget streak
+ *   calculateHomeHealthScore() → computes 4-pillar score
+ *   getAchievements()          → catalog with earned status
+ *   markAchievementSeen(id)    → dismiss "new" badge
+ *   getQuests()                → active quest list
+ */
+
+import { randomUUID } from 'node:crypto';
+import * as BetterSqlite3 from 'better-sqlite3';
+import { createLogger } from '@protolabsai/utils';
+import type {
+  GamificationProfile,
+  EarnedAchievement,
+  AchievementWithStatus,
+  Quest,
+  XpAwardResult,
+  StreakState,
+  MonthlyStreakState,
+  HomeHealthScore,
+} from '@protolabsai/types';
+import type { EventEmitter } from '../lib/events.js';
+import { calculateLevel } from '../utils/level-calculator.js';
+import { calculateHomeHealthScore } from '../utils/health-score-calculator.js';
+import { evaluateAchievements } from './achievement-evaluator.js';
+import { ACHIEVEMENT_CATALOG } from './achievement-catalog.js';
+
+const logger = createLogger('GamificationService');
+
+/** Shape of the gamification_profile row */
+interface ProfileRow {
+  id: number;
+  xp: number;
+  level: number;
+  streaks: string;
+  homeHealthScore: string;
+  updatedAt: string;
+}
+
+/** Shape of an earned_achievements row */
+interface EarnedRow {
+  id: string;
+  unlockedAt: string;
+  seen: number;
+}
+
+/** Shape of an active_quests row */
+interface QuestRow {
+  id: string;
+  title: string;
+  description: string;
+  xpReward: number;
+  progress: number;
+  target: number;
+  category: string;
+  expiresAt: string | null;
+  generatedBy: string;
+  createdAt: string;
+}
+
+const DEFAULT_STREAKS = {
+  maintenance: { current: 0, best: 0, lastCompletedAt: null } satisfies StreakState,
+  budget: { current: 0, best: 0, lastMonth: null } satisfies MonthlyStreakState,
+};
+
+const DEFAULT_HEALTH_SCORE: HomeHealthScore = {
+  total: 0,
+  maintenance: 0,
+  inventory: 0,
+  budget: 0,
+  systems: 0,
+  calculatedAt: new Date(0).toISOString(),
+};
+
+export class GamificationService {
+  private db: BetterSqlite3.Database;
+  private events?: EventEmitter;
+
+  constructor(db: BetterSqlite3.Database, events?: EventEmitter) {
+    this.db = db;
+    this.events = events;
+    this.ensureProfileRow();
+  }
+
+  /**
+   * Ensure the single profile row exists (id=1).
+   */
+  private ensureProfileRow(): void {
+    const existing = this.db.prepare('SELECT id FROM gamification_profile WHERE id = 1').get();
+    if (!existing) {
+      this.db
+        .prepare(
+          `INSERT INTO gamification_profile (id, xp, level, streaks, homeHealthScore, updatedAt)
+           VALUES (1, 0, 1, ?, ?, ?)`
+        )
+        .run(
+          JSON.stringify(DEFAULT_STREAKS),
+          JSON.stringify(DEFAULT_HEALTH_SCORE),
+          new Date().toISOString()
+        );
+    }
+  }
+
+  // ── Profile ─────────────────────────────────────────────────────────────
+
+  /** Return the full gamification profile for the household. */
+  getProfile(): GamificationProfile {
+    const row = this.db
+      .prepare('SELECT * FROM gamification_profile WHERE id = 1')
+      .get() as ProfileRow;
+
+    const levelInfo = calculateLevel(row.xp);
+    const streaks = JSON.parse(row.streaks) as {
+      maintenance: StreakState;
+      budget: MonthlyStreakState;
+    };
+    const homeHealthScore = JSON.parse(row.homeHealthScore) as HomeHealthScore;
+    const achievements = this.getEarnedAchievements();
+
+    return {
+      xp: row.xp,
+      level: levelInfo.level,
+      levelTitle: levelInfo.title,
+      xpToNextLevel: levelInfo.xpToNextLevel,
+      achievements,
+      streaks,
+      homeHealthScore,
+    };
+  }
+
+  private getEarnedAchievements(): EarnedAchievement[] {
+    const rows = this.db
+      .prepare('SELECT id, unlockedAt, seen FROM earned_achievements')
+      .all() as EarnedRow[];
+    return rows.map((r) => ({ id: r.id, unlockedAt: r.unlockedAt, seen: r.seen === 1 }));
+  }
+
+  // ── XP ───────────────────────────────────────────────────────────────────
+
+  /**
+   * Award XP to the profile from the given source.
+   * Multiplier is rounded down before applying (per deviation rules).
+   * Emits 'gamification:xp-gained' and 'gamification:level-up' if applicable.
+   */
+  awardXp(source: string, amount: number, multiplier = 1.0): XpAwardResult {
+    const safeMultiplier = Math.max(0, multiplier);
+    const effectiveAmount = Math.floor(amount * safeMultiplier);
+
+    if (effectiveAmount <= 0) {
+      const profile = this.getProfile();
+      return {
+        xpGained: 0,
+        newTotal: profile.xp,
+        leveledUp: false,
+        newLevel: profile.level,
+        newTitle: profile.levelTitle,
+      };
+    }
+
+    const row = this.db
+      .prepare('SELECT xp, level FROM gamification_profile WHERE id = 1')
+      .get() as Pick<ProfileRow, 'xp' | 'level'>;
+
+    const oldLevel = row.level;
+    const newXp = row.xp + effectiveAmount;
+    const levelInfo = calculateLevel(newXp);
+    const leveledUp = levelInfo.level > oldLevel;
+    const now = new Date().toISOString();
+
+    // Persist XP and level in a transaction
+    this.db
+      .prepare(`UPDATE gamification_profile SET xp = ?, level = ?, updatedAt = ? WHERE id = 1`)
+      .run(newXp, levelInfo.level, now);
+
+    // Record XP history
+    this.db
+      .prepare(
+        `INSERT INTO xp_history (id, source, amount, multiplier, timestamp)
+         VALUES (?, ?, ?, ?, ?)`
+      )
+      .run(randomUUID(), source, effectiveAmount, safeMultiplier, now);
+
+    const result: XpAwardResult = {
+      xpGained: effectiveAmount,
+      newTotal: newXp,
+      leveledUp,
+      newLevel: levelInfo.level,
+      newTitle: levelInfo.title,
+    };
+
+    // Emit events — per deviation rules: failure to emit does NOT block the XP record
+    try {
+      this.events?.emit('gamification:xp-gained', {
+        source,
+        amount: effectiveAmount,
+        newTotal: newXp,
+        ...(leveledUp ? { leveledUp, newLevel: levelInfo.level, newTitle: levelInfo.title } : {}),
+      });
+
+      if (leveledUp) {
+        this.events?.emit('gamification:level-up', {
+          level: levelInfo.level,
+          title: levelInfo.title,
+          xp: newXp,
+        });
+      }
+    } catch (err) {
+      logger.error('Failed to emit XP events (XP was still awarded):', err);
+    }
+
+    return result;
+  }
+
+  // ── Achievements ─────────────────────────────────────────────────────────
+
+  /**
+   * Evaluate all achievement conditions and unlock any newly earned ones.
+   * Per deviation rules: errors in individual conditions are caught and skipped.
+   */
+  checkAchievements(): void {
+    const earned = this.getEarnedAchievements();
+    const earnedIds = new Set(earned.map((a) => a.id));
+    const profile = this.getProfile();
+
+    const newlyUnlocked = evaluateAchievements(earnedIds, { profile, db: this.db });
+
+    for (const achievement of newlyUnlocked) {
+      const now = new Date().toISOString();
+
+      this.db
+        .prepare(
+          `INSERT OR IGNORE INTO earned_achievements (id, unlockedAt, seen)
+           VALUES (?, ?, 0)`
+        )
+        .run(achievement.id, now);
+
+      // Award XP for the achievement (no further achievement checks to avoid recursion)
+      if (achievement.xpReward > 0) {
+        const row = this.db
+          .prepare('SELECT xp, level FROM gamification_profile WHERE id = 1')
+          .get() as Pick<ProfileRow, 'xp' | 'level'>;
+        const newXp = row.xp + achievement.xpReward;
+        const levelInfo = calculateLevel(newXp);
+        this.db
+          .prepare(`UPDATE gamification_profile SET xp = ?, level = ?, updatedAt = ? WHERE id = 1`)
+          .run(newXp, levelInfo.level, new Date().toISOString());
+
+        this.db
+          .prepare(
+            `INSERT INTO xp_history (id, source, amount, multiplier, timestamp)
+             VALUES (?, ?, ?, ?, ?)`
+          )
+          .run(randomUUID(), `achievement:${achievement.id}`, achievement.xpReward, 1.0, now);
+      }
+
+      // Emit achievement unlocked event
+      try {
+        this.events?.emit('gamification:achievement-unlocked', {
+          achievement,
+          xpReward: achievement.xpReward,
+        });
+      } catch (err) {
+        logger.error(
+          `Failed to emit achievement-unlocked for "${achievement.id}" (still recorded):`,
+          err
+        );
+      }
+
+      logger.info(`Achievement unlocked: "${achievement.title}" (+${achievement.xpReward} XP)`);
+    }
+  }
+
+  /** Return all achievements with their earned status. */
+  getAchievements(): AchievementWithStatus[] {
+    const earned = this.getEarnedAchievements();
+    const earnedMap = new Map(earned.map((a) => [a.id, a]));
+
+    return ACHIEVEMENT_CATALOG.map((def) => {
+      const earnedEntry = earnedMap.get(def.id);
+      return {
+        ...def,
+        earned: !!earnedEntry,
+        unlockedAt: earnedEntry?.unlockedAt ?? null,
+        seen: earnedEntry?.seen ?? false,
+      };
+    });
+  }
+
+  /** Mark an achievement as seen (dismiss the "new" indicator). */
+  markAchievementSeen(id: string): boolean {
+    const result = this.db.prepare('UPDATE earned_achievements SET seen = 1 WHERE id = ?').run(id);
+    return result.changes > 0;
+  }
+
+  // ── Streaks ──────────────────────────────────────────────────────────────
+
+  /**
+   * Update a streak based on whether the activity was completed.
+   * 'maintenance' uses a count-based streak; 'budget' uses monthly.
+   */
+  updateStreaks(type: 'maintenance' | 'budget', completed: boolean): void {
+    const row = this.db
+      .prepare('SELECT streaks FROM gamification_profile WHERE id = 1')
+      .get() as Pick<ProfileRow, 'streaks'>;
+
+    const streaks = JSON.parse(row.streaks) as {
+      maintenance: StreakState;
+      budget: MonthlyStreakState;
+    };
+    const now = new Date().toISOString();
+
+    if (type === 'maintenance') {
+      const streak = streaks.maintenance;
+      if (completed) {
+        streak.current += 1;
+        streak.best = Math.max(streak.best, streak.current);
+        streak.lastCompletedAt = now;
+      } else {
+        streak.current = 0;
+      }
+
+      this.db
+        .prepare('UPDATE gamification_profile SET streaks = ?, updatedAt = ? WHERE id = 1')
+        .run(JSON.stringify(streaks), now);
+
+      try {
+        this.events?.emit('gamification:streak-updated', {
+          type: 'maintenance',
+          current: streak.current,
+          best: streak.best,
+          isNewBest: streak.current === streak.best && streak.current > 0,
+        });
+      } catch (err) {
+        logger.error('Failed to emit streak-updated event:', err);
+      }
+    } else {
+      // Budget streak — track by month string (e.g. "2026-03")
+      const streak = streaks.budget;
+      const currentMonth = new Date().toISOString().slice(0, 7); // YYYY-MM
+
+      if (completed) {
+        streak.current += 1;
+        streak.best = Math.max(streak.best, streak.current);
+        streak.lastMonth = currentMonth;
+      } else {
+        streak.current = 0;
+      }
+
+      this.db
+        .prepare('UPDATE gamification_profile SET streaks = ?, updatedAt = ? WHERE id = 1')
+        .run(JSON.stringify(streaks), now);
+
+      try {
+        this.events?.emit('gamification:streak-updated', {
+          type: 'budget',
+          current: streak.current,
+          best: streak.best,
+          isNewBest: streak.current === streak.best && streak.current > 0,
+        });
+      } catch (err) {
+        logger.error('Failed to emit streak-updated event:', err);
+      }
+    }
+  }
+
+  // ── Home Health Score ─────────────────────────────────────────────────────
+
+  /**
+   * Recompute the home health score from live data and cache the result.
+   * Emits 'gamification:health-score-changed' if the total changed.
+   */
+  calculateHomeHealthScore(): HomeHealthScore {
+    const row = this.db
+      .prepare('SELECT homeHealthScore FROM gamification_profile WHERE id = 1')
+      .get() as Pick<ProfileRow, 'homeHealthScore'>;
+
+    const oldScore = JSON.parse(row.homeHealthScore) as HomeHealthScore;
+    const newScore = calculateHomeHealthScore({ db: this.db });
+
+    this.db
+      .prepare('UPDATE gamification_profile SET homeHealthScore = ?, updatedAt = ? WHERE id = 1')
+      .run(JSON.stringify(newScore), new Date().toISOString());
+
+    if (oldScore.total !== newScore.total) {
+      try {
+        this.events?.emit('gamification:health-score-changed', {
+          old: oldScore.total,
+          new: newScore.total,
+          pillarChanges: {
+            maintenance: newScore.maintenance - oldScore.maintenance,
+            inventory: newScore.inventory - oldScore.inventory,
+            budget: newScore.budget - oldScore.budget,
+            systems: newScore.systems - oldScore.systems,
+          },
+        });
+      } catch (err) {
+        logger.error('Failed to emit health-score-changed event:', err);
+      }
+    }
+
+    return newScore;
+  }
+
+  // ── Quests ───────────────────────────────────────────────────────────────
+
+  /** Return all active (non-expired) quests. */
+  getQuests(): Quest[] {
+    const now = new Date().toISOString();
+
+    // Clean up expired quests first
+    this.db
+      .prepare('DELETE FROM active_quests WHERE expiresAt IS NOT NULL AND expiresAt < ?')
+      .run(now);
+
+    const rows = this.db
+      .prepare('SELECT * FROM active_quests ORDER BY createdAt DESC')
+      .all() as QuestRow[];
+
+    return rows.map((r) => ({
+      id: r.id,
+      title: r.title,
+      description: r.description,
+      xpReward: r.xpReward,
+      progress: r.progress,
+      target: r.target,
+      category: r.category,
+      ...(r.expiresAt ? { expiresAt: r.expiresAt } : {}),
+      generatedBy: r.generatedBy as 'system' | 'ava',
+    }));
+  }
+}

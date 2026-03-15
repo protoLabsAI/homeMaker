@@ -94,6 +94,7 @@ import { createDoraRoutes } from '../routes/dora/index.js';
 import { createAgentRoutes } from '../routes/agents.js';
 import { createBudgetRoutes } from '../routes/budget/index.js';
 import { createInventoryRoutes } from '../routes/inventory/index.js';
+import { createGamificationRoutes } from '../routes/gamification/index.js';
 
 const logger = createLogger('Server:Routes');
 
@@ -451,6 +452,10 @@ export function registerRoutes(app: Express, services: ServiceContainer): void {
   // Inventory tracking routes (household asset CRUD, search, warranty reports, value aggregation)
   app.use('/api/inventory', createInventoryRoutes(services.inventoryService));
   logger.info('Inventory routes mounted at /api/inventory');
+
+  // Gamification routes (XP, levels, achievements, streaks, home health score, quests)
+  app.use('/api/gamification', createGamificationRoutes(services.gamificationService));
+  logger.info('Gamification routes mounted at /api/gamification');
 
   // Note: Sentry v8 automatically captures Express errors - no manual error handler needed
 }
