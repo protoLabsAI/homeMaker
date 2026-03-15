@@ -123,6 +123,44 @@ function runMigrations(db: BetterSqlite3.Database): void {
       createdAt TEXT NOT NULL,
       updatedAt TEXT NOT NULL
     );
+
+    CREATE TABLE IF NOT EXISTS gamification_profile (
+      id INTEGER PRIMARY KEY CHECK (id = 1),
+      xp INTEGER NOT NULL DEFAULT 0,
+      level INTEGER NOT NULL DEFAULT 1,
+      streaks TEXT NOT NULL DEFAULT '{}',
+      homeHealthScore TEXT NOT NULL DEFAULT '{}',
+      updatedAt TEXT NOT NULL
+    );
+
+    CREATE TABLE IF NOT EXISTS earned_achievements (
+      id TEXT PRIMARY KEY,
+      unlockedAt TEXT NOT NULL,
+      seen INTEGER NOT NULL DEFAULT 0
+    );
+
+    CREATE TABLE IF NOT EXISTS xp_history (
+      id TEXT PRIMARY KEY,
+      source TEXT NOT NULL,
+      amount INTEGER NOT NULL,
+      multiplier REAL NOT NULL DEFAULT 1.0,
+      timestamp TEXT NOT NULL
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_xp_history_timestamp ON xp_history(timestamp);
+
+    CREATE TABLE IF NOT EXISTS active_quests (
+      id TEXT PRIMARY KEY,
+      title TEXT NOT NULL,
+      description TEXT NOT NULL,
+      xpReward INTEGER NOT NULL,
+      progress INTEGER NOT NULL DEFAULT 0,
+      target INTEGER NOT NULL,
+      category TEXT NOT NULL,
+      expiresAt TEXT,
+      generatedBy TEXT NOT NULL DEFAULT 'system',
+      createdAt TEXT NOT NULL
+    );
   `);
 
   logger.info('All homemaker tables initialized');
