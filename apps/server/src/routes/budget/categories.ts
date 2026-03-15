@@ -9,10 +9,14 @@
 import { Router } from 'express';
 import { createLogger } from '@protolabsai/utils';
 import type { BudgetService } from '../../services/budget-service.js';
+import type { EventEmitter } from '../../lib/events.js';
 
 const logger = createLogger('BudgetCategoryRoutes');
 
-export function createBudgetCategoryRoutes(budgetService: BudgetService): Router {
+export function createBudgetCategoryRoutes(
+  budgetService: BudgetService,
+  events?: EventEmitter
+): Router {
   const router = Router();
 
   /** POST /budget/categories */
@@ -32,12 +36,10 @@ export function createBudgetCategoryRoutes(budgetService: BudgetService): Router
       }
 
       if (!color || typeof color !== 'string' || !/^#[0-9a-fA-F]{6}$/.test(color)) {
-        res
-          .status(400)
-          .json({
-            success: false,
-            error: 'color is required and must be a valid hex color (e.g. #4CAF50)',
-          });
+        res.status(400).json({
+          success: false,
+          error: 'color is required and must be a valid hex color (e.g. #4CAF50)',
+        });
         return;
       }
 
@@ -52,6 +54,7 @@ export function createBudgetCategoryRoutes(budgetService: BudgetService): Router
       }
 
       const category = budgetService.createCategory(name.trim(), color, budgetedAmount);
+      events?.emit('budget:category-created', { categoryId: category.id });
       res.status(201).json({ success: true, data: category });
     } catch (error) {
       logger.error('Failed to create budget category:', error);

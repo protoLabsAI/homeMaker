@@ -108,6 +108,278 @@ const CONDITIONS: Record<string, AchievementCondition> = {
   // ── Secret ───────────────────────────────────────────────────────────────
   xp_milestone_10k: ({ profile }) => profile.xp >= 10000,
   xp_milestone_50k: ({ profile }) => profile.xp >= 50000,
+
+  // ── Onboarding — specific home milestones ─────────────────────────────
+  homeowner: ({ db }) => {
+    try {
+      const row = db
+        .prepare("SELECT COUNT(*) as cnt FROM xp_history WHERE source = 'kanban_completed'")
+        .get() as { cnt: number };
+      return row.cnt >= 1;
+    } catch {
+      return false;
+    }
+  },
+  connected_home: ({ db }) => {
+    try {
+      const row = db
+        .prepare("SELECT COUNT(*) as cnt FROM xp_history WHERE source = 'sensor_registered'")
+        .get() as { cnt: number };
+      return row.cnt >= 1;
+    } catch {
+      return false;
+    }
+  },
+  scheduled: ({ db }) => {
+    try {
+      const row = db.prepare('SELECT COUNT(*) as cnt FROM maintenance_schedules').get() as {
+        cnt: number;
+      };
+      return row.cnt >= 1;
+    } catch {
+      return false;
+    }
+  },
+  budgeted: ({ db }) => {
+    try {
+      const row = db
+        .prepare("SELECT COUNT(*) as cnt FROM xp_history WHERE source = 'budget_category_created'")
+        .get() as { cnt: number };
+      return row.cnt >= 1;
+    } catch {
+      return false;
+    }
+  },
+  vault_keeper: ({ db }) => {
+    try {
+      const row = db.prepare('SELECT COUNT(*) as cnt FROM vault_entries').get() as { cnt: number };
+      return row.cnt >= 1;
+    } catch {
+      return false;
+    }
+  },
+
+  // ── Maintenance — milestone counts ────────────────────────────────────
+  on_schedule: ({ db }) => {
+    try {
+      const row = db
+        .prepare("SELECT COUNT(*) as cnt FROM xp_history WHERE source = 'maintenance_on_time'")
+        .get() as { cnt: number };
+      return row.cnt >= 3;
+    } catch {
+      return false;
+    }
+  },
+  clockwork: ({ db }) => {
+    try {
+      const row = db
+        .prepare("SELECT COUNT(*) as cnt FROM xp_history WHERE source = 'maintenance_on_time'")
+        .get() as { cnt: number };
+      return row.cnt >= 10;
+    } catch {
+      return false;
+    }
+  },
+  preventive_pro: ({ db }) => {
+    try {
+      const row = db
+        .prepare(
+          `SELECT COUNT(DISTINCT
+            substr(timestamp, 1, 4) || '-Q' ||
+            CASE
+              WHEN CAST(substr(timestamp, 6, 2) AS INTEGER) BETWEEN 1 AND 3 THEN '1'
+              WHEN CAST(substr(timestamp, 6, 2) AS INTEGER) BETWEEN 4 AND 6 THEN '2'
+              WHEN CAST(substr(timestamp, 6, 2) AS INTEGER) BETWEEN 7 AND 9 THEN '3'
+              ELSE '4'
+            END
+          ) as quarters
+          FROM xp_history WHERE source = 'maintenance_on_time'`
+        )
+        .get() as { quarters: number };
+      return row.quarters >= 4;
+    } catch {
+      return false;
+    }
+  },
+  year_of_prevention: ({ db }) => {
+    try {
+      const row = db
+        .prepare(
+          `SELECT COUNT(DISTINCT substr(timestamp, 1, 7)) as months
+           FROM xp_history WHERE source = 'maintenance_on_time'`
+        )
+        .get() as { months: number };
+      return row.months >= 12;
+    } catch {
+      return false;
+    }
+  },
+  zero_overdue: ({ db }) => {
+    try {
+      const totalRow = db.prepare('SELECT COUNT(*) as cnt FROM maintenance_schedules').get() as {
+        cnt: number;
+      };
+      if (totalRow.cnt === 0) return false;
+      const overdueRow = db
+        .prepare(
+          `SELECT COUNT(*) as cnt FROM maintenance_schedules
+           WHERE nextDueAt IS NOT NULL AND nextDueAt < datetime('now')
+           AND (lastCompletedAt IS NULL OR lastCompletedAt < nextDueAt)`
+        )
+        .get() as { cnt: number };
+      return overdueRow.cnt === 0;
+    } catch {
+      return false;
+    }
+  },
+
+  // ── Inventory — deeper milestones ─────────────────────────────────────
+  cataloger: ({ db }) => {
+    try {
+      const row = db.prepare('SELECT COUNT(*) as cnt FROM assets').get() as { cnt: number };
+      return row.cnt >= 50;
+    } catch {
+      return false;
+    }
+  },
+  museum_curator: ({ db }) => {
+    try {
+      const row = db
+        .prepare(
+          `SELECT COUNT(*) as cnt FROM assets
+           WHERE photoUrls IS NOT NULL AND photoUrls != '[]'`
+        )
+        .get() as { cnt: number };
+      return row.cnt >= 10;
+    } catch {
+      return false;
+    }
+  },
+  warranty_warrior: ({ db }) => {
+    try {
+      const row = db
+        .prepare('SELECT COUNT(*) as cnt FROM assets WHERE warrantyExpiration IS NOT NULL')
+        .get() as { cnt: number };
+      return row.cnt >= 10;
+    } catch {
+      return false;
+    }
+  },
+
+  // ── Budget — long streaks ─────────────────────────────────────────────
+  financial_fortress: ({ profile }) => profile.streaks.budget.current >= 12,
+
+  // ── Seasonal ──────────────────────────────────────────────────────────
+  winter_ready: ({ db }) => {
+    try {
+      const row = db
+        .prepare(
+          `SELECT COUNT(*) as cnt FROM xp_history
+           WHERE source = 'maintenance_on_time'
+           AND CAST(substr(timestamp, 6, 2) AS INTEGER) IN (12, 1, 2)`
+        )
+        .get() as { cnt: number };
+      return row.cnt >= 1;
+    } catch {
+      return false;
+    }
+  },
+  spring_fresh: ({ db }) => {
+    try {
+      const row = db
+        .prepare(
+          `SELECT COUNT(*) as cnt FROM xp_history
+           WHERE source = 'maintenance_on_time'
+           AND CAST(substr(timestamp, 6, 2) AS INTEGER) IN (3, 4, 5)`
+        )
+        .get() as { cnt: number };
+      return row.cnt >= 1;
+    } catch {
+      return false;
+    }
+  },
+  summer_set: ({ db }) => {
+    try {
+      const row = db
+        .prepare(
+          `SELECT COUNT(*) as cnt FROM xp_history
+           WHERE source = 'maintenance_on_time'
+           AND CAST(substr(timestamp, 6, 2) AS INTEGER) IN (6, 7, 8)`
+        )
+        .get() as { cnt: number };
+      return row.cnt >= 1;
+    } catch {
+      return false;
+    }
+  },
+  fall_prepared: ({ db }) => {
+    try {
+      const row = db
+        .prepare(
+          `SELECT COUNT(*) as cnt FROM xp_history
+           WHERE source = 'maintenance_on_time'
+           AND CAST(substr(timestamp, 6, 2) AS INTEGER) IN (9, 10, 11)`
+        )
+        .get() as { cnt: number };
+      return row.cnt >= 1;
+    } catch {
+      return false;
+    }
+  },
+
+  // ── Secret — hidden until earned ──────────────────────────────────────
+  night_owl: ({ db }) => {
+    try {
+      const row = db
+        .prepare(
+          `SELECT COUNT(*) as cnt FROM xp_history
+           WHERE CAST(strftime('%H', timestamp) AS INTEGER) < 5
+           AND source IN (
+             'maintenance_on_time', 'maintenance_late', 'asset_added',
+             'budget_transaction', 'kanban_completed'
+           )`
+        )
+        .get() as { cnt: number };
+      return row.cnt >= 1;
+    } catch {
+      return false;
+    }
+  },
+  speed_demon: ({ db }) => {
+    try {
+      const row = db
+        .prepare(
+          `SELECT MAX(daily_count) as max_count FROM (
+             SELECT date(timestamp) as day, COUNT(*) as daily_count
+             FROM xp_history
+             WHERE source IN ('maintenance_on_time', 'maintenance_late')
+             GROUP BY date(timestamp)
+           ) sub`
+        )
+        .get() as { max_count: number | null };
+      return (row.max_count ?? 0) >= 5;
+    } catch {
+      return false;
+    }
+  },
+  explorer: ({ db }) => {
+    try {
+      const row = db
+        .prepare(
+          `SELECT COUNT(DISTINCT source) as cnt FROM xp_history
+           WHERE source IN (
+             'kanban_completed', 'sensor_registered', 'asset_added', 'budget_transaction'
+           )`
+        )
+        .get() as { cnt: number };
+      return row.cnt >= 4;
+    } catch {
+      return false;
+    }
+  },
+  centurion: ({ profile }) => profile.homeHealthScore.total >= 100,
+  streak_master: ({ profile }) =>
+    profile.streaks.maintenance.best >= 25 || profile.streaks.budget.best >= 25,
 };
 
 /**

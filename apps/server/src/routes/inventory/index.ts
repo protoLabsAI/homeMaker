@@ -17,6 +17,7 @@ import { Router } from 'express';
 import { createLogger } from '@protolabsai/utils';
 import type { InventoryService } from '../../services/inventory-service.js';
 import type { CreateAssetInput, UpdateAssetInput, AssetCategory } from '@protolabsai/types';
+import type { EventEmitter } from '../../lib/events.js';
 
 const logger = createLogger('InventoryRoutes');
 
@@ -33,7 +34,10 @@ const VALID_CATEGORIES: ReadonlySet<string> = new Set<AssetCategory>([
   'other',
 ]);
 
-export function createInventoryRoutes(inventoryService: InventoryService): Router {
+export function createInventoryRoutes(
+  inventoryService: InventoryService,
+  events?: EventEmitter
+): Router {
   const router = Router();
 
   // ── Search (must come before /:id to avoid route collision) ─────────────
@@ -123,6 +127,7 @@ export function createInventoryRoutes(inventoryService: InventoryService): Route
       };
 
       const asset = inventoryService.create(input);
+      events?.emit('inventory:asset-created', { assetId: asset.id });
       res.status(201).json({ success: true, data: asset });
     } catch (error) {
       logger.error('Failed to create asset:', error);
@@ -221,6 +226,7 @@ export function createInventoryRoutes(inventoryService: InventoryService): Route
         res.status(404).json({ success: false, error: `Asset "${req.params.id}" not found` });
         return;
       }
+      events?.emit('inventory:asset-updated', { assetId: req.params.id });
       res.json({ success: true, data: updated });
     } catch (error) {
       logger.error('Failed to update asset:', error);

@@ -6,7 +6,7 @@
  *   maintenance_on_time          +50
  *   maintenance_late             +25
  *   asset_added                  +15
- *   asset_with_photo_receipt     +25 (bonus on top of asset_added)
+ *   budget_category_created      +10
  *   budget_transaction           +5
  *   monthly_budget_under_target  +100
  *   kanban_completed             +75
@@ -59,6 +59,65 @@ export function registerXpEventListeners(
       gamificationService.checkAchievements();
     } catch (err) {
       logger.error('XP listener error (feature:completed):', err);
+    }
+  });
+
+  // ── Inventory asset created or updated ───────────────────────────────
+  // inventory:asset-created fires when a new asset is added to the inventory.
+  events.on('inventory:asset-created', () => {
+    try {
+      gamificationService.awardXp('asset_added', 15);
+      gamificationService.checkAchievements();
+    } catch (err) {
+      logger.error('XP listener error (inventory:asset-created):', err);
+    }
+  });
+
+  // inventory:asset-updated fires when an existing asset is modified.
+  events.on('inventory:asset-updated', () => {
+    try {
+      gamificationService.checkAchievements();
+    } catch (err) {
+      logger.error('XP listener error (inventory:asset-updated):', err);
+    }
+  });
+
+  // ── Budget category created ───────────────────────────────────────────
+  // budget:category-created fires when a new budget category is added.
+  events.on('budget:category-created', () => {
+    try {
+      gamificationService.awardXp('budget_category_created', 10);
+      gamificationService.checkAchievements();
+    } catch (err) {
+      logger.error('XP listener error (budget:category-created):', err);
+    }
+  });
+
+  // ── Budget transaction created ────────────────────────────────────────
+  // budget:transaction-created fires when a new budget transaction is logged.
+  events.on('budget:transaction-created', () => {
+    try {
+      gamificationService.awardXp('budget_transaction', 5);
+      gamificationService.checkAchievements();
+    } catch (err) {
+      logger.error('XP listener error (budget:transaction-created):', err);
+    }
+  });
+
+  // ── Budget month closed ────────────────────────────────────────────────
+  // budget:month-closed fires when the first transaction of a new month is
+  // added, closing out the previous month. Payload: { underBudget: boolean }.
+  events.on('budget:month-closed', (payload) => {
+    try {
+      const p = payload as Record<string, unknown>;
+      const underBudget = p['underBudget'] === true;
+      if (underBudget) {
+        gamificationService.awardXp('monthly_budget_under_target', 100);
+      }
+      gamificationService.updateStreaks('budget', underBudget);
+      gamificationService.checkAchievements();
+    } catch (err) {
+      logger.error('XP listener error (budget:month-closed):', err);
     }
   });
 

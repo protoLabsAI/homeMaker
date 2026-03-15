@@ -10,13 +10,17 @@ import { Router } from 'express';
 import { createLogger } from '@protolabsai/utils';
 import type { TransactionRecurrence } from '@protolabsai/types';
 import type { BudgetService } from '../../services/budget-service.js';
+import type { EventEmitter } from '../../lib/events.js';
 
 const logger = createLogger('BudgetTransactionRoutes');
 
 const VALID_TYPES = new Set(['income', 'expense']);
 const VALID_RECURRENCES = new Set(['weekly', 'monthly', 'yearly']);
 
-export function createBudgetTransactionRoutes(budgetService: BudgetService): Router {
+export function createBudgetTransactionRoutes(
+  budgetService: BudgetService,
+  events?: EventEmitter
+): Router {
   const router = Router();
 
   /** POST /budget/transactions */
@@ -49,12 +53,10 @@ export function createBudgetTransactionRoutes(budgetService: BudgetService): Rou
       }
 
       if (!description || typeof description !== 'string' || !description.trim()) {
-        res
-          .status(400)
-          .json({
-            success: false,
-            error: 'description is required and must be a non-empty string',
-          });
+        res.status(400).json({
+          success: false,
+          error: 'description is required and must be a non-empty string',
+        });
         return;
       }
 
@@ -64,12 +66,10 @@ export function createBudgetTransactionRoutes(budgetService: BudgetService): Rou
       }
 
       if (recurrence !== undefined && recurrence !== null && !VALID_RECURRENCES.has(recurrence)) {
-        res
-          .status(400)
-          .json({
-            success: false,
-            error: 'recurrence must be "weekly", "monthly", "yearly", or null',
-          });
+        res.status(400).json({
+          success: false,
+          error: 'recurrence must be "weekly", "monthly", "yearly", or null',
+        });
         return;
       }
 
@@ -81,6 +81,36 @@ export function createBudgetTransactionRoutes(budgetService: BudgetService): Rou
         date,
         (recurrence as TransactionRecurrence) ?? null
       );
+
+      events?.emit('budget:transaction-created', { transactionId: transaction.id });
+
+      // Detect month boundary: if this is the first transaction of a new month,
+      // close out the previous month and evaluate whether it was under budget.
+      if (events) {
+        const thisMonth = transaction.date.slice(0, 7);
+        const allTransactions = budgetService.listTransactions();
+        const transactionsThisMonth = allTransactions.filter((t) => t.date.startsWith(thisMonth));
+
+        if (transactionsThisMonth.length === 1) {
+          const prevMonths = [
+            ...new Set(
+              allTransactions
+                .filter((t) => t.date.slice(0, 7) < thisMonth)
+                .map((t) => t.date.slice(0, 7))
+            ),
+          ].sort();
+
+          if (prevMonths.length > 0) {
+            const prevMonth = prevMonths[prevMonths.length - 1];
+            const prevSummary = budgetService.getSummary(prevMonth);
+            events.emit('budget:month-closed', {
+              month: prevMonth,
+              underBudget: prevSummary.balance >= 0,
+            });
+          }
+        }
+      }
+
       res.status(201).json({ success: true, data: transaction });
     } catch (error) {
       logger.error('Failed to create transaction:', error);

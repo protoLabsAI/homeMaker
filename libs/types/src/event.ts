@@ -314,6 +314,13 @@ export type EventType =
   // Sensor registry events (core sensor framework)
   | 'sensor:registered'
   | 'sensor:data-received'
+  // Inventory mutation events (trigger gamification checks)
+  | 'inventory:asset-created'
+  | 'inventory:asset-updated'
+  // Budget mutation events (trigger gamification checks)
+  | 'budget:category-created'
+  | 'budget:transaction-created'
+  | 'budget:month-closed'
   // Calendar CRUD events (emitted by calendar routes after successful create/update/delete)
   | 'calendar:event:created'
   | 'calendar:event:updated'

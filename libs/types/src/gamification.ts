@@ -65,6 +65,8 @@ export interface AchievementDefinition {
   icon: string;
   xpReward: number;
   category: AchievementCategory;
+  /** Secret achievements are hidden until unlocked */
+  hidden?: boolean;
 }
 
 /** Achievement definition with earned status attached (for API response) */
@@ -72,6 +74,8 @@ export interface AchievementWithStatus extends AchievementDefinition {
   earned: boolean;
   unlockedAt: string | null;
   seen: boolean;
+  /** Hidden achievements show no title or description until earned */
+  hidden: boolean;
 }
 
 /** A single XP event recorded to xp_history */
