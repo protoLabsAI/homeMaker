@@ -1,13 +1,18 @@
 // Route registration: all app.use() mounts, rate limiting, and OTEL initialization
 
 import type { Express } from 'express';
-import rateLimit from 'express-rate-limit';
 import { createLogger } from '@protolabsai/utils';
 
 import type { ServiceContainer } from './services.js';
 
 import { authMiddleware } from '../lib/auth.js';
 import { requireJsonContentType } from '../middleware/require-json-content-type.js';
+import {
+  apiRateLimiter,
+  vaultReadRateLimiter,
+  vaultWriteRateLimiter,
+  sensorReportRateLimiter,
+} from './middleware.js';
 // Note: OTel is initialized in startup.ts via initOtel() — a single unified NodeSDK
 // with both OTLP exporter and LangfuseSpanProcessor. No separate init needed here.
 import { cleanupStaleValidations } from '../routes/github/routes/validation-common.js';
@@ -171,29 +176,18 @@ export function registerRoutes(app: Express, services: ServiceContainer): void {
   }, VALIDATION_CLEANUP_INTERVAL_MS);
 
   // Rate limiting — general API (skip health checks and read-only status endpoints)
-  const apiLimiter = rateLimit({
-    windowMs: 60 * 1000, // 1 minute
-    limit: 300,
-    standardHeaders: 'draft-7',
-    legacyHeaders: false,
-    skip: (req) =>
-      req.path === '/health' ||
-      req.path.startsWith('/health/') ||
-      req.path.startsWith('/setup/') ||
-      req.path === '/settings/status',
-    message: { error: 'Too many requests, please try again later' },
-  });
-  app.use('/api', apiLimiter);
+  app.use('/api', apiRateLimiter);
 
-  // Stricter rate limit for auth login (brute force protection)
-  const authLimiter = rateLimit({
-    windowMs: 15 * 60 * 1000, // 15 minutes
-    limit: 20,
-    standardHeaders: 'draft-7',
-    legacyHeaders: false,
-    message: { error: 'Too many login attempts, please try again later' },
+  // Sensor report endpoint: 120 req/min keyed on sensor ID
+  app.use('/api/sensors/report', sensorReportRateLimiter);
+
+  // Vault-specific rate limits (applied before vault routes are mounted)
+  // Reads (GET): 30 req/min per IP; Writes (POST/PUT/DELETE): 10 req/min per IP
+  app.use('/api/vault', (req, _res, next) => {
+    const isWrite = req.method === 'POST' || req.method === 'PUT' || req.method === 'DELETE';
+    const limiter = isWrite ? vaultWriteRateLimiter : vaultReadRateLimiter;
+    limiter(req, _res, next);
   });
-  app.use('/api/auth/login', authLimiter);
 
   // Require Content-Type: application/json for all API POST/PUT/PATCH requests
   app.use('/api', requireJsonContentType);
