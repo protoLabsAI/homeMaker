@@ -941,6 +941,8 @@ export type {
   SensorAggregationInterval,
   SensorHistoryAggregatedOptions,
   AggregatedSensorReading,
+  SensorCommandAction,
+  SensorCommand,
 } from './sensor.js';
 
 // ProtoConfig types and schema (proto.config.yaml structure)
