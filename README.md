@@ -31,9 +31,25 @@ The same system handles renovation planning (break a kitchen remodel into phased
 
 A Kanban board where AI agents pick up tasks and execute them autonomously. Unlike coding tools, homeMaker agents default to **research-and-report** mode — they gather information, summarize findings, and make recommendations.
 
+### Home Inventory and Asset Tracking
+
+Track every home asset with purchase dates, prices, and current valuations. Monitor warranty expiration with 30-day and 7-day warnings. Link physical items to IoT sensors for automated status monitoring.
+
+### Maintenance Scheduling
+
+Define recurring home obligations (HVAC filters, gutter cleaning, appliance servicing) with interval-based scheduling. Due dates auto-calculate from last completion. Link tasks to vendors and inventory items. Completion history tracks what was done and when.
+
+### Vendor Directory
+
+Manage service provider contacts organized by trade category (plumbing, electrical, HVAC, landscaping, etc.). Store phone numbers, emails, websites, and ratings. Link vendors to maintenance tasks and inventory assets.
+
+### Gamification
+
+A Home Health Score (0--100) calculated across four pillars: Maintenance (30%), Sensors (25%), Budget (25%), and Inventory (20%). Earn XP for completing maintenance tasks, adding inventory items, logging budget entries, and keeping sensors online. Progress through 10 tiers from Novice to Home Champion. Unlock 30 achievements across 6 categories. Maintain streaks for consecutive-day activity. Accept AI-generated quests for bonus XP rewards. Celebration animations on level-ups and achievement unlocks.
+
 ### IoT Sensor Dashboard
 
-Register smart home devices via REST API. Sensors report readings, the system tracks online/stale/offline status with TTL-based detection, and a context aggregator determines household presence (active, idle, away, headless).
+Register smart home devices via REST API. Sensors report readings, the system tracks online/stale/offline status with TTL-based detection, and a context aggregator determines household presence (active, idle, away, headless). Command push sends instructions back to devices. Reading history persists to SQLite with configurable retention.
 
 ### Budget Tracking
 
@@ -45,7 +61,11 @@ Encrypted local storage for passwords, API keys, WiFi credentials, and home code
 
 ### Calendar and Scheduling
 
-Full event management with creation, editing, and detail views. Schedule home maintenance, family events, and project deadlines.
+Full event management with creation, editing, and detail views. Schedule home maintenance, family events, and project deadlines. Maintenance tasks with upcoming due dates appear automatically.
+
+### Home Assistant and Weather Integrations
+
+Subscribe to Home Assistant's WebSocket API to receive state changes from HA entities, mapped to sensor readings automatically. Weather data from OpenWeatherMap displayed in a dashboard widget.
 
 ### Notes and Todo Lists
 
@@ -77,6 +97,8 @@ docker compose -f docker-compose.homemaker.yml up -d
 
 Access from any Tailscale device at `http://homemaker:3007`.
 
+See [docs/deployment/tailscale.md](docs/deployment/tailscale.md) for the full deployment guide.
+
 ## How It Works
 
 ```
@@ -89,9 +111,11 @@ You describe a task --> AI agent picks it up --> Researches/plans/organizes --> 
 4. Results delivered as a summary you can review and act on
 5. For code tasks (building new features for homeMaker itself), agents work the same way as protoLabs Studio
 
+Your Home Health Score updates as you complete tasks, maintain sensors, track budgets, and document inventory. The gamification layer turns household upkeep into measurable progress with XP, levels, achievements, and AI-generated quests.
+
 ## Architecture
 
-TypeScript monorepo with a React frontend, Express backend, and shared packages:
+TypeScript monorepo with a React frontend, Express backend, and shared packages. All server services share a single `homemaker.db` SQLite database (WAL mode, foreign keys enabled).
 
 ```
 homeMaker/
@@ -114,14 +138,18 @@ homeMaker/
 
 ## Environment Variables
 
-| Variable | Required | Description |
-|----------|----------|-------------|
-| `ANTHROPIC_API_KEY` | Yes | Anthropic API key for AI agents |
-| `HOMEMAKER_VAULT_KEY` | For vault | 64-char hex key for secrets encryption |
-| `AUTOMAKER_API_KEY` | Optional | API key for server authentication |
-| `PORT` | No | Server port (default: 3008) |
-| `HOST` | No | Host to bind to (default: 0.0.0.0) |
-| `DATA_DIR` | No | Data storage directory (default: ./data) |
+| Variable                        | Required  | Description                                        |
+| ------------------------------- | --------- | -------------------------------------------------- |
+| `ANTHROPIC_API_KEY`             | Yes       | Anthropic API key for AI agents                    |
+| `HOMEMAKER_VAULT_KEY`           | For vault | 64-char hex key for AES-256-GCM secrets encryption |
+| `AUTOMAKER_API_KEY`             | Optional  | API key for server authentication                  |
+| `PORT`                          | No        | Server port (default: 3008)                        |
+| `HOST`                          | No        | Host to bind to (default: 0.0.0.0)                 |
+| `DATA_DIR`                      | No        | Data storage directory (default: ./data)           |
+| `OPENWEATHERMAP_API_KEY`        | Optional  | OpenWeatherMap API key                             |
+| `OPENWEATHERMAP_LAT`            | No        | Home latitude for weather                          |
+| `OPENWEATHERMAP_LON`            | No        | Home longitude for weather                         |
+| `SENSOR_HISTORY_RETENTION_DAYS` | No        | Days of sensor history to retain (default: 30)     |
 
 ## Security
 
