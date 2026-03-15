@@ -1,42 +1,15 @@
-import { useMemo, createElement } from 'react';
+import { useMemo } from 'react';
 import type { NavigateOptions } from '@tanstack/react-router';
 import {
-  FileText,
   LayoutGrid,
-  Library,
-  Network,
   Inbox,
   Settings,
   NotebookPen,
-  Palette,
   CalendarDays,
-  FolderOpen,
-  FolderKanban,
   ListTodo,
+  MessageSquare,
+  Home,
 } from 'lucide-react';
-
-/** protoLabs logo icon sized for sidebar nav (matches lucide icon API) */
-function ProtoLabsIcon({ className }: { className?: string }) {
-  return createElement(
-    'svg',
-    {
-      xmlns: 'http://www.w3.org/2000/svg',
-      viewBox: '0 0 24 24',
-      fill: 'none',
-      stroke: 'currentColor',
-      strokeWidth: 2,
-      strokeLinecap: 'round',
-      strokeLinejoin: 'round',
-      className,
-    },
-    createElement('rect', { width: 16, height: 12, x: 4, y: 8, rx: 2 }),
-    createElement('path', { d: 'M12 8V4H8' }),
-    createElement('path', { d: 'M2 14h2' }),
-    createElement('path', { d: 'M20 14h2' }),
-    createElement('path', { d: 'M15 13v2' }),
-    createElement('path', { d: 'M9 13v2' })
-  );
-}
 import type { NavSection, NavItem } from '../types';
 import type { KeyboardShortcut } from '@/hooks/use-keyboard-shortcuts';
 import type { Project } from '@/lib/electron';
@@ -104,25 +77,19 @@ export function useNavigation({
 }: UseNavigationProps) {
   // Build navigation sections
   const navSections: NavSection[] = useMemo(() => {
-    const allToolsItems: NavItem[] = [
+    // Home management navigation items
+    const homeItems: NavItem[] = [
       {
-        id: 'spec',
-        label: 'Spec Editor',
-        icon: FileText,
-        shortcut: shortcuts.spec,
-        isLoading: isSpecGenerating,
+        id: 'dashboard',
+        label: 'Dashboard',
+        icon: Home,
+        shortcut: shortcuts.systemView,
       },
       {
-        id: 'docs',
-        label: 'Docs',
-        icon: Library,
-        shortcut: shortcuts.docs,
-      },
-      {
-        id: 'notes',
-        label: 'Notes',
-        icon: NotebookPen,
-        shortcut: shortcuts.notes,
+        id: 'board',
+        label: 'Board',
+        icon: LayoutGrid,
+        shortcut: shortcuts.board,
       },
       {
         id: 'calendar',
@@ -136,72 +103,24 @@ export function useNavigation({
         icon: ListTodo,
         shortcut: shortcuts.todo,
       },
-    ];
-
-    // Filter out hidden items
-    const visibleToolsItems = allToolsItems.filter((item) => {
-      if (item.id === 'spec' && hideSpecEditor) return false;
-      return true;
-    });
-
-    // Build project items
-    const projectItems: NavItem[] = [
       {
-        id: 'project-management',
-        label: 'Project Management',
-        icon: FolderKanban,
-        shortcut: shortcuts.projects,
+        id: 'notes',
+        label: 'Notes',
+        icon: NotebookPen,
+        shortcut: shortcuts.notes,
       },
       {
-        id: 'board',
-        label: 'Features',
-        icon: LayoutGrid,
-        shortcut: shortcuts.board,
+        id: 'chat',
+        label: 'Chat',
+        icon: MessageSquare,
+        shortcut: shortcuts.chat,
       },
     ];
-
-    if (!hideSystemView) {
-      projectItems.push({
-        id: 'system-view',
-        label: 'System View',
-        icon: Network,
-        shortcut: shortcuts.systemView,
-      });
-    }
-
-    if (!hideFileEditor) {
-      projectItems.push({
-        id: 'file-editor',
-        label: 'Editor',
-        icon: FolderOpen,
-        shortcut: shortcuts.fileEditor,
-      });
-    }
-
-    projectItems.push({
-      id: 'chat',
-      label: 'Ava',
-      icon: ProtoLabsIcon,
-      shortcut: shortcuts.chat,
-    });
-
-    if (!hideDesigns) {
-      projectItems.push({
-        id: 'designs',
-        label: 'Designs',
-        icon: Palette,
-        shortcut: shortcuts.designs,
-      });
-    }
 
     const sections: NavSection[] = [
       {
-        label: 'Project',
-        items: projectItems,
-      },
-      {
-        label: 'Tools',
-        items: visibleToolsItems,
+        label: 'Home',
+        items: homeItems,
       },
     ];
 
@@ -227,16 +146,7 @@ export function useNavigation({
     });
 
     return sections;
-  }, [
-    shortcuts,
-    hideSpecEditor,
-    hideDesigns,
-    hideFileEditor,
-    hideSystemView,
-    unreadNotificationsCount,
-    unreadCeremonyCount,
-    isSpecGenerating,
-  ]);
+  }, [shortcuts, unreadNotificationsCount, unreadCeremonyCount]);
 
   // Build keyboard shortcuts for navigation
   const navigationShortcuts: KeyboardShortcut[] = useMemo(() => {
