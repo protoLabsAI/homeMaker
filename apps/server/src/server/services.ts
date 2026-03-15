@@ -124,6 +124,7 @@ import { ChatChannelService } from '../services/chat-channel-service.js';
 import { AvaClassifier } from '../services/ava-classifier.js';
 import { AvaResponder } from '../services/ava-responder.js';
 import { AvaProactiveService } from '../services/ava-proactive.js';
+import { WeatherService } from '../services/weather-service.js';
 
 const logger = createLogger('Server:Services');
 
@@ -328,6 +329,9 @@ export interface ServiceContainer {
 
   // Ava proactive alerts (overdue maintenance, expiring warranties)
   avaProactiveService: AvaProactiveService;
+
+  // Weather context (current conditions + 5-day forecast via OpenWeatherMap)
+  weatherService: WeatherService;
 
   // Drift detection interval (set by wireServices, cleared by shutdown)
   driftCheckInterval: ReturnType<typeof setInterval> | null;
@@ -794,6 +798,9 @@ export async function createServices(dataDir: string, repoRoot: string): Promise
     inventoryService,
   });
 
+  // Weather Service — fetches current conditions and 5-day forecast from OpenWeatherMap
+  const weatherService = new WeatherService(sensorRegistryService);
+
   // Register Ava cron tasks (daily board health, PR triage, staging ping)
   void registerAvaCronTasks({ schedulerService, reactiveSpawnerService, projectPath: repoRoot });
 
@@ -1002,6 +1009,7 @@ export async function createServices(dataDir: string, repoRoot: string): Promise
     questGeneratorService,
     chatChannelService,
     avaProactiveService,
+    weatherService,
     driftCheckInterval: null,
   };
 }
