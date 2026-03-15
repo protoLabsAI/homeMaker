@@ -49,21 +49,31 @@ function createTestDb(): BetterSqlite3.Database {
       createdAt TEXT NOT NULL
     );
 
-    CREATE TABLE IF NOT EXISTS maintenance_schedules (
+    CREATE TABLE IF NOT EXISTS maintenance (
       id TEXT PRIMARY KEY,
       title TEXT NOT NULL,
       nextDueAt TEXT NOT NULL,
       intervalDays INTEGER NOT NULL DEFAULT 30,
+      lastCompletedAt TEXT,
       createdAt TEXT NOT NULL,
       updatedAt TEXT NOT NULL
+    );
+
+    CREATE TABLE IF NOT EXISTS maintenance_completions (
+      id TEXT PRIMARY KEY,
+      scheduleId TEXT NOT NULL REFERENCES maintenance(id),
+      completedAt TEXT NOT NULL,
+      completedBy TEXT NOT NULL DEFAULT 'test',
+      notes TEXT
     );
 
     CREATE TABLE IF NOT EXISTS assets (
       id TEXT PRIMARY KEY,
       name TEXT NOT NULL,
       category TEXT NOT NULL,
-      manualUrl TEXT,
+      purchaseDate TEXT,
       warrantyExpiration TEXT,
+      photoUrls TEXT DEFAULT '[]',
       createdAt TEXT NOT NULL,
       updatedAt TEXT NOT NULL
     );
@@ -82,11 +92,14 @@ function createTestDb(): BetterSqlite3.Database {
       createdAt TEXT NOT NULL
     );
 
-    CREATE TABLE IF NOT EXISTS sensor_readings (
-      sensorId TEXT NOT NULL,
-      data TEXT NOT NULL,
-      receivedAt TEXT NOT NULL,
-      PRIMARY KEY (sensorId, receivedAt)
+    CREATE TABLE IF NOT EXISTS vault_entries (
+      id TEXT PRIMARY KEY,
+      name TEXT NOT NULL,
+      encryptedValue TEXT NOT NULL,
+      iv TEXT NOT NULL,
+      tag TEXT NOT NULL,
+      createdAt TEXT NOT NULL,
+      updatedAt TEXT NOT NULL
     );
   `);
 

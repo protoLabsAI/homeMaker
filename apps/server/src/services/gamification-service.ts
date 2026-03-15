@@ -37,6 +37,17 @@ import { calculateHomeHealthScore } from '../utils/health-score-calculator.js';
 import { evaluateAchievements } from './achievement-evaluator.js';
 import { ACHIEVEMENT_CATALOG } from './achievement-catalog.js';
 
+/** Minimum score delta that triggers a health-score-changed event */
+const HEALTH_SCORE_EVENT_THRESHOLD = 2;
+
+/** How long a cached health score is considered fresh (5 minutes) */
+const HEALTH_SCORE_CACHE_TTL_MS = 5 * 60 * 1000;
+
+/** Minimal sensor registry interface (avoids circular dependency) */
+interface SensorRegistryLike {
+  getAll(): Array<{ sensor: { id: string }; state: 'active' | 'stale' | 'offline' }>;
+}
+
 const logger = createLogger('GamificationService');
 
 /** Shape of the gamification_profile row */
@@ -82,15 +93,22 @@ const DEFAULT_HEALTH_SCORE: HomeHealthScore = {
   budget: 0,
   systems: 0,
   calculatedAt: new Date(0).toISOString(),
+  pillarHints: [],
 };
 
 export class GamificationService {
   private db: BetterSqlite3.Database;
   private events?: EventEmitter;
+  private sensorRegistry?: SensorRegistryLike;
 
-  constructor(db: BetterSqlite3.Database, events?: EventEmitter) {
+  constructor(
+    db: BetterSqlite3.Database,
+    events?: EventEmitter,
+    sensorRegistry?: SensorRegistryLike
+  ) {
     this.db = db;
     this.events = events;
+    this.sensorRegistry = sensorRegistry;
     this.ensureProfileRow();
   }
 
@@ -401,21 +419,35 @@ export class GamificationService {
 
   /**
    * Recompute the home health score from live data and cache the result.
-   * Emits 'gamification:health-score-changed' if the total changed.
+   *
+   * The cached score is reused if it was calculated within the last 5 minutes,
+   * unless `force` is true (called after a relevant mutation).
+   *
+   * Emits 'gamification:health-score-changed' when the total changes by 2+ points.
    */
-  calculateHomeHealthScore(): HomeHealthScore {
+  calculateHomeHealthScore(force = false): HomeHealthScore {
     const row = this.db
       .prepare('SELECT homeHealthScore FROM gamification_profile WHERE id = 1')
       .get() as Pick<ProfileRow, 'homeHealthScore'>;
 
     const oldScore = JSON.parse(row.homeHealthScore) as HomeHealthScore;
-    const newScore = calculateHomeHealthScore({ db: this.db });
+
+    // Return cached result if still fresh and not forced
+    if (!force) {
+      const cacheAgeMs = Date.now() - new Date(oldScore.calculatedAt).getTime();
+      if (cacheAgeMs < HEALTH_SCORE_CACHE_TTL_MS && oldScore.total > 0) {
+        return oldScore;
+      }
+    }
+
+    const newScore = calculateHomeHealthScore({ db: this.db, sensorRegistry: this.sensorRegistry });
 
     this.db
       .prepare('UPDATE gamification_profile SET homeHealthScore = ?, updatedAt = ? WHERE id = 1')
       .run(JSON.stringify(newScore), new Date().toISOString());
 
-    if (oldScore.total !== newScore.total) {
+    // Only emit event when score changes by 2+ points
+    if (Math.abs(newScore.total - oldScore.total) >= HEALTH_SCORE_EVENT_THRESHOLD) {
       try {
         this.events?.emit('gamification:health-score-changed', {
           old: oldScore.total,

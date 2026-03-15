@@ -736,7 +736,7 @@ export async function createServices(dataDir: string, repoRoot: string): Promise
   const maintenanceService = new MaintenanceService(homemakerDb);
 
   // Gamification Service — XP, levels, achievements, streaks, home health scoring
-  const gamificationService = new GamificationService(homemakerDb, events);
+  const gamificationService = new GamificationService(homemakerDb, events, sensorRegistryService);
   registerXpEventListeners(events, gamificationService);
 
   // Register Ava cron tasks (daily board health, PR triage, staging ping)

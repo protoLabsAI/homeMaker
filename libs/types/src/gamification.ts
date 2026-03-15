@@ -32,6 +32,8 @@ export interface HomeHealthScore {
   budget: number;
   systems: number;
   calculatedAt: string;
+  /** Actionable hints for improving the lowest-scoring pillars */
+  pillarHints: string[];
 }
 
 /** Full gamification profile for the household */
