@@ -997,6 +997,17 @@ export type {
   BudgetCategorySummary,
 } from './budget.js';
 
+// Inventory tracking types (household asset management)
+export type {
+  AssetCategory,
+  Asset,
+  CreateAssetInput,
+  UpdateAssetInput,
+  WarrantyReport,
+  CategoryValue,
+  TotalValueReport,
+} from './inventory.js';
+
 // PenFile types (vector graphics format v2.8)
 export type {
   PenColor,
