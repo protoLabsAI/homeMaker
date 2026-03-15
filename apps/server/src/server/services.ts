@@ -438,8 +438,8 @@ export async function createServices(dataDir: string, repoRoot: string): Promise
     settingsService,
     healthMonitorService
   );
-  // Sensor Registry (external sensor data ingestion + SQLite history persistence)
-  const sensorRegistryService = new SensorRegistryService(events, getHomemakerDb());
+  // Sensor Registry (external sensor data ingestion)
+  const sensorRegistryService = new SensorRegistryService(events);
 
   // Context Aggregator (reads sensor readings → unified UserPresenceState)
   const contextAggregator = new ContextAggregator(sensorRegistryService);

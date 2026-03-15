@@ -14,7 +14,6 @@
  *   sensor:data-received — when a sensor reports a reading
  */
 
-import * as BetterSqlite3 from 'better-sqlite3';
 import { createLogger } from '@protolabsai/utils';
 import crypto from 'node:crypto';
 import type {
@@ -40,31 +39,11 @@ const STALE_TTL_MS = 5 * 60 * 1000;
 /** How long after the last reading a sensor is considered "offline" (15 minutes) */
 const OFFLINE_TTL_MS = 15 * 60 * 1000;
 
-/** Default number of days to retain sensor history readings */
-const DEFAULT_RETENTION_DAYS = 30;
-
-/** Row shape returned by the sensor_readings table */
-interface SensorReadingRow {
-  sensorId: string;
-  data: string;
-  receivedAt: string;
-}
-
-/** Row shape returned by aggregation queries */
-interface AggregatedRow {
-  period: string;
-  avg: number;
-  min: number;
-  max: number;
-  count: number;
-}
-
 export class SensorRegistryService {
   private sensors = new Map<string, SensorConfig>();
   private readings = new Map<string, SensorReading>();
   private commandQueue = new Map<string, SensorCommand[]>();
   private events?: EventEmitter;
-  private db?: BetterSqlite3.Database;
 
   /** Current tracked WebSocket client count for the builtin:websocket-clients sensor */
   private _wsClientCount = 0;
@@ -72,9 +51,8 @@ export class SensorRegistryService {
   /** Interval handle for the Electron idle time poller */
   private _electronIdleInterval?: ReturnType<typeof setInterval>;
 
-  constructor(events?: EventEmitter, db?: BetterSqlite3.Database) {
+  constructor(events?: EventEmitter) {
     this.events = events;
-    this.db = db;
   }
 
   /**
@@ -235,19 +213,6 @@ export class SensorRegistryService {
 
     // Store the latest reading (replaces previous)
     this.readings.set(input.sensorId, reading);
-
-    // Persist to SQLite for historical queries (fire-and-forget — never blocks the hot path)
-    if (this.db) {
-      try {
-        this.db
-          .prepare(
-            'INSERT OR REPLACE INTO sensor_readings (sensorId, data, receivedAt) VALUES (?, ?, ?)'
-          )
-          .run(input.sensorId, JSON.stringify(input.data), receivedAt);
-      } catch (err) {
-        logger.warn(`Failed to persist sensor reading for "${input.sensorId}" to SQLite`, err);
-      }
-    }
 
     // Update sensor's lastSeenAt
     sensor.lastSeenAt = receivedAt;

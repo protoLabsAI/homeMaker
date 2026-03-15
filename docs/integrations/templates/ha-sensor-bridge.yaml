@@ -1,0 +1,81 @@
+# Home Assistant Package: Bridge sensor state changes to homeMaker
+#
+# SETUP:
+# 1. Copy this file to /config/packages/homeMaker-bridge.yaml
+# 2. Enable packages in configuration.yaml:
+#      homeassistant:
+#        packages: !include_dir_named packages
+# 3. Replace YOUR_HOMEMAKER_HOST with your homeMaker IP or hostname
+# 4. Replace YOUR_AUTOMAKER_API_KEY with the value of AUTOMAKER_API_KEY
+#    from your homeMaker .env file
+# 5. Add each HA entity you want to stream under trigger.entity_id
+# 6. Run ha-register-sensors.yaml first to register sensors before reporting
+# 7. Restart Home Assistant
+#
+# NOTES:
+# - The report endpoint requires an API key (Authorization: Bearer <key>)
+# - Sensor IDs must match those registered via ha-register-sensors.yaml
+# - Sensor ID format: ha:{entity_id}  (e.g. ha:sensor.living_room_temperature)
+# - Attributes are included in the payload for rich context in the dashboard
+# - The automation uses "mode: parallel" so multiple sensors can report
+#   simultaneously without queuing
+
+rest_command:
+  homeMaker_report_sensor:
+    url: 'http://YOUR_HOMEMAKER_HOST:3008/api/sensors/report'
+    method: POST
+    headers:
+      Content-Type: 'application/json'
+      Authorization: 'Bearer YOUR_AUTOMAKER_API_KEY'
+    # sensor_id, value, unit, entity_id, and attributes are passed as data
+    # when calling the service from the automation action below.
+    payload: >-
+      {
+        "sensorId": "{{ sensor_id }}",
+        "data": {
+          "value": "{{ value }}",
+          "unit": "{{ unit | default('') }}",
+          "entity_id": "{{ entity_id }}",
+          "attributes": {{ attributes | default('{}') }}
+        }
+      }
+    verify_ssl: false
+
+automation:
+  - alias: 'homeMaker: Bridge sensor readings'
+    description: 'Posts HA sensor state changes to homeMaker sensor registry'
+    trigger:
+      # --- List every entity whose state changes you want to stream ---
+      - platform: state
+        entity_id:
+          - sensor.living_room_temperature
+          - sensor.living_room_humidity
+          - sensor.outdoor_temperature
+          - binary_sensor.front_door
+          # Add more entities here...
+
+        # Only trigger on meaningful state changes — skip transitions to/from
+        # unknown or unavailable to avoid noisy readings during HA restarts.
+        not_from:
+          - 'unknown'
+          - 'unavailable'
+        not_to:
+          - 'unknown'
+          - 'unavailable'
+
+    condition: []
+    action:
+      - service: rest_command.homeMaker_report_sensor
+        data:
+          # Map HA entity_id to homeMaker sensorId using the ha: prefix
+          sensor_id: 'ha:{{ trigger.entity_id }}'
+          value: '{{ trigger.to_state.state }}'
+          unit: >-
+            {{ trigger.to_state.attributes.get('unit_of_measurement', '') }}
+          entity_id: '{{ trigger.entity_id }}'
+          # Serialize attributes as JSON string for the payload template
+          attributes: >-
+            {{ trigger.to_state.attributes | to_json }}
+
+    mode: parallel
+    max: 10

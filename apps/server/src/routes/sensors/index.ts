@@ -220,6 +220,7 @@ export function createSensorRoutes(sensorRegistryService: SensorRegistryService)
    * Queue a command for delivery to an IoT device.
    * Body: { action: 'set' | 'toggle' | 'reboot'; payload?: Record<string, unknown> }
    */
+
   router.post('/:id/command', (req, res) => {
     try {
       const { id } = req.params;
