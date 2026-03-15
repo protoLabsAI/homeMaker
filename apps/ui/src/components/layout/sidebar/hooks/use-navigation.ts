@@ -12,6 +12,7 @@ import {
   Home,
   Package,
   Trophy,
+  Cpu,
 } from 'lucide-react';
 import type { NavSection, NavItem } from '../types';
 import type { KeyboardShortcut } from '@/hooks/use-keyboard-shortcuts';
@@ -122,6 +123,11 @@ export function useNavigation({
         label: 'Chat',
         icon: MessageSquare,
         shortcut: shortcuts.chat,
+      },
+      {
+        id: 'sensors',
+        label: 'Sensors',
+        icon: Cpu,
       },
       {
         id: 'inventory',
