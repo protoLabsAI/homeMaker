@@ -1,105 +1,88 @@
-# Deploy homeMaker on Tailscale
+# Deploy homeMaker via Tailscale
 
-Set up homeMaker as a private home server accessible across your Tailscale network.
+Deploy homeMaker on a home server using Docker Compose with a Tailscale sidecar. No ports are exposed to the public internet — all access is private, network-level authenticated through Tailscale.
 
 ## Prerequisites
 
-- Node.js 22+
-- Docker and Docker Compose
-- A [Tailscale](https://tailscale.com) account with at least one machine enrolled
-- An Anthropic API key
+- Docker and Docker Compose installed on the home server
+- A [Tailscale](https://tailscale.com) account
 
-## Environment setup
+## Why Tailscale
 
-Create a `.env` file in the project root:
+Tailscale creates an encrypted private network (WireGuard-based) between your devices. Using it as the access layer for homeMaker means:
 
-```bash
-# Required
-ANTHROPIC_API_KEY=sk-ant-...
+- No login screen or password needed — network membership is the auth
+- No firewall rules or port forwarding to configure on your router
+- All traffic between your devices stays encrypted end-to-end
+- The server is completely invisible to the public internet
 
-# Vault encryption — generate with: openssl rand -hex 32
-HOMEMAKER_VAULT_KEY=your-64-char-hex-key
+## Step 1 — Generate a vault key
 
-# Ports
-PORT=3008
-HOST=0.0.0.0
-
-# Data directory (persisted across container restarts)
-DATA_DIR=/data
-
-# Optional — weather widget
-OPENWEATHERMAP_API_KEY=your-key
-OPENWEATHERMAP_LAT=37.7749
-OPENWEATHERMAP_LON=-122.4194
-
-# Optional — sensor history
-SENSOR_HISTORY_RETENTION_DAYS=30
-```
-
-Generate the vault key with:
+The vault uses AES-256-GCM encryption. Generate a 64-character hex key:
 
 ```bash
 openssl rand -hex 32
 ```
 
-## Start with Docker Compose
+Save the output — you will need it in the next step.
+
+## Step 2 — Create the env file
 
 ```bash
-docker compose up -d
+cp .env.homemaker.example .env.homemaker
 ```
 
-The UI is available at `http://localhost:3007` and the API at `http://localhost:3008`.
+Open `.env.homemaker` and fill in:
 
-## Access via Tailscale
+| Variable              | How to get it                                                            |
+| --------------------- | ------------------------------------------------------------------------ |
+| `ANTHROPIC_API_KEY`   | [console.anthropic.com](https://console.anthropic.com)                   |
+| `HOMEMAKER_VAULT_KEY` | Output from `openssl rand -hex 32` (Step 1)                              |
+| `AUTOMAKER_API_KEY`   | Any strong random string — `openssl rand -hex 32` works                  |
+| `TS_AUTHKEY`          | Tailscale admin console → Settings → Keys → Generate auth key            |
+| `TAILSCALE_HOSTNAME`  | The name this server will have on your TS network (default: `homemaker`) |
 
-1. Install Tailscale on the host machine and sign in:
+When generating the Tailscale auth key, check **Reusable** and add the tag `tag:homemaker` so the key matches the advertised tag in the compose file.
+
+## Step 3 — Start the stack
 
 ```bash
-curl -fsSL https://tailscale.com/install.sh | sh
-sudo tailscale up
+docker compose -f docker-compose.homemaker.yml --env-file .env.homemaker up -d
 ```
 
-2. Find the machine's Tailscale hostname (e.g., `my-home-server`):
+This starts three containers:
+
+- `server` — Express backend on port 3008 (internal network only)
+- `ui` — Nginx serving the built frontend on port 80/3007 (internal network only)
+- `tailscale` — Tailscale sidecar that registers this host on your private network
+
+## Step 4 — Verify Tailscale is connected
 
 ```bash
-tailscale status
+docker compose -f docker-compose.homemaker.yml logs tailscale
 ```
 
-3. Access homeMaker from any Tailscale device:
+You should see a line like `Login successful` or `Already logged in`. The server will appear in your Tailscale admin console under the hostname you set.
 
-```
-http://my-home-server:3007
-```
+## Step 5 — Access homeMaker
 
-For a cleaner URL, set a [Tailscale MagicDNS](https://tailscale.com/kb/1081/magicdns) name and use:
+From any device on your Tailscale network:
 
 ```
 http://homemaker:3007
 ```
 
-## Backup strategy
+Replace `homemaker` with whatever you set as `TAILSCALE_HOSTNAME`. If you have [MagicDNS](https://tailscale.com/kb/1081/magicdns) enabled in your Tailscale admin console, the hostname resolves automatically on all your devices.
 
-All persistent data lives in the `DATA_DIR` volume and the `homemaker.db` SQLite file. Back up both:
-
-```bash
-# Stop the server to prevent write-ahead log splits
-docker compose stop server
-
-# Copy the data directory
-rsync -av ./data/ /backup/homemaker-data/
-
-# Copy the database
-cp homemaker.db /backup/homemaker.db
-
-# Restart
-docker compose start server
-```
-
-Schedule with cron for automated nightly backups:
+## Stopping and updating
 
 ```bash
-# crontab -e
-0 2 * * * /home/user/homemaker/scripts/backup.sh
+# Stop
+docker compose -f docker-compose.homemaker.yml --env-file .env.homemaker down
+
+# Pull updated images and restart
+docker compose -f docker-compose.homemaker.yml --env-file .env.homemaker pull
+docker compose -f docker-compose.homemaker.yml --env-file .env.homemaker up -d
 ```
 
 ## Next steps
@@ -107,3 +90,4 @@ Schedule with cron for automated nightly backups:
 - [Configure IoT sensors](../modules/sensors.md) to report readings to the server
 - [Set up the vault](../modules/vault.md) for encrypted credential storage
 - [Add maintenance schedules](../modules/maintenance.md) for home obligations
+- [Backup your data](./backup.md) — all persistent data lives in the `homemaker-data` Docker volume

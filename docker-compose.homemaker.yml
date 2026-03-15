@@ -1,0 +1,96 @@
+# homeMaker — Tailscale Home Server Deployment
+#
+# Deploys homeMaker on a home server with Tailscale for private network access.
+# No ports are exposed to the public internet. All traffic flows through Tailscale.
+#
+# Architecture:
+#   - server and ui are on an internal Docker bridge network only
+#   - tailscale sidecar joins the same internal network and handles TS tunneling
+#     (NET_ADMIN + /dev/net/tun gives it the kernel-level access it needs)
+#   - Devices on your Tailscale network reach homeMaker via the host's Tailscale IP
+#
+# Usage:
+#   cp .env.homemaker.example .env.homemaker
+#   # Fill in the values in .env.homemaker
+#   docker compose -f docker-compose.homemaker.yml --env-file .env.homemaker up -d
+#
+# Access:
+#   http://homemaker:3007  (from any device on your Tailscale network)
+
+services:
+  server:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: server
+    restart: unless-stopped
+    networks:
+      - homemaker-net
+    environment:
+      - NODE_ENV=production
+      - HOST=0.0.0.0
+      - PORT=3008
+      - DATA_DIR=/data
+      - HOMEMAKER_VAULT_KEY=${HOMEMAKER_VAULT_KEY}
+      - AUTOMAKER_API_KEY=${AUTOMAKER_API_KEY}
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
+    volumes:
+      - homemaker-data:/data
+    healthcheck:
+      test: ['CMD', 'curl', '-f', 'http://localhost:3008/api/health']
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
+    # No ports: section — server is internal only, reached via Tailscale
+
+  ui:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: ui
+    restart: unless-stopped
+    networks:
+      - homemaker-net
+    depends_on:
+      server:
+        condition: service_healthy
+    healthcheck:
+      test: ['CMD', 'wget', '-qO-', 'http://localhost:80/']
+      interval: 30s
+      timeout: 3s
+      retries: 3
+      start_period: 10s
+    # No ports: section — UI is internal only, reached via Tailscale
+
+  tailscale:
+    image: tailscale/tailscale:latest
+    restart: unless-stopped
+    hostname: ${TAILSCALE_HOSTNAME:-homemaker}
+    networks:
+      - homemaker-net
+    cap_add:
+      - NET_ADMIN
+      - SYS_MODULE
+    devices:
+      - /dev/net/tun
+    environment:
+      - TS_AUTHKEY=${TS_AUTHKEY}
+      - TS_HOSTNAME=${TAILSCALE_HOSTNAME:-homemaker}
+      - TS_EXTRA_ARGS=--advertise-tags=tag:homemaker
+      - TS_STATE_DIR=/var/lib/tailscale
+    volumes:
+      - tailscale-state:/var/lib/tailscale
+
+networks:
+  homemaker-net:
+    driver: bridge
+    internal: false
+    # internal: false so Tailscale can reach the Tailscale coordination server on startup.
+    # Once connected, all homeMaker traffic stays private on your TS network.
+
+volumes:
+  homemaker-data:
+    name: homemaker-data
+  tailscale-state:
+    name: homemaker-tailscale-state
