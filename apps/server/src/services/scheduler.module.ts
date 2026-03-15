@@ -250,24 +250,6 @@ export function register(container: ServiceContainer): void {
         true
       );
 
-      // Register daily sensor history cleanup — runs at 3 AM daily
-      // Deletes sensor readings older than SENSOR_HISTORY_RETENTION_DAYS (default 30)
-      await schedulerService.registerTask(
-        'sensor-history:cleanup',
-        'Sensor History Cleanup',
-        '0 3 * * *',
-        () => {
-          const result = container.sensorRegistryService.cleanupOldReadings();
-          if (result.deleted > 0) {
-            events.emit('sensor:history-cleanup', {
-              deleted: result.deleted,
-              timestamp: new Date().toISOString(),
-            });
-          }
-        },
-        true
-      );
-
       // Initialize and register daily standup cron (every 15 minutes)
       container.dailyStandupService.initialize(
         settingsService,

@@ -937,10 +937,6 @@ export type {
   UserPresenceState,
   SensorConfig,
   SensorReading,
-  SensorHistoryOptions,
-  SensorAggregationInterval,
-  SensorHistoryAggregatedOptions,
-  AggregatedSensorReading,
 } from './sensor.js';
 
 // ProtoConfig types and schema (proto.config.yaml structure)
