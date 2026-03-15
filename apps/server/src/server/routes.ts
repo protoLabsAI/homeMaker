@@ -466,7 +466,10 @@ export function registerRoutes(app: Express, services: ServiceContainer): void {
   logger.info('Vendor routes mounted at /api/vendors');
 
   // Gamification routes (XP, levels, achievements, streaks, home health score, quests)
-  app.use('/api/gamification', createGamificationRoutes(services.gamificationService));
+  app.use(
+    '/api/gamification',
+    createGamificationRoutes(services.gamificationService, services.questGeneratorService)
+  );
   logger.info('Gamification routes mounted at /api/gamification');
 
   // Note: Sentry v8 automatically captures Express errors - no manual error handler needed

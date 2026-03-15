@@ -26,6 +26,8 @@ import type {
   EarnedAchievement,
   AchievementWithStatus,
   Quest,
+  QuestCategory,
+  QuestStatus,
   XpAwardResult,
   StreakState,
   MonthlyStreakState,
@@ -36,6 +38,9 @@ import { calculateLevel } from '../utils/level-calculator.js';
 import { calculateHomeHealthScore } from '../utils/health-score-calculator.js';
 import { evaluateAchievements } from './achievement-evaluator.js';
 import { ACHIEVEMENT_CATALOG } from './achievement-catalog.js';
+
+/** Maximum number of active quests at any time */
+const MAX_ACTIVE_QUESTS = 3;
 
 /** Minimum score delta that triggers a health-score-changed event */
 const HEALTH_SCORE_EVENT_THRESHOLD = 2;
@@ -76,7 +81,9 @@ interface QuestRow {
   progress: number;
   target: number;
   category: string;
+  status: string;
   expiresAt: string | null;
+  completedAt: string | null;
   generatedBy: string;
   createdAt: string;
 }
@@ -469,29 +476,213 @@ export class GamificationService {
 
   // ── Quests ───────────────────────────────────────────────────────────────
 
-  /** Return all active (non-expired) quests. */
+  /** Return all active (non-expired) quests. Silently removes expired quests. */
   getQuests(): Quest[] {
     const now = new Date().toISOString();
 
-    // Clean up expired quests first
-    this.db
-      .prepare('DELETE FROM active_quests WHERE expiresAt IS NOT NULL AND expiresAt < ?')
-      .run(now);
+    // Mark expired quests
+    const expiredRows = this.db
+      .prepare(
+        `SELECT id, title FROM active_quests
+         WHERE status = 'active' AND expiresAt IS NOT NULL AND expiresAt < ?`
+      )
+      .all(now) as Array<{ id: string; title: string }>;
+
+    if (expiredRows.length > 0) {
+      const markExpired = this.db.prepare(
+        `UPDATE active_quests SET status = 'expired' WHERE id = ?`
+      );
+      for (const row of expiredRows) {
+        markExpired.run(row.id);
+        try {
+          this.events?.emit('gamification:quest-expired', {
+            questId: row.id,
+            title: row.title,
+            timestamp: now,
+          });
+        } catch (err) {
+          logger.error(`Failed to emit quest-expired for "${row.id}":`, err);
+        }
+      }
+      // Delete expired quests after emitting events
+      this.db.prepare(`DELETE FROM active_quests WHERE status = 'expired'`).run();
+    }
 
     const rows = this.db
-      .prepare('SELECT * FROM active_quests ORDER BY createdAt DESC')
+      .prepare(`SELECT * FROM active_quests WHERE status = 'active' ORDER BY createdAt DESC`)
       .all() as QuestRow[];
 
-    return rows.map((r) => ({
+    return rows.map(this.rowToQuest);
+  }
+
+  /** Return the count of currently active quests. */
+  getActiveQuestCount(): number {
+    const row = this.db
+      .prepare(`SELECT COUNT(*) as count FROM active_quests WHERE status = 'active'`)
+      .get() as { count: number };
+    return row.count;
+  }
+
+  /** Check whether an active quest of the given category already exists. */
+  hasActiveQuestOfCategory(category: QuestCategory): boolean {
+    const row = this.db
+      .prepare(
+        `SELECT COUNT(*) as count FROM active_quests WHERE status = 'active' AND category = ?`
+      )
+      .get(category) as { count: number };
+    return row.count > 0;
+  }
+
+  /**
+   * Insert a new quest into the active_quests table.
+   * Returns null if the maximum active quest limit (3) is reached or a
+   * quest of the same category already exists.
+   */
+  insertQuest(quest: Quest): Quest | null {
+    if (this.getActiveQuestCount() >= MAX_ACTIVE_QUESTS) {
+      logger.warn('Max active quests reached, skipping quest insertion');
+      return null;
+    }
+
+    if (this.hasActiveQuestOfCategory(quest.category)) {
+      logger.warn(`Active quest of category "${quest.category}" already exists, skipping`);
+      return null;
+    }
+
+    this.db
+      .prepare(
+        `INSERT INTO active_quests
+           (id, title, description, xpReward, progress, target, category, status, expiresAt, completedAt, generatedBy, createdAt)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+      )
+      .run(
+        quest.id,
+        quest.title,
+        quest.description,
+        quest.xpReward,
+        quest.progress,
+        quest.target,
+        quest.category,
+        quest.status,
+        quest.expiresAt ?? null,
+        quest.completedAt ?? null,
+        quest.generatedBy,
+        quest.createdAt
+      );
+
+    try {
+      this.events?.emit('gamification:quest-generated', {
+        questId: quest.id,
+        title: quest.title,
+        category: quest.category,
+        xpReward: quest.xpReward,
+        generatedBy: quest.generatedBy,
+        timestamp: quest.createdAt,
+      });
+    } catch (err) {
+      logger.error(`Failed to emit quest-generated for "${quest.id}":`, err);
+    }
+
+    return quest;
+  }
+
+  /**
+   * Increment progress on all active quests matching the given category.
+   * When progress reaches the target, the quest is completed and XP is awarded.
+   */
+  incrementQuestProgress(category: QuestCategory, amount = 1): void {
+    const quests = this.db
+      .prepare(`SELECT * FROM active_quests WHERE status = 'active' AND category = ?`)
+      .all(category) as QuestRow[];
+
+    for (const quest of quests) {
+      const newProgress = Math.min(quest.target, Math.max(0, quest.progress + amount));
+
+      this.db
+        .prepare(`UPDATE active_quests SET progress = ? WHERE id = ?`)
+        .run(newProgress, quest.id);
+
+      try {
+        this.events?.emit('gamification:quest-progress', {
+          questId: quest.id,
+          title: quest.title,
+          category: quest.category,
+          progress: newProgress,
+          target: quest.target,
+        });
+      } catch (err) {
+        logger.error(`Failed to emit quest-progress for "${quest.id}":`, err);
+      }
+
+      if (newProgress >= quest.target) {
+        this.completeQuestById(quest.id);
+      }
+    }
+  }
+
+  /**
+   * Complete a quest by ID: mark completed, award XP.
+   * Returns the completed quest, or null if quest not found or already completed.
+   * Per deviation rules: checks progress before awarding XP to prevent double XP.
+   */
+  completeQuestById(questId: string): Quest | null {
+    const row = this.db.prepare(`SELECT * FROM active_quests WHERE id = ?`).get(questId) as
+      | QuestRow
+      | undefined;
+
+    if (!row || row.status !== 'active') {
+      return null;
+    }
+
+    const now = new Date().toISOString();
+
+    this.db
+      .prepare(
+        `UPDATE active_quests SET status = 'completed', completedAt = ?, progress = ? WHERE id = ?`
+      )
+      .run(now, row.target, questId);
+
+    // Award XP through the official channel
+    const xpResult = this.awardXp(`quest:${questId}`, row.xpReward);
+
+    try {
+      this.events?.emit('gamification:quest-completed', {
+        questId,
+        title: row.title,
+        category: row.category,
+        xpReward: row.xpReward,
+        xpResult,
+        timestamp: now,
+      });
+    } catch (err) {
+      logger.error(`Failed to emit quest-completed for "${questId}":`, err);
+    }
+
+    logger.info(`Quest completed: "${row.title}" (+${row.xpReward} XP)`);
+
+    return {
+      ...this.rowToQuest(row),
+      status: 'completed',
+      completedAt: now,
+      progress: row.target,
+    };
+  }
+
+  /** Convert a database row to a Quest object. */
+  private rowToQuest(r: QuestRow): Quest {
+    return {
       id: r.id,
       title: r.title,
       description: r.description,
       xpReward: r.xpReward,
-      progress: r.progress,
+      progress: Math.max(0, r.progress),
       target: r.target,
-      category: r.category,
+      category: r.category as QuestCategory,
+      status: (r.status ?? 'active') as QuestStatus,
+      createdAt: r.createdAt,
       ...(r.expiresAt ? { expiresAt: r.expiresAt } : {}),
+      ...(r.completedAt ? { completedAt: r.completedAt } : {}),
       generatedBy: r.generatedBy as 'system' | 'ava',
-    }));
+    };
   }
 }

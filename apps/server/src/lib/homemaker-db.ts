@@ -171,10 +171,15 @@ function runMigrations(db: BetterSqlite3.Database): void {
       progress INTEGER NOT NULL DEFAULT 0,
       target INTEGER NOT NULL,
       category TEXT NOT NULL,
+      status TEXT NOT NULL DEFAULT 'active',
       expiresAt TEXT,
+      completedAt TEXT,
       generatedBy TEXT NOT NULL DEFAULT 'system',
       createdAt TEXT NOT NULL
     );
+
+    CREATE INDEX IF NOT EXISTS idx_active_quests_status ON active_quests(status);
+    CREATE INDEX IF NOT EXISTS idx_active_quests_category ON active_quests(category);
   `);
 
   logger.info('All homemaker tables initialized');

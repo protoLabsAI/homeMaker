@@ -117,6 +117,7 @@ import { InventoryService } from '../services/inventory-service.js';
 import { MaintenanceService } from '../services/maintenance-service.js';
 import { VendorService } from '../services/vendor-service.js';
 import { GamificationService } from '../services/gamification-service.js';
+import { QuestGeneratorService } from '../services/quest-generator-service.js';
 import { registerXpEventListeners } from '../listeners/xp-event-listeners.js';
 import { getHomemakerDb } from '../lib/homemaker-db.js';
 
@@ -314,6 +315,9 @@ export interface ServiceContainer {
 
   // Gamification engine (XP, levels, achievements, streaks, home health scoring)
   gamificationService: GamificationService;
+
+  // Quest generation engine (contextual quest generation based on home state)
+  questGeneratorService: QuestGeneratorService;
 
   // Drift detection interval (set by wireServices, cleared by shutdown)
   driftCheckInterval: ReturnType<typeof setInterval> | null;
@@ -754,6 +758,13 @@ export async function createServices(dataDir: string, repoRoot: string): Promise
   const gamificationService = new GamificationService(homemakerDb, events, sensorRegistryService);
   registerXpEventListeners(events, gamificationService);
 
+  // Quest Generator Service — contextual quest generation based on home state data
+  const questGeneratorService = new QuestGeneratorService(
+    homemakerDb,
+    gamificationService,
+    sensorRegistryService
+  );
+
   // Register Ava cron tasks (daily board health, PR triage, staging ping)
   void registerAvaCronTasks({ schedulerService, reactiveSpawnerService, projectPath: repoRoot });
 
@@ -959,6 +970,7 @@ export async function createServices(dataDir: string, repoRoot: string): Promise
     maintenanceService,
     vendorService,
     gamificationService,
+    questGeneratorService,
     driftCheckInterval: null,
   };
 }
