@@ -369,7 +369,9 @@ export type EventType =
   | 'gamification:quest-generated'
   | 'gamification:quest-completed'
   | 'gamification:quest-expired'
-  | 'gamification:quest-progress';
+  | 'gamification:quest-progress'
+  // Household chat channel events (family chat with Ava AI)
+  | 'chat:message-received';
 
 export type EventCallback = (type: EventType, payload: unknown) => void;
 
@@ -873,6 +875,11 @@ export interface EventPayloadMap {
   // Ava Channel events (private multi-instance coordination channel)
   'ava-channel:message': {
     message: import('./ava-channel.js').AvaChatMessage;
+  };
+
+  // Household chat channel events (family chat with Ava AI)
+  'chat:message-received': {
+    message: import('./chat-channel.js').ChatMessage;
   };
 }
 

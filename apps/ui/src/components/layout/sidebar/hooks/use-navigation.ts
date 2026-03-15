@@ -9,6 +9,7 @@ import {
   CalendarClock,
   ListTodo,
   MessageSquare,
+  MessageCircle,
   Home,
   Package,
   Trophy,
@@ -131,6 +132,11 @@ export function useNavigation({
         label: 'Chat',
         icon: MessageSquare,
         shortcut: shortcuts.chat,
+      },
+      {
+        id: 'chat-channel',
+        label: 'Family Chat',
+        icon: MessageCircle,
       },
       {
         id: 'sensors',

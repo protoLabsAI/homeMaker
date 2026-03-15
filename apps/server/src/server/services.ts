@@ -120,6 +120,10 @@ import { GamificationService } from '../services/gamification-service.js';
 import { QuestGeneratorService } from '../services/quest-generator-service.js';
 import { registerXpEventListeners } from '../listeners/xp-event-listeners.js';
 import { getHomemakerDb } from '../lib/homemaker-db.js';
+import { ChatChannelService } from '../services/chat-channel-service.js';
+import { AvaClassifier } from '../services/ava-classifier.js';
+import { AvaResponder } from '../services/ava-responder.js';
+import { AvaProactiveService } from '../services/ava-proactive.js';
 
 const logger = createLogger('Server:Services');
 
@@ -318,6 +322,12 @@ export interface ServiceContainer {
 
   // Quest generation engine (contextual quest generation based on home state)
   questGeneratorService: QuestGeneratorService;
+
+  // Household chat channel (family chat with Ava AI participant)
+  chatChannelService: ChatChannelService;
+
+  // Ava proactive alerts (overdue maintenance, expiring warranties)
+  avaProactiveService: AvaProactiveService;
 
   // Drift detection interval (set by wireServices, cleared by shutdown)
   driftCheckInterval: ReturnType<typeof setInterval> | null;
@@ -765,6 +775,25 @@ export async function createServices(dataDir: string, repoRoot: string): Promise
     sensorRegistryService
   );
 
+  // Chat Channel Service — household family chat with Ava AI participant
+  const avaClassifier = new AvaClassifier();
+  const avaResponder = new AvaResponder({
+    maintenanceService,
+    inventoryService,
+    budgetService,
+    vendorService,
+  });
+  const chatChannelService = new ChatChannelService({
+    db: homemakerDb,
+    events,
+    classifier: avaClassifier,
+    responder: avaResponder,
+  });
+  const avaProactiveService = new AvaProactiveService({
+    maintenanceService,
+    inventoryService,
+  });
+
   // Register Ava cron tasks (daily board health, PR triage, staging ping)
   void registerAvaCronTasks({ schedulerService, reactiveSpawnerService, projectPath: repoRoot });
 
@@ -971,6 +1000,8 @@ export async function createServices(dataDir: string, repoRoot: string): Promise
     vendorService,
     gamificationService,
     questGeneratorService,
+    chatChannelService,
+    avaProactiveService,
     driftCheckInterval: null,
   };
 }
