@@ -9,6 +9,7 @@ import {
   ListTodo,
   MessageSquare,
   Home,
+  Package,
 } from 'lucide-react';
 import type { NavSection, NavItem } from '../types';
 import type { KeyboardShortcut } from '@/hooks/use-keyboard-shortcuts';
@@ -114,6 +115,11 @@ export function useNavigation({
         label: 'Chat',
         icon: MessageSquare,
         shortcut: shortcuts.chat,
+      },
+      {
+        id: 'inventory',
+        label: 'Inventory',
+        icon: Package,
       },
     ];
 
