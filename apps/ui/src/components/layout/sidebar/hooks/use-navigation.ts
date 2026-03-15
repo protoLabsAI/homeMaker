@@ -14,6 +14,7 @@ import {
   Trophy,
   Cpu,
   DollarSign,
+  Wrench,
   KeyRound,
 } from 'lucide-react';
 import type { NavSection, NavItem } from '../types';
@@ -119,6 +120,11 @@ export function useNavigation({
         id: 'maintenance',
         label: 'Maintenance',
         icon: CalendarClock,
+      },
+      {
+        id: 'vendors',
+        label: 'Vendors',
+        icon: Wrench,
       },
       {
         id: 'chat',
