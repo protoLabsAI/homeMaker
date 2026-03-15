@@ -101,6 +101,7 @@ import { createVaultRoutes } from '../routes/vault/index.js';
 import { createBudgetRoutes } from '../routes/budget/index.js';
 import { createInventoryRoutes } from '../routes/inventory/index.js';
 import { createMaintenanceRoutes } from '../routes/maintenance/index.js';
+import { createVendorRoutes } from '../routes/vendors/index.js';
 import { createGamificationRoutes } from '../routes/gamification/index.js';
 
 const logger = createLogger('Server:Routes');
@@ -459,6 +460,10 @@ export function registerRoutes(app: Express, services: ServiceContainer): void {
     createMaintenanceRoutes(services.maintenanceService, services.events)
   );
   logger.info('Maintenance routes mounted at /api/maintenance');
+
+  // Vendor/contractor directory routes (service providers, trade categories, ratings, asset links)
+  app.use('/api/vendors', createVendorRoutes(services.vendorService));
+  logger.info('Vendor routes mounted at /api/vendors');
 
   // Gamification routes (XP, levels, achievements, streaks, home health score, quests)
   app.use('/api/gamification', createGamificationRoutes(services.gamificationService));

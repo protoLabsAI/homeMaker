@@ -1020,6 +1020,15 @@ export type {
   MaintenanceListFilters,
 } from './maintenance.js';
 
+// Vendor/contractor directory types (service providers, trade categories, ratings)
+export type {
+  VendorCategory,
+  Vendor,
+  CreateVendorInput,
+  UpdateVendorInput,
+  VendorFilters,
+} from './vendor.js';
+
 // PenFile types (vector graphics format v2.8)
 export type {
   PenColor,

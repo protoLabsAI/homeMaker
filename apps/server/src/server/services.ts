@@ -115,6 +115,7 @@ import { VaultService } from '../services/vault-service.js';
 import { BudgetService } from '../services/budget-service.js';
 import { InventoryService } from '../services/inventory-service.js';
 import { MaintenanceService } from '../services/maintenance-service.js';
+import { VendorService } from '../services/vendor-service.js';
 import { GamificationService } from '../services/gamification-service.js';
 import { registerXpEventListeners } from '../listeners/xp-event-listeners.js';
 import { getHomemakerDb } from '../lib/homemaker-db.js';
@@ -307,6 +308,9 @@ export interface ServiceContainer {
 
   // Maintenance scheduling (recurring home maintenance tasks and completion history)
   maintenanceService: MaintenanceService;
+
+  // Vendor/contractor directory (service providers, trade categories, ratings)
+  vendorService: VendorService;
 
   // Gamification engine (XP, levels, achievements, streaks, home health scoring)
   gamificationService: GamificationService;
@@ -743,6 +747,9 @@ export async function createServices(dataDir: string, repoRoot: string): Promise
   // Maintenance Service — recurring home maintenance scheduling and completion tracking
   const maintenanceService = new MaintenanceService(homemakerDb);
 
+  // Vendor Service — vendor/contractor directory with trade categories, ratings, asset links
+  const vendorService = new VendorService(homemakerDb);
+
   // Gamification Service — XP, levels, achievements, streaks, home health scoring
   const gamificationService = new GamificationService(homemakerDb, events, sensorRegistryService);
   registerXpEventListeners(events, gamificationService);
@@ -950,6 +957,7 @@ export async function createServices(dataDir: string, repoRoot: string): Promise
     budgetService,
     inventoryService,
     maintenanceService,
+    vendorService,
     gamificationService,
     driftCheckInterval: null,
   };
