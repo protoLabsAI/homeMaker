@@ -997,6 +997,15 @@ export type {
   BudgetCategorySummary,
 } from './budget.js';
 
+// Maintenance scheduling types (recurring home maintenance tasks and completion history)
+export type {
+  MaintenanceCategory,
+  MaintenanceSchedule,
+  MaintenanceCompletion,
+  MaintenanceDueSummary,
+  MaintenanceListFilters,
+} from './maintenance.js';
+
 // PenFile types (vector graphics format v2.8)
 export type {
   PenColor,

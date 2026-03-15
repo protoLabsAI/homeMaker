@@ -93,6 +93,7 @@ import { createHivemindRoutes } from '../routes/hivemind/index.js';
 import { createDoraRoutes } from '../routes/dora/index.js';
 import { createAgentRoutes } from '../routes/agents.js';
 import { createBudgetRoutes } from '../routes/budget/index.js';
+import { createMaintenanceRoutes } from '../routes/maintenance/index.js';
 
 const logger = createLogger('Server:Routes');
 
@@ -446,6 +447,10 @@ export function registerRoutes(app: Express, services: ServiceContainer): void {
   // Budget tracking routes (household budget categories, transactions, summaries)
   app.use('/api/budget', createBudgetRoutes(services.budgetService));
   logger.info('Budget routes mounted at /api/budget');
+
+  // Maintenance scheduling routes (recurring home maintenance tasks and completion history)
+  app.use('/api/maintenance', createMaintenanceRoutes(services.maintenanceService));
+  logger.info('Maintenance routes mounted at /api/maintenance');
 
   // Note: Sentry v8 automatically captures Express errors - no manual error handler needed
 }
