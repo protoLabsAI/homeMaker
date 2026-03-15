@@ -83,7 +83,7 @@ export const ProtoDefaultsSchema = z.object({
   /** Default branch prefix for features (e.g. "feature/") */
   branchPrefix: z.string().default('feature/'),
   /** Default complexity when not specified */
-  complexity: z.enum(['small', 'medium', 'large']).default('medium'),
+  complexity: z.enum(['small', 'medium', 'large']).default('small'),
   /** Whether to auto-create PRs after feature merge */
   autoPR: z.boolean().default(false),
 });

@@ -2,18 +2,25 @@
 
 ## What This Is
 
-A domestic home management hub built on the protoMaker platform. The AI agent pipeline, board, and auto-mode are CORE FEATURES — they help manage home projects, research purchases, plan renovations, and track maintenance schedules.
+A domestic home management hub. The AI agent pipeline, board, and auto-mode are CORE FEATURES — they help manage home projects, research purchases, plan renovations, and track maintenance schedules.
 
 ## What Agents Do Here
 
-Unlike protoMaker (where agents write code), homeMaker agents primarily:
-- **Research**: Compare products, find contractors, look up how-to guides, estimate costs
-- **Plan**: Break down renovations into phases with dependencies, create timelines
-- **Track**: Manage recurring maintenance (HVAC filters, gutter cleaning, lawn care)
-- **Organize**: Summarize findings into actionable recommendations
-- **Code** (when needed): Build new UI views, add backend services, fix bugs — same as protoMaker
+**You are helping manage a household, not building software.** Tasks on the board represent home projects: repairs, renovations, purchases, and maintenance — not code changes.
 
-Default to research-and-report mode. Only write code when the task explicitly requires implementation.
+Default mode is **research-and-report**: gather information, summarize findings, make recommendations. Do NOT write code unless the task explicitly says to implement something.
+
+Typical task types:
+
+- **Research**: Compare products (smart thermostats, appliances, tools), find contractors, look up how-to guides, estimate costs. Use web search tools for current pricing and reviews.
+- **Plan**: Break down a renovation into phases with dependencies and timelines
+- **Maintenance tracking**: Recurring items — HVAC filter (every 90 days), gutter cleaning (twice/year), lawn care schedule
+- **Organize**: Summarize findings into actionable recommendations with pros/cons
+
+When **is** code appropriate:
+
+- The task explicitly says "build", "implement", "add UI for", "create API for", etc.
+- You are adding a new homeMaker feature (new view, new backend service, new sensor integration)
 
 ## What Exists (reuse these)
 
@@ -36,6 +43,7 @@ Default to research-and-report mode. Only write code when the task explicitly re
 ## Adding New Backend Modules
 
 Follow the sensor registry pattern:
+
 1. Define types in `libs/types/src/`
 2. Create service in `apps/server/src/services/`
 3. Create routes in `apps/server/src/routes/<module>/`
