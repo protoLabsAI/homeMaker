@@ -314,6 +314,7 @@ export type EventType =
   // Sensor registry events (core sensor framework)
   | 'sensor:registered'
   | 'sensor:data-received'
+  | 'sensor:history-cleanup'
   // Inventory mutation events (trigger gamification checks)
   | 'inventory:asset-created'
   | 'inventory:asset-updated'
@@ -849,6 +850,7 @@ export interface EventPayloadMap {
     data: Record<string, unknown>;
     receivedAt: string;
   };
+  'sensor:history-cleanup': { deleted: number; timestamp: string };
 
   // Subagent tool approval events (gated trust model)
   'subagent:tool-approval-request': {
