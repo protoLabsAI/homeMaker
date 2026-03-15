@@ -380,6 +380,8 @@ export type {
   SchedulerSettings,
   // Ceremony settings
   GlobalCeremoniesConfig,
+  // Home Assistant config
+  HomeAssistantConfig,
 } from './settings.js';
 export {
   DEFAULT_KEYBOARD_SHORTCUTS,

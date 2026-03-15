@@ -757,6 +757,26 @@ export interface GlobalSettings {
    * @see GlobalCeremoniesConfig
    */
   ceremonies?: GlobalCeremoniesConfig;
+
+  /**
+   * Home Assistant integration configuration.
+   * Stores the HA instance URL, access token, and per-entity sync preferences.
+   * @see HomeAssistantConfig
+   */
+  homeAssistant?: HomeAssistantConfig;
+}
+
+/**
+ * Home Assistant integration configuration.
+ * Stores connection details and per-entity sensor sync preferences.
+ */
+export interface HomeAssistantConfig {
+  /** Home Assistant instance URL (e.g., http://homeassistant.local:8123) */
+  url: string;
+  /** Long-lived access token for authentication */
+  accessToken: string;
+  /** Map of entity_id -> enabled for sensor sync (true = sync to homeMaker sensors) */
+  entitySyncMap?: Record<string, boolean>;
 }
 
 /**
