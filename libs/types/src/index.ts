@@ -988,6 +988,9 @@ export type {
 // Chat stream part types (SubagentProgress, SubagentStatus)
 export type { SubagentProgress, SubagentStatus } from './chat.js';
 
+// Vault types (encrypted local secrets storage)
+export type { SecretCategory, VaultEntry, VaultEntryWithValue } from './vault.js';
+
 // PenFile types (vector graphics format v2.8)
 export type {
   PenColor,

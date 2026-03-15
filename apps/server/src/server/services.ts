@@ -111,6 +111,7 @@ import { CheckpointService } from '../services/checkpoint-service.js';
 import { DailyStandupService } from '../services/daily-standup-service.js';
 import { ProjectSlugResolver } from '../services/project-slug-resolver.js';
 import { DeviationRuleService } from '../services/deviation-rule-service.js';
+import { VaultService } from '../services/vault-service.js';
 
 const logger = createLogger('Server:Services');
 
@@ -288,6 +289,9 @@ export interface ServiceContainer {
 
   // Deviation rule evaluation (agent scope constraints)
   deviationRuleService: DeviationRuleService;
+
+  // Encrypted secrets vault (AES-256-GCM, SQLite-backed)
+  vaultService: VaultService;
 
   // Drift detection interval (set by wireServices, cleared by shutdown)
   driftCheckInterval: ReturnType<typeof setInterval> | null;
@@ -707,6 +711,10 @@ export async function createServices(dataDir: string, repoRoot: string): Promise
   // Deviation Rule Service — evaluates agent scope against per-feature constraints
   const deviationRuleService = new DeviationRuleService();
 
+  // Vault Service — encrypted secrets storage (AES-256-GCM, SQLite-backed)
+  // Throws at startup if HOMEMAKER_VAULT_KEY is missing or malformed.
+  const vaultService = new VaultService(dataDir);
+
   // Register Ava cron tasks (daily board health, PR triage, staging ping)
   void registerAvaCronTasks({ schedulerService, reactiveSpawnerService, projectPath: repoRoot });
 
@@ -906,6 +914,7 @@ export async function createServices(dataDir: string, repoRoot: string): Promise
     checkpointService,
     projectSlugResolver,
     deviationRuleService,
+    vaultService,
     driftCheckInterval: null,
   };
 }
