@@ -1,146 +1,125 @@
-# Installation
+# Install homeMaker
+
+This guide covers installing homeMaker on Linux, macOS, and Windows, configuring all environment variables, and verifying the installation works.
 
 ## Prerequisites
 
-- **Node.js 22+** (required: >=22.0.0 <23.0.0)
-- **npm** (comes with Node.js)
-- **Git** (for worktree isolation)
-- **[Claude Code CLI](https://code.claude.com/docs/en/overview)** — Install and authenticate with your Anthropic subscription
+- Node.js 22+
+- npm 10+
+- Git
+- An Anthropic API key
 
-protoLabs uses your authenticated Claude Code CLI credentials automatically. No separate API key configuration needed.
+## Install Node.js
 
-## Install
+### Linux (Ubuntu/Debian)
 
 ```bash
-git clone https://github.com/protoLabsAI/protoMaker.git
-cd protoMaker
+curl -fsSL https://deb.nodesource.com/setup_22.x | sudo -E bash -
+sudo apt-get install -y nodejs
+```
+
+### Linux (Fedora/RHEL)
+
+```bash
+sudo dnf install nodejs
+```
+
+### macOS
+
+```bash
+brew install node@22
+```
+
+### Windows
+
+Download the Node.js 22 installer from [nodejs.org](https://nodejs.org) and run it.
+
+## Clone and install
+
+```bash
+git clone https://github.com/your-org/homeMaker.git
+cd homeMaker
 npm install
+npm run build:packages
 ```
 
-## Run
+## Environment variables
+
+Create a `.env` file in the project root:
 
 ```bash
-npm run dev
+cp .env.example .env
 ```
 
-This opens an interactive launcher. Choose between:
+| Variable | Required | Description |
+| --- | --- | --- |
+| `ANTHROPIC_API_KEY` | Yes | Anthropic API key for AI agents |
+| `HOMEMAKER_VAULT_KEY` | For vault | 64-char hex key for AES-256-GCM secrets encryption |
+| `AUTOMAKER_API_KEY` | Optional | API key for server authentication |
+| `HOST` | No | Host to bind to (default: `0.0.0.0`) |
+| `PORT` | No | Server port (default: `3008`) |
+| `DATA_DIR` | No | Data storage directory (default: `./data`) |
+| `AUTOMAKER_MOCK_AGENT` | No | Set to `true` to enable mock agent mode for CI testing |
+| `GITHUB_TOKEN` | Optional | For GitHub operations |
+| `OPENWEATHERMAP_API_KEY` | Optional | Weather widget API key |
+| `OPENWEATHERMAP_LAT` | No | Home latitude for weather |
+| `OPENWEATHERMAP_LON` | No | Home longitude for weather |
+| `SENSOR_HISTORY_RETENTION_DAYS` | No | Days of sensor history (default: `30`) |
 
-1. **Web Application** — Opens in your browser at `localhost:3007`
-2. **Desktop Application** — Electron app (recommended)
-
-Or specify directly:
+Generate the vault key:
 
 ```bash
-npm run dev:full             # Web mode — starts UI (:3007) AND server (:3008) together (recommended)
-npm run dev:electron         # Desktop app (bundles server automatically)
-npm run dev:electron:debug   # Desktop with DevTools
-npm run dev:electron:wsl     # WSL (Windows Subsystem for Linux)
+openssl rand -hex 32
 ```
 
-> **Important:** `npm run dev:web` starts only the UI frontend on port 3007. It requires the backend server to be running separately on port 3008. Use `npm run dev:full` to start both in one command, or run `npm run dev:server` in a second terminal alongside `npm run dev:web`.
+## Start the server
 
-## TUI Launcher
-
-For a richer interactive menu:
+### Development (UI + server together)
 
 ```bash
-./start-automaker.sh
+npm run dev:full
 ```
 
-Features: gradient ASCII art, pre-flight dependency checks, remembers your last choice (stored in `~/.automaker_launcher_history`), 30-second timeout for hands-free selection.
+UI is at `http://localhost:3007`, API at `http://localhost:3008`.
+
+### UI only
 
 ```bash
-./start-automaker.sh web            # Direct launch — web
-./start-automaker.sh electron       # Direct launch — desktop
-./start-automaker.sh --check-deps   # Verify dependencies
-./start-automaker.sh --help         # All options
+npm run dev:web
 ```
 
-## Authentication
-
-protoLabs integrates with your authenticated Claude Code CLI. Install and authenticate following the [official quickstart](https://code.claude.com/docs/en/quickstart), then protoLabs detects your credentials automatically.
-
-### API Key
-
-The server uses `protoLabs_studio_key` as the default API key. To override, set the env var:
+### Backend only
 
 ```bash
-AUTOMAKER_API_KEY=your-custom-key npm run dev --workspace=apps/server
+npm run dev:server
 ```
 
-## Environment Variables
+## Verify the installation
 
-### Server
+1. Open `http://localhost:3007` — the dashboard should load.
+2. Open `http://localhost:3008/api/health` — should return `{ "status": "ok" }`.
+3. Navigate to the Board tab and create a task — it should persist after a page reload.
 
-| Variable            | Default                | Description                   |
-| ------------------- | ---------------------- | ----------------------------- |
-| `PORT`              | `3008`                 | Server port                   |
-| `HOST`              | `0.0.0.0`              | Host to bind to               |
-| `HOSTNAME`          | `localhost`            | Hostname for user-facing URLs |
-| `DATA_DIR`          | `./data`               | Data storage directory        |
-| `AUTOMAKER_API_KEY` | `protoLabs_studio_key` | API key for server auth       |
+## Common issues
 
-### Security
+**Port already in use**
 
-| Variable                 | Default     | Description                                      |
-| ------------------------ | ----------- | ------------------------------------------------ |
-| `ALLOWED_ROOT_DIRECTORY` | _(none)_    | Restrict file operations to a specific directory |
-| `CORS_ORIGIN`            | `localhost` | CORS allowed origins (comma-separated)           |
-
-### Integrations
-
-| Variable              | Default                      | Description                                 |
-| --------------------- | ---------------------------- | ------------------------------------------- |
-| `GITHUB_TOKEN`        | _(none)_                     | GitHub PAT for repository operations        |
-| `LANGFUSE_PUBLIC_KEY` | _(none)_                     | Langfuse public key (enables observability) |
-| `LANGFUSE_SECRET_KEY` | _(none)_                     | Langfuse secret key                         |
-| `LANGFUSE_BASE_URL`   | `https://cloud.langfuse.com` | Langfuse API URL                            |
-
-### Development
-
-| Variable                         | Default  | Description                               |
-| -------------------------------- | -------- | ----------------------------------------- |
-| `VITE_SKIP_ELECTRON`             | _(none)_ | Skip Electron in dev mode                 |
-| `OPEN_DEVTOOLS`                  | _(none)_ | Auto-open DevTools in Electron            |
-| `AUTOMAKER_AUTO_LOGIN`           | _(none)_ | Skip login prompt (ignored in production) |
-| `AUTOMAKER_MOCK_AGENT`           | _(none)_ | Enable mock agent mode for CI             |
-| `AUTOMAKER_SKIP_SANDBOX_WARNING` | _(none)_ | Skip sandbox warning dialog               |
-
-## Building
-
-### Web Application
+Change `PORT` in `.env` or kill the process using the port:
 
 ```bash
-npm run build
+lsof -ti:3008 | xargs kill
 ```
 
-### Desktop Application
+**Build fails with missing packages**
 
-```bash
-npm run build:electron              # Current platform
-npm run build:electron:mac          # macOS (DMG + ZIP, x64 + arm64)
-npm run build:electron:win          # Windows (NSIS installer, x64)
-npm run build:electron:linux        # Linux (AppImage + DEB + RPM, x64)
-```
+Run `npm run build:packages` before starting. Shared libraries must be built first.
 
-Output: `apps/ui/release/`
+**Vault operations fail**
 
-### Docker
+Verify `HOMEMAKER_VAULT_KEY` is exactly 64 hex characters. Generate a new one with `openssl rand -hex 32`.
 
-See [Docker Architecture](../self-hosting/docker.md) and [Docker Compose](../self-hosting/docker-compose.md) for containerized deployment.
+## Next steps
 
-## Testing
-
-```bash
-npm run test                # E2E tests (Playwright, headless)
-npm run test:headed         # E2E tests with browser visible
-npm run test:server         # Server unit tests (Vitest)
-npm run test:packages       # Shared package tests
-npm run test:all            # All tests (packages + server)
-```
-
-Tests run on ports 3007 (UI) and 3008 (server). Playwright uses Chromium and auto-starts test servers.
-
-## Next Steps
-
-Head to the [Quick Tutorial](./index.md#quick-tutorial) to create your first feature.
+- [Add your first asset](./first-asset.md)
+- [Deploy with Docker](../deployment/docker.md)
+- [Connect to Tailscale](../deployment/tailscale.md)
