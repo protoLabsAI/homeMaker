@@ -991,6 +991,35 @@ export type { SubagentProgress, SubagentStatus } from './chat.js';
 // Vault types (encrypted local secrets storage)
 export type { SecretCategory, VaultEntry, VaultEntryWithValue } from './vault.js';
 
+// Budget tracking types (household budget categories and transactions)
+export type {
+  BudgetCategory,
+  TransactionRecurrence,
+  Transaction,
+  BudgetSummary,
+  BudgetCategorySummary,
+} from './budget.js';
+
+// Inventory tracking types (household asset management)
+export type {
+  AssetCategory,
+  Asset,
+  CreateAssetInput,
+  UpdateAssetInput,
+  WarrantyReport,
+  CategoryValue,
+  TotalValueReport,
+} from './inventory.js';
+
+// Maintenance scheduling types (recurring home maintenance tasks and completion history)
+export type {
+  MaintenanceCategory,
+  MaintenanceSchedule,
+  MaintenanceCompletion,
+  MaintenanceDueSummary,
+  MaintenanceListFilters,
+} from './maintenance.js';
+
 // PenFile types (vector graphics format v2.8)
 export type {
   PenColor,
@@ -1026,3 +1055,18 @@ export type {
   PenNode,
   PenDocument,
 } from './pen.js';
+
+// Gamification types (XP, levels, achievements, streaks, quests, home health scoring)
+export type {
+  EarnedAchievement,
+  StreakState,
+  MonthlyStreakState,
+  HomeHealthScore,
+  GamificationProfile,
+  AchievementCategory,
+  AchievementDefinition,
+  AchievementWithStatus,
+  XpEvent,
+  Quest,
+  XpAwardResult,
+} from './gamification.js';

@@ -54,6 +54,7 @@ import { useMobileVisibility } from '@/hooks/use-mobile-visibility';
 import { useVirtualKeyboardResize } from '@/hooks/use-virtual-keyboard-resize';
 import { BottomPanel } from '@/components/layout/bottom-panel';
 import { UpdateNotification } from '@/components/layout/update-notification';
+import { CelebrationProvider } from '@/components/gamification/celebrations';
 import {
   Panel,
   PanelGroup,
@@ -936,6 +937,7 @@ function RootLayoutContent() {
         <main className="h-screen-safe overflow-hidden" data-testid="app-container">
           <Outlet />
           <Toaster richColors position="bottom-right" theme={isDarkTheme ? 'dark' : 'light'} />
+          <CelebrationProvider />
         </main>
         <SandboxRiskDialog
           open={showSandboxDialog}
@@ -1010,6 +1012,7 @@ function RootLayoutContent() {
         <ChatModal />
         <MobileBottomNav />
         <Toaster richColors position="bottom-right" theme={isDarkTheme ? 'dark' : 'light'} />
+        <CelebrationProvider />
       </main>
       <SandboxRiskDialog
         open={showSandboxDialog}

@@ -202,8 +202,8 @@ export interface Feature {
   gitWorkflow?: Partial<GitWorkflowSettings>;
   /**
    * Feature complexity level - affects model selection
-   * - small: Quick fixes, trivial changes (haiku)
-   * - medium: Standard features (sonnet) - default
+   * - small: Quick lookups, research tasks, trivial changes (haiku) - default
+   * - medium: Standard features (sonnet)
    * - large: Complex multi-file features (sonnet)
    * - architectural: Core infrastructure, key architecture decisions (opus)
    */
