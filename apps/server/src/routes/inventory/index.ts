@@ -127,7 +127,12 @@ export function createInventoryRoutes(
       };
 
       const asset = inventoryService.create(input);
-      events?.emit('inventory:asset-created', { assetId: asset.id });
+      const hasPhoto = asset.photoUrls.length > 0;
+      const hasReceipt = asset.purchasePrice != null;
+      events?.emit('inventory:asset-created', {
+        assetId: asset.id,
+        hasPhotoAndReceipt: hasPhoto && hasReceipt,
+      });
       res.status(201).json({ success: true, data: asset });
     } catch (error) {
       logger.error('Failed to create asset:', error);

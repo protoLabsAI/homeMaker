@@ -18,6 +18,7 @@ import { Router } from 'express';
 import { createLogger } from '@protolabsai/utils';
 import type { MaintenanceCategory } from '@protolabsai/types';
 import type { MaintenanceService } from '../../services/maintenance-service.js';
+import type { EventEmitter } from '../../lib/events.js';
 
 const logger = createLogger('MaintenanceRoutes');
 
@@ -34,7 +35,10 @@ const VALID_CATEGORIES: ReadonlySet<string> = new Set<MaintenanceCategory>([
   'other',
 ]);
 
-export function createMaintenanceRoutes(maintenanceService: MaintenanceService): Router {
+export function createMaintenanceRoutes(
+  maintenanceService: MaintenanceService,
+  events?: EventEmitter
+): Router {
   const router = Router();
 
   // ── POST / — create schedule ─────────────────────────────────────────────
@@ -313,11 +317,22 @@ export function createMaintenanceRoutes(maintenanceService: MaintenanceService):
         return;
       }
 
+      // Look up the schedule before completing to determine if on time
+      const schedule = maintenanceService.get(req.params.scheduleId);
+      const completionTime =
+        typeof completedAt === 'string' ? completedAt : new Date().toISOString();
+      const onTime = schedule ? completionTime <= schedule.nextDueAt : false;
+
       const result = maintenanceService.complete(req.params.scheduleId, {
         completedBy: (completedBy as string).trim(),
         completedAt: typeof completedAt === 'string' ? completedAt : undefined,
         notes: typeof notes === 'string' ? notes : null,
         actualCostUsd: typeof actualCostUsd === 'number' ? actualCostUsd : null,
+      });
+
+      events?.emit('maintenance:tick', {
+        scheduleId: req.params.scheduleId,
+        onTime,
       });
 
       res.status(201).json({ success: true, data: result });

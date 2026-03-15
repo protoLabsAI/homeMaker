@@ -455,7 +455,10 @@ export function registerRoutes(app: Express, services: ServiceContainer): void {
   logger.info('Inventory routes mounted at /api/inventory');
 
   // Maintenance scheduling routes (recurring home maintenance tasks and completion history)
-  app.use('/api/maintenance', createMaintenanceRoutes(services.maintenanceService));
+  app.use(
+    '/api/maintenance',
+    createMaintenanceRoutes(services.maintenanceService, services.events)
+  );
   logger.info('Maintenance routes mounted at /api/maintenance');
 
   // Gamification routes (XP, levels, achievements, streaks, home health score, quests)
