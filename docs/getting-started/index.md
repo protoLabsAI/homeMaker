@@ -1,225 +1,65 @@
-# Getting Started
+# Get homeMaker running in 5 minutes
 
-protoLabs is an AI development studio. You describe features. AI agents build them in isolated git branches and create PRs. You review and merge.
+This tutorial walks you through cloning homeMaker, installing dependencies, and opening the UI for the first time. By the end you will have a running local instance you can log into.
 
-## How It Works
+## Prerequisites
 
-```
-You create a feature → Agent claims it → Works in isolated branch → Creates PR → You review & merge
-```
+- Node.js 22 or higher
+- npm 10 or higher
+- An [Anthropic API key](https://console.anthropic.com)
 
-1. **Describe what you want** — Create a feature on the board with a title and description
-2. **Agent picks it up** — Auto-mode assigns an AI agent based on complexity
-3. **Isolated execution** — The agent works in a git worktree, protecting your main branch
-4. **PR for review** — When done, the agent creates a pull request
-5. **Merge and ship** — Review the PR, merge it, feature moves to done
+## Steps
 
-## Quick Tutorial
-
-Walk through the core workflow: create a feature, let an agent implement it, and merge the PR.
-
-### Step 1: Start the Application
-
-`npm run dev:web` starts only the UI frontend (port 3007). The backend server (port 3008) must also be running. Use `dev:full` to start both in one command:
+### 1. Clone the repository
 
 ```bash
-cd /path/to/your-project
-npm run dev:full   # Starts UI on :3007 and server on :3008 concurrently
+git clone https://github.com/your-org/homeMaker.git
+cd homeMaker
 ```
 
-Or start them separately in two terminals:
+### 2. Install dependencies
 
 ```bash
-# Terminal 1 — backend server
-npm run dev:server
-
-# Terminal 2 — web UI
-npm run dev:web
+npm install
+npm run build:packages
 ```
 
-Open `http://localhost:3007` in your browser. You'll see the Kanban board.
+### 3. Configure environment variables
 
-### Step 2: Create a Feature
-
-Click "New Feature" or use the CLI:
+Copy the example environment file and fill in the required values:
 
 ```bash
-claude
-> /board create
+cp .env.example .env
 ```
 
-Give it a title and description. Be specific — the agent will implement exactly what you describe:
-
-```markdown
-## Title
-
-Add health check endpoint
-
-## Description
-
-Create a GET /api/health endpoint that returns { status: "ok", uptime: process.uptime() }.
-Add it to the existing Express router in src/routes/index.ts.
-
-## Acceptance Criteria
-
-- [ ] GET /api/health returns 200 with JSON body
-- [ ] Response includes status and uptime fields
-- [ ] No new dependencies added
-```
-
-The feature appears in the **backlog** column.
-
-### Step 3: Start Auto-Mode
-
-Auto-mode picks up backlog features and assigns agents:
+Open `.env` and set at minimum:
 
 ```bash
-/auto-mode start
+ANTHROPIC_API_KEY=sk-ant-...
+HOMEMAKER_VAULT_KEY=your-64-char-hex-key
 ```
 
-Or click the auto-mode toggle in the UI.
+Generate the vault key with:
 
-The agent:
-
-1. Creates a git worktree for isolation
-2. Reads the codebase to understand patterns
-3. Implements the feature
-4. Runs build verification
-5. Creates a PR
-
-### Step 4: Review the PR
-
-The feature moves to the **review** column. The agent's PR includes:
-
-- All code changes
-- A summary of what was implemented
-- CodeRabbit AI review (if configured)
-- CI check results (build, test, format, lint)
-
-Review the PR on GitHub. If changes are needed, comment on the PR — the agent can address feedback automatically (see [PR Remediation Loop](../concepts/reliability.md)).
-
-### Step 5: Merge
-
-Once satisfied, merge the PR. The feature automatically moves to **done**.
-
-## Pipeline Overview
-
-For complex work (ideas, projects, multi-feature efforts), protoLabs runs an 8-phase pipeline:
-
-```
-Signal → TRIAGE → RESEARCH → SPEC → SPEC_REVIEW → DESIGN → PLAN → EXECUTE → PUBLISH
-                                          ⬆ GATE                              ⬆ GATE
+```bash
+openssl rand -hex 32
 ```
 
-**Fast path** (most common): Create a feature directly on the board → EXECUTE → PUBLISH. Use this when you know exactly what needs building.
+### 4. Start the development server
 
-**Full path**: Submit an idea → PM Agent researches → SPARC PRD → human review → ProjM decomposes into milestones → agents implement each feature.
-
-For the complete pipeline reference, see [Idea to Production](../concepts/pipeline.md).
-
-## Key Concepts
-
-### Features
-
-Features are units of work on the Kanban board. Each has a status:
-
-| Status        | Meaning                     |
-| ------------- | --------------------------- |
-| `backlog`     | Queued, ready to start      |
-| `in_progress` | Being worked on by an agent |
-| `review`      | PR created, under review    |
-| `blocked`     | Temporarily halted          |
-| `done`        | PR merged, work complete    |
-
-### Agents
-
-AI agents powered by Claude execute features. Domain-scoped agents own specific areas:
-
-| Agent                | Domain                            | Model  |
-| -------------------- | --------------------------------- | ------ |
-| Frontend agent       | React, UI, Tailwind               | Sonnet |
-| Backend agent        | Express, services, APIs           | Sonnet |
-| Infrastructure agent | LangGraph, providers, agent infra | Sonnet |
-| DevOps agent         | Docker, CI/CD, deploy             | Sonnet |
-| Content agent        | Blog posts, docs, SEO             | Sonnet |
-| Orchestrator         | Routing, coordination, priorities | Opus   |
-
-Model selection is automatic: Haiku for small tasks, Sonnet for standard work (default), Opus for architectural changes. Features that fail 2+ times auto-escalate to the next model tier.
-
-### Worktrees
-
-Every feature runs in an isolated [git worktree](https://git-scm.com/docs/git-worktree). This means agents can work on multiple features simultaneously without conflicts, and your main branch stays clean.
-
-### Dependencies
-
-Features can depend on other features. A dependent feature won't start until its dependencies are done. Use `/orchestrate` to visualize and manage the dependency graph.
-
-### Context Files
-
-Files in `.automaker/context/` are automatically injected into every agent's prompt. Use them for coding standards, architectural rules, and project-specific conventions. See [Context System](../guides/context-files.md).
-
-## Core Architecture
-
-protoLabs is built as three surfaces that share the same agent infrastructure:
-
-```
-┌──────────────────────────────────────────────┐
-│  UI Board (localhost:3007)                    │
-│  Visual Kanban, agent runner, flow graph     │
-├──────────────────────────────────────────────┤
-│  CLI / MCP (Claude Code plugin)              │
-│  /board, /auto-mode, /plan-project, 120+ tools│
-├──────────────────────────────────────────────┤
-│  Autonomous Pipeline                          │
-│  Auto-mode, Lead Engineer, PR remediation    │
-└──────────────────────────────────────────────┘
-           │
-           ▼
-┌──────────────────────────────────────────────┐
-│  Shared Infrastructure                        │
-│  Agent templates, worktree isolation,        │
-│  context loading, event bus, Langfuse tracing│
-└──────────────────────────────────────────────┘
+```bash
+npm run dev:full
 ```
 
-The same agent templates serve all three surfaces. Whether you invoke a domain agent interactively in the CLI or auto-mode assigns it to a feature, it uses the same prompt, same tools, same domain knowledge.
+This starts both the UI (port 3007) and the backend API (port 3008).
 
-## Data Storage
+### 5. Open the UI
 
-protoLabs stores data in two locations:
+Navigate to `http://localhost:3007` in your browser.
 
-**Per-project** (`.automaker/` in your repo):
+You should see the homeMaker dashboard. The board, calendar, sensor registry, and all other modules are ready to use.
 
-- `features/` — Feature JSON files and agent output
-- `context/` — Context files injected into agent prompts
-- `memory/` — Learnings from past agent work
-- `settings.json` — Project-specific configuration
+## Next steps
 
-**Global** (`./data` in the server directory):
-
-- `settings.json` — Global settings and API keys
-- `agent-sessions/` — Conversation histories
-
-## Next Steps
-
-### Understand the Agent System
-
-- **[Agent Philosophy](../concepts/agent-philosophy.md)** — Why named personas, model tiers, and worktree isolation
-- **[Architecture Overview](../concepts/agent-architecture.md)** — Technical implementation of the agent system
-- **[Reliability & Recovery](../concepts/reliability.md)** — How failures are handled automatically
-
-### Customize Agent Behavior
-
-- **[Prompt Engineering](../concepts/prompt-engineering.md)** — How prompts are composed and how to modify them
-- **[Context System](../guides/context-files.md)** — Add project-specific rules for agents
-
-### Deploy and Integrate
-
-- **[Installation (Fedora/RHEL)](./installation-fedora)** — Install the desktop app on Linux
-- **[Deployment Options](../self-hosting/deployment)** — Docker, systemd, and staging setups
-- **[MCP Plugin](../integrations/claude-plugin)** — Control protoLabs from Claude Code CLI
-
-### Go Deeper
-
-- **[Idea to Production](../concepts/pipeline.md)** — The full 8-phase pipeline reference
-- **[Project Lifecycle](../concepts/project-lifecycle.md)** — Board-driven project state machine
+- [Detailed installation guide](./installation.md) — covers Linux, macOS, Windows, and all environment variables
+- [Add your first asset](./first-asset.md) — a tutorial for adding an inventory item and maintenance schedule
