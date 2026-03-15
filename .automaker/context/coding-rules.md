@@ -37,3 +37,33 @@
 - External IoT devices POST to `POST /api/sensors/report` with their registered ID
 - Register on startup via `POST /api/sensors/register`
 - Use WebSocket events (`sensor:data-received`) for real-time UI updates
+
+## Module-Specific Rules
+
+### Gamification
+
+- All XP awards MUST go through `gamificationService.awardXp()` — never write XP directly to the database
+- Always emit `gamification:xp-gained` and `gamification:achievement-unlocked` events via the service
+- Home Health Score must be recalculated after any data mutation in Inventory, Maintenance, Sensors, or Budget modules
+
+### Inventory
+
+- Monetary amounts (purchase price, current value) stored as integers in cents — never floating point dollars
+- Always link sensor IDs by reference; do not embed sensor data in inventory records
+
+### Maintenance
+
+- `intervalDays` must always be a positive integer (>0)
+- `nextDueAt` is auto-calculated from `lastCompletedAt + intervalDays` — never store user-supplied values directly
+- Link to vendors by ID only; do not embed vendor data in maintenance records
+
+### Vendors
+
+- Phone numbers stored as strings to preserve formatting (e.g., "(555) 123-4567")
+- Trade categories use a fixed enum — do not allow free-form category creation
+
+### Shared Database
+
+- All services use the shared `homemaker.db` from `ServiceContainer` — do NOT create standalone SQLite files
+- Use WAL mode pragma in service initialization: `db.exec('PRAGMA journal_mode=WAL')`
+- Enable foreign keys: `db.exec('PRAGMA foreign_keys=ON')`
