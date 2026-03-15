@@ -988,6 +988,15 @@ export type {
 // Chat stream part types (SubagentProgress, SubagentStatus)
 export type { SubagentProgress, SubagentStatus } from './chat.js';
 
+// Budget tracking types (household budget categories and transactions)
+export type {
+  BudgetCategory,
+  TransactionRecurrence,
+  Transaction,
+  BudgetSummary,
+  BudgetCategorySummary,
+} from './budget.js';
+
 // PenFile types (vector graphics format v2.8)
 export type {
   PenColor,
