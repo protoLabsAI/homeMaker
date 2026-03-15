@@ -301,7 +301,7 @@ export interface ServiceContainer {
   // Inventory tracking (household asset management, warranty reports, value aggregation)
   inventoryService: InventoryService;
 
-  // Maintenance schedule tracking (recurring household maintenance tasks, scheduler queries)
+  // Maintenance scheduling (recurring home maintenance tasks and completion history)
   maintenanceService: MaintenanceService;
 
   // Gamification engine (XP, levels, achievements, streaks, home health scoring)
@@ -729,13 +729,14 @@ export async function createServices(dataDir: string, repoRoot: string): Promise
   const budgetService = new BudgetService(dataDir);
 
   // Inventory Service — household asset tracking (CRUD, search, warranty reports, value aggregation)
-  const inventoryService = new InventoryService(getHomemakerDb());
+  const homemakerDb = getHomemakerDb();
+  const inventoryService = new InventoryService(homemakerDb);
 
-  // Maintenance Service — recurring household maintenance schedule tracking
-  const maintenanceService = new MaintenanceService(getHomemakerDb());
+  // Maintenance Service — recurring home maintenance scheduling and completion tracking
+  const maintenanceService = new MaintenanceService(homemakerDb);
 
   // Gamification Service — XP, levels, achievements, streaks, home health scoring
-  const gamificationService = new GamificationService(getHomemakerDb(), events);
+  const gamificationService = new GamificationService(homemakerDb, events);
   registerXpEventListeners(events, gamificationService);
 
   // Register Ava cron tasks (daily board health, PR triage, staging ping)

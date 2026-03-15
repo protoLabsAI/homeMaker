@@ -66,21 +66,35 @@ function runMigrations(db: BetterSqlite3.Database): void {
       updatedAt TEXT NOT NULL
     );
 
-    CREATE TABLE IF NOT EXISTS maintenance_schedules (
+    CREATE TABLE IF NOT EXISTS maintenance (
       id TEXT PRIMARY KEY,
       title TEXT NOT NULL,
       description TEXT,
-      intervalDays INTEGER,
+      intervalDays INTEGER NOT NULL,
       lastCompletedAt TEXT,
-      nextDueAt TEXT,
-      assetId TEXT REFERENCES assets(id),
-      category TEXT,
+      nextDueAt TEXT NOT NULL,
+      assetId TEXT,
+      category TEXT NOT NULL,
       estimatedCostUsd REAL,
-      vendorId TEXT REFERENCES vendors(id),
+      vendorId TEXT,
       completedById TEXT,
       createdAt TEXT NOT NULL,
       updatedAt TEXT NOT NULL
     );
+
+    CREATE INDEX IF NOT EXISTS idx_maintenance_nextDueAt ON maintenance(nextDueAt);
+
+    CREATE TABLE IF NOT EXISTS maintenance_completions (
+      id TEXT PRIMARY KEY,
+      scheduleId TEXT NOT NULL REFERENCES maintenance(id),
+      completedAt TEXT NOT NULL,
+      completedBy TEXT NOT NULL,
+      notes TEXT,
+      actualCostUsd REAL,
+      FOREIGN KEY (scheduleId) REFERENCES maintenance(id)
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_maintenance_completions_scheduleId ON maintenance_completions(scheduleId);
 
     CREATE TABLE IF NOT EXISTS sensor_readings (
       sensorId TEXT NOT NULL,

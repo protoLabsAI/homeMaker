@@ -72,14 +72,10 @@ async function processProjectMaintenance(
     const descriptionParts: string[] = [];
     if (schedule.assetName) descriptionParts.push(`Asset: ${schedule.assetName}`);
     if (schedule.vendorName) {
-      const vendorLine = schedule.vendorPhone
-        ? `Vendor: ${schedule.vendorName} (${schedule.vendorPhone})`
-        : `Vendor: ${schedule.vendorName}`;
-      descriptionParts.push(vendorLine);
+      descriptionParts.push(`Vendor: ${schedule.vendorName}`);
     }
-    if (schedule.estimatedCostCents !== null) {
-      const dollars = (schedule.estimatedCostCents / 100).toFixed(2);
-      descriptionParts.push(`Estimated cost: $${dollars}`);
+    if (schedule.estimatedCostUsd !== null) {
+      descriptionParts.push(`Estimated cost: $${schedule.estimatedCostUsd.toFixed(2)}`);
     }
     if (schedule.description) descriptionParts.push(schedule.description);
 
@@ -142,7 +138,6 @@ async function processProjectMaintenance(
           [
             schedule.assetName ? `Asset: ${schedule.assetName}` : null,
             schedule.vendorName ? `Vendor: ${schedule.vendorName}` : null,
-            schedule.vendorPhone ? `Phone: ${schedule.vendorPhone}` : null,
             `Due: ${schedule.nextDueAt.slice(0, 10)}`,
           ]
             .filter(Boolean)

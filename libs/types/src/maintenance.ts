@@ -1,50 +1,63 @@
 /**
- * Maintenance schedule types for homeMaker.
+ * Maintenance scheduling types for recurring home maintenance tasks.
  *
- * Maintenance schedules track recurring household maintenance tasks linked to
- * assets and vendors. Schedules have an interval (in days) and track when the
- * next task is due so the scheduler can auto-generate calendar events and todos.
+ * Tracks schedules with configurable intervals, links to assets and vendors,
+ * and records completion history for audit and forecasting.
  */
 
-/** A recurring maintenance schedule linked to an asset and optional vendor */
+export type MaintenanceCategory =
+  | 'hvac'
+  | 'plumbing'
+  | 'electrical'
+  | 'exterior'
+  | 'interior'
+  | 'safety'
+  | 'appliance'
+  | 'landscaping'
+  | 'pest-control'
+  | 'other';
+
 export interface MaintenanceSchedule {
-  /** Unique identifier */
   id: string;
-  /** Title of the maintenance task (e.g. "HVAC Filter Replacement") */
   title: string;
-  /** Optional description of what the maintenance involves */
   description: string | null;
-  /** Linked asset ID (no FK enforcement — asset may be deleted independently) */
-  assetId: string | null;
-  /** Denormalized asset name for display without a join */
-  assetName: string | null;
-  /** Vendor or contractor name (e.g. "Acme HVAC Services") */
-  vendorName: string | null;
-  /** Vendor phone number */
-  vendorPhone: string | null;
-  /** How often the task recurs, in days (e.g. 90 for quarterly) */
   intervalDays: number;
-  /** ISO-8601 date of the last time this task was completed, or null if never */
   lastCompletedAt: string | null;
-  /** ISO-8601 date when this task is next due */
   nextDueAt: string;
-  /** Estimated cost in cents */
-  estimatedCostCents: number | null;
-  /** Free-form notes */
-  notes: string | null;
-  /** ISO-8601 creation timestamp */
+  assetId: string | null;
+  category: MaintenanceCategory;
+  estimatedCostUsd: number | null;
+  vendorId: string | null;
+  completedById: string | null;
   createdAt: string;
-  /** ISO-8601 last-update timestamp */
   updatedAt: string;
+  /** JOINed from assets table (may be null if asset not found or table missing) */
+  assetName?: string | null;
+  /** JOINed from vendors table (may be null if vendor not found or table missing) */
+  vendorName?: string | null;
 }
 
-/** Fields accepted when creating a new schedule (id and timestamps are generated) */
-export type CreateMaintenanceScheduleInput = Omit<
-  MaintenanceSchedule,
-  'id' | 'createdAt' | 'updatedAt'
->;
+export interface MaintenanceCompletion {
+  id: string;
+  scheduleId: string;
+  completedAt: string;
+  completedBy: string;
+  notes: string | null;
+  actualCostUsd: number | null;
+}
 
-/** Fields accepted when updating an existing schedule (all optional) */
-export type UpdateMaintenanceScheduleInput = Partial<
-  Omit<MaintenanceSchedule, 'id' | 'createdAt' | 'updatedAt'>
->;
+/** Due-date summary counts for dashboard display */
+export interface MaintenanceDueSummary {
+  overdue: number;
+  dueThisWeek: number;
+  dueThisMonth: number;
+  upToDate: number;
+}
+
+/** Filters for querying maintenance schedules */
+export interface MaintenanceListFilters {
+  category?: MaintenanceCategory;
+  overdue?: boolean;
+  assetId?: string;
+  upcoming?: number;
+}
