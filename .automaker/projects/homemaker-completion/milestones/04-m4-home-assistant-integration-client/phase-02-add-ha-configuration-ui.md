@@ -16,10 +16,12 @@ Add Home Assistant configuration section in settings with URL, access token, con
 ## Tasks
 
 ### Files to Create/Modify
+
 - [ ] `apps/ui/src/components/views/settings-view/ha-section.tsx`
 - [ ] `apps/ui/src/components/views/settings-view/index.tsx`
 
 ### Verification
+
 - [ ] Settings UI has Home Assistant section
 - [ ] Can configure HA URL and access token
 - [ ] Shows connection status (connected/disconnected/error)

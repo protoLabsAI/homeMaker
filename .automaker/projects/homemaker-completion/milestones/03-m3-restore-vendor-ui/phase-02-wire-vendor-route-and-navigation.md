@@ -16,10 +16,12 @@ Add vendor route file, add nav item in sidebar, verify CRUD operations work end-
 ## Tasks
 
 ### Files to Create/Modify
+
 - [ ] `apps/ui/src/routes/vendors.tsx`
 - [ ] `apps/ui/src/components/layout/sidebar/hooks/use-navigation.ts`
 
 ### Verification
+
 - [ ] Vendor route is accessible at /vendors
 - [ ] Sidebar shows Vendors nav item
 - [ ] Create, read, update, delete vendors works end-to-end

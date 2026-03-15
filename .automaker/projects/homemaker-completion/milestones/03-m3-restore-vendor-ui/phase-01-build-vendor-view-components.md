@@ -16,6 +16,7 @@ Rebuild vendor list, vendor card, add-vendor dialog, and vendor detail panel com
 ## Tasks
 
 ### Files to Create/Modify
+
 - [ ] `apps/ui/src/components/views/vendors-view/index.tsx`
 - [ ] `apps/ui/src/components/views/vendors-view/vendor-list.tsx`
 - [ ] `apps/ui/src/components/views/vendors-view/vendor-card.tsx`
@@ -24,6 +25,7 @@ Rebuild vendor list, vendor card, add-vendor dialog, and vendor detail panel com
 - [ ] `apps/ui/src/hooks/use-vendors.ts`
 
 ### Verification
+
 - [ ] Vendor list displays all vendors from API
 - [ ] Vendor card shows name, trade, phone, rating
 - [ ] Add-vendor dialog creates new vendors via API

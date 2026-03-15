@@ -14,9 +14,9 @@ Update all UI strings referencing 'protoLabs Studio' to 'homeMaker'. Update bug 
 
 ## Phases
 
-| Phase | File | Duration | Dependencies | Owner |
-|-------|------|----------|--------------|-------|
-| 1 | [phase-01-update-all-protolabs-studio-ui-references-to-homemaker.md](./phase-01-update-all-protolabs-studio-ui-references-to-homemaker.md) | 0.5 weeks | None | TBD |
+| Phase | File                                                                                                                                       | Duration  | Dependencies | Owner |
+| ----- | ------------------------------------------------------------------------------------------------------------------------------------------ | --------- | ------------ | ----- |
+| 1     | [phase-01-update-all-protolabs-studio-ui-references-to-homemaker.md](./phase-01-update-all-protolabs-studio-ui-references-to-homemaker.md) | 0.5 weeks | None         | TBD   |
 
 ---
 
@@ -34,6 +34,7 @@ M1 is **complete** when:
 ## Outputs
 
 ### For Next Milestone
+
 - Foundation work ready for dependent features
 - APIs stable and documented
 - Types exported and usable

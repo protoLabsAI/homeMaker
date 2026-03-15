@@ -14,10 +14,10 @@ Build a dedicated HA WebSocket client that connects to Home Assistant, subscribe
 
 ## Phases
 
-| Phase | File | Duration | Dependencies | Owner |
-|-------|------|----------|--------------|-------|
-| 1 | [phase-01-build-ha-websocket-client-service.md](./phase-01-build-ha-websocket-client-service.md) | 1 week | None | TBD |
-| 2 | [phase-02-add-ha-configuration-ui.md](./phase-02-add-ha-configuration-ui.md) | 1 week | None | TBD |
+| Phase | File                                                                                             | Duration | Dependencies | Owner |
+| ----- | ------------------------------------------------------------------------------------------------ | -------- | ------------ | ----- |
+| 1     | [phase-01-build-ha-websocket-client-service.md](./phase-01-build-ha-websocket-client-service.md) | 1 week   | None         | TBD   |
+| 2     | [phase-02-add-ha-configuration-ui.md](./phase-02-add-ha-configuration-ui.md)                     | 1 week   | None         | TBD   |
 
 ---
 
@@ -35,6 +35,7 @@ M4 is **complete** when:
 ## Outputs
 
 ### For Next Milestone
+
 - Foundation work ready for dependent features
 - APIs stable and documented
 - Types exported and usable

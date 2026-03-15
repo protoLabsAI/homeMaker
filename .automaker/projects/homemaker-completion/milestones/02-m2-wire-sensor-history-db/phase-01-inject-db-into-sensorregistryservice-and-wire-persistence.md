@@ -16,10 +16,12 @@ Add BetterSqlite3 DB parameter to SensorRegistryService constructor via ServiceC
 ## Tasks
 
 ### Files to Create/Modify
+
 - [ ] `apps/server/src/services/sensor-registry-service.ts`
 - [ ] `apps/server/src/server/services.ts`
 
 ### Verification
+
 - [ ] SensorRegistryService receives DB via constructor injection
 - [ ] sensor_readings table is created on service init
 - [ ] report() persists readings to SQLite

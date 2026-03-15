@@ -14,9 +14,9 @@ Inject SQLite DB into SensorRegistryService so sensor readings persist to the se
 
 ## Phases
 
-| Phase | File | Duration | Dependencies | Owner |
-|-------|------|----------|--------------|-------|
-| 1 | [phase-01-inject-db-into-sensorregistryservice-and-wire-persistence.md](./phase-01-inject-db-into-sensorregistryservice-and-wire-persistence.md) | 0.5 weeks | None | TBD |
+| Phase | File                                                                                                                                             | Duration  | Dependencies | Owner |
+| ----- | ------------------------------------------------------------------------------------------------------------------------------------------------ | --------- | ------------ | ----- |
+| 1     | [phase-01-inject-db-into-sensorregistryservice-and-wire-persistence.md](./phase-01-inject-db-into-sensorregistryservice-and-wire-persistence.md) | 0.5 weeks | None         | TBD   |
 
 ---
 
@@ -34,6 +34,7 @@ M2 is **complete** when:
 ## Outputs
 
 ### For Next Milestone
+
 - Foundation work ready for dependent features
 - APIs stable and documented
 - Types exported and usable

@@ -16,12 +16,14 @@ Create HAClientService that connects to a Home Assistant instance via WebSocket 
 ## Tasks
 
 ### Files to Create/Modify
+
 - [ ] `apps/server/src/services/ha-client-service.ts`
 - [ ] `apps/server/src/routes/integrations/ha.ts`
 - [ ] `apps/server/src/server/services.ts`
 - [ ] `apps/server/src/server/routes.ts`
 
 ### Verification
+
 - [ ] HAClientService connects to HA WebSocket API
 - [ ] Authenticates with long-lived access token
 - [ ] Subscribes to state_changed events

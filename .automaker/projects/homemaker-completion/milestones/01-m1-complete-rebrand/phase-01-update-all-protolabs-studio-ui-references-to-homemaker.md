@@ -16,6 +16,7 @@ Replace all user-facing 'protoLabs Studio' and 'protoLabs Logo' strings with 'ho
 ## Tasks
 
 ### Files to Create/Modify
+
 - [ ] `apps/ui/src/components/views/setup-view.tsx`
 - [ ] `apps/ui/src/components/views/welcome-step.tsx`
 - [ ] `apps/ui/src/components/views/dashboard-view.tsx`
@@ -26,6 +27,7 @@ Replace all user-facing 'protoLabs Studio' and 'protoLabs Logo' strings with 'ho
 - [ ] `apps/ui/src/components/views/profile-section.tsx`
 
 ### Verification
+
 - [ ] No UI string contains 'protoLabs Studio' or 'protoLabs Logo'
 - [ ] Bug report links point to homeMaker GitHub repo
 - [ ] App title and branding display 'homeMaker' everywhere
