@@ -1069,14 +1069,6 @@ export type {
   PenDocument,
 } from './pen.js';
 
-// Chat channel types (household family chat with Ava AI participant)
-export type {
-  ChatMessage,
-  SendChatMessageInput,
-  ChatMessageQuery,
-  AvaClassification,
-} from './chat-channel.js';
-
 // Gamification types (XP, levels, achievements, streaks, quests, home health scoring)
 export type {
   EarnedAchievement,
