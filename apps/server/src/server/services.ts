@@ -112,7 +112,9 @@ import { DailyStandupService } from '../services/daily-standup-service.js';
 import { ProjectSlugResolver } from '../services/project-slug-resolver.js';
 import { DeviationRuleService } from '../services/deviation-rule-service.js';
 import { BudgetService } from '../services/budget-service.js';
+import { InventoryService } from '../services/inventory-service.js';
 import { MaintenanceService } from '../services/maintenance-service.js';
+import { getHomemakerDb } from '../lib/homemaker-db.js';
 
 const logger = createLogger('Server:Services');
 
@@ -293,6 +295,9 @@ export interface ServiceContainer {
 
   // Budget tracking (household budget categories, transactions, summaries)
   budgetService: BudgetService;
+
+  // Inventory tracking (household asset management, warranty reports, value aggregation)
+  inventoryService: InventoryService;
 
   // Maintenance scheduling (recurring home maintenance tasks and completion history)
   maintenanceService: MaintenanceService;
@@ -718,8 +723,12 @@ export async function createServices(dataDir: string, repoRoot: string): Promise
   // Budget Service — household budget tracking (categories, transactions, summaries)
   const budgetService = new BudgetService(dataDir);
 
+  // Inventory Service — household asset tracking (CRUD, search, warranty reports, value aggregation)
+  const homemakerDb = getHomemakerDb();
+  const inventoryService = new InventoryService(homemakerDb);
+
   // Maintenance Service — recurring home maintenance scheduling and completion tracking
-  const maintenanceService = new MaintenanceService(dataDir);
+  const maintenanceService = new MaintenanceService(homemakerDb);
 
   // Register Ava cron tasks (daily board health, PR triage, staging ping)
   void registerAvaCronTasks({ schedulerService, reactiveSpawnerService, projectPath: repoRoot });
@@ -921,6 +930,7 @@ export async function createServices(dataDir: string, repoRoot: string): Promise
     projectSlugResolver,
     deviationRuleService,
     budgetService,
+    inventoryService,
     maintenanceService,
     driftCheckInterval: null,
   };

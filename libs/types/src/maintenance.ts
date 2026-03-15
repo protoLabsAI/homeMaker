@@ -31,6 +31,10 @@ export interface MaintenanceSchedule {
   completedById: string | null;
   createdAt: string;
   updatedAt: string;
+  /** JOINed from assets table (may be null if asset not found or table missing) */
+  assetName?: string | null;
+  /** JOINed from vendors table (may be null if vendor not found or table missing) */
+  vendorName?: string | null;
 }
 
 export interface MaintenanceCompletion {

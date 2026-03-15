@@ -27,22 +27,27 @@ function runMigrations(db: BetterSqlite3.Database): void {
     CREATE TABLE IF NOT EXISTS assets (
       id TEXT PRIMARY KEY,
       name TEXT NOT NULL,
-      category TEXT,
+      category TEXT NOT NULL,
       location TEXT,
       purchaseDate TEXT,
-      purchasePrice REAL,
+      purchasePrice INTEGER,
       warrantyExpiration TEXT,
       modelNumber TEXT,
       serialNumber TEXT,
       manufacturer TEXT,
       manualUrl TEXT,
-      replacementCost REAL,
+      replacementCost INTEGER,
       notes TEXT,
       sensorIds TEXT DEFAULT '[]',
       photoUrls TEXT DEFAULT '[]',
       createdAt TEXT NOT NULL,
       updatedAt TEXT NOT NULL
     );
+
+    CREATE INDEX IF NOT EXISTS idx_assets_name ON assets(name);
+    CREATE INDEX IF NOT EXISTS idx_assets_manufacturer ON assets(manufacturer);
+    CREATE INDEX IF NOT EXISTS idx_assets_category ON assets(category);
+    CREATE INDEX IF NOT EXISTS idx_assets_location ON assets(location);
 
     CREATE TABLE IF NOT EXISTS vendors (
       id TEXT PRIMARY KEY,
@@ -61,21 +66,35 @@ function runMigrations(db: BetterSqlite3.Database): void {
       updatedAt TEXT NOT NULL
     );
 
-    CREATE TABLE IF NOT EXISTS maintenance_schedules (
+    CREATE TABLE IF NOT EXISTS maintenance (
       id TEXT PRIMARY KEY,
       title TEXT NOT NULL,
       description TEXT,
-      intervalDays INTEGER,
+      intervalDays INTEGER NOT NULL,
       lastCompletedAt TEXT,
-      nextDueAt TEXT,
-      assetId TEXT REFERENCES assets(id),
-      category TEXT,
+      nextDueAt TEXT NOT NULL,
+      assetId TEXT,
+      category TEXT NOT NULL,
       estimatedCostUsd REAL,
-      vendorId TEXT REFERENCES vendors(id),
+      vendorId TEXT,
       completedById TEXT,
       createdAt TEXT NOT NULL,
       updatedAt TEXT NOT NULL
     );
+
+    CREATE INDEX IF NOT EXISTS idx_maintenance_nextDueAt ON maintenance(nextDueAt);
+
+    CREATE TABLE IF NOT EXISTS maintenance_completions (
+      id TEXT PRIMARY KEY,
+      scheduleId TEXT NOT NULL REFERENCES maintenance(id),
+      completedAt TEXT NOT NULL,
+      completedBy TEXT NOT NULL,
+      notes TEXT,
+      actualCostUsd REAL,
+      FOREIGN KEY (scheduleId) REFERENCES maintenance(id)
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_maintenance_completions_scheduleId ON maintenance_completions(scheduleId);
 
     CREATE TABLE IF NOT EXISTS sensor_readings (
       sensorId TEXT NOT NULL,

@@ -61,12 +61,10 @@ export function createMaintenanceRoutes(maintenanceService: MaintenanceService):
       }
 
       if (intervalDays == null || typeof intervalDays !== 'number' || intervalDays < 1) {
-        res
-          .status(400)
-          .json({
-            success: false,
-            error: 'intervalDays is required and must be a positive integer',
-          });
+        res.status(400).json({
+          success: false,
+          error: 'intervalDays is required and must be a positive integer',
+        });
         return;
       }
 
@@ -116,7 +114,7 @@ export function createMaintenanceRoutes(maintenanceService: MaintenanceService):
         string | undefined
       >;
 
-      const schedule = maintenanceService.list({
+      const schedules = maintenanceService.list({
         category:
           category && VALID_CATEGORIES.has(category)
             ? (category as MaintenanceCategory)
@@ -126,7 +124,7 @@ export function createMaintenanceRoutes(maintenanceService: MaintenanceService):
         upcoming: upcoming != null ? parseInt(upcoming, 10) || undefined : undefined,
       });
 
-      res.json({ success: true, data: schedule });
+      res.json({ success: true, data: schedules });
     } catch (error) {
       logger.error('Failed to list maintenance schedules:', error);
       res.status(500).json({ success: false, error: 'Failed to list maintenance schedules' });
@@ -228,12 +226,10 @@ export function createMaintenanceRoutes(maintenanceService: MaintenanceService):
         estimatedCostUsd !== null &&
         (typeof estimatedCostUsd !== 'number' || estimatedCostUsd < 0)
       ) {
-        res
-          .status(400)
-          .json({
-            success: false,
-            error: 'estimatedCostUsd must be a non-negative number or null',
-          });
+        res.status(400).json({
+          success: false,
+          error: 'estimatedCostUsd must be a non-negative number or null',
+        });
         return;
       }
 
@@ -265,13 +261,13 @@ export function createMaintenanceRoutes(maintenanceService: MaintenanceService):
             : undefined,
       });
 
-      res.json({ success: true, data: schedule });
-    } catch (error) {
-      const message = error instanceof Error ? error.message : String(error);
-      if (message.includes('not found')) {
-        res.status(404).json({ success: false, error: message });
+      if (!schedule) {
+        res.status(404).json({ success: false, error: `Schedule "${req.params.id}" not found` });
         return;
       }
+
+      res.json({ success: true, data: schedule });
+    } catch (error) {
       logger.error('Failed to update maintenance schedule:', error);
       res.status(500).json({ success: false, error: 'Failed to update maintenance schedule' });
     }
@@ -281,14 +277,13 @@ export function createMaintenanceRoutes(maintenanceService: MaintenanceService):
 
   router.delete('/:id', (req, res) => {
     try {
-      maintenanceService.delete(req.params.id);
-      res.json({ success: true, data: { id: req.params.id } });
-    } catch (error) {
-      const message = error instanceof Error ? error.message : String(error);
-      if (message.includes('not found')) {
-        res.status(404).json({ success: false, error: message });
+      const deleted = maintenanceService.delete(req.params.id);
+      if (!deleted) {
+        res.status(404).json({ success: false, error: `Schedule "${req.params.id}" not found` });
         return;
       }
+      res.json({ success: true, data: { id: req.params.id } });
+    } catch (error) {
       logger.error('Failed to delete maintenance schedule:', error);
       res.status(500).json({ success: false, error: 'Failed to delete maintenance schedule' });
     }
@@ -304,12 +299,10 @@ export function createMaintenanceRoutes(maintenanceService: MaintenanceService):
       >;
 
       if (!completedBy || typeof completedBy !== 'string' || !completedBy.trim()) {
-        res
-          .status(400)
-          .json({
-            success: false,
-            error: 'completedBy is required and must be a non-empty string',
-          });
+        res.status(400).json({
+          success: false,
+          error: 'completedBy is required and must be a non-empty string',
+        });
         return;
       }
 
@@ -320,14 +313,14 @@ export function createMaintenanceRoutes(maintenanceService: MaintenanceService):
         return;
       }
 
-      const completion = maintenanceService.complete(req.params.scheduleId, {
+      const result = maintenanceService.complete(req.params.scheduleId, {
         completedBy: (completedBy as string).trim(),
         completedAt: typeof completedAt === 'string' ? completedAt : undefined,
         notes: typeof notes === 'string' ? notes : null,
         actualCostUsd: typeof actualCostUsd === 'number' ? actualCostUsd : null,
       });
 
-      res.status(201).json({ success: true, data: completion });
+      res.status(201).json({ success: true, data: result });
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
       if (message.includes('not found')) {

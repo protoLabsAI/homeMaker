@@ -6,9 +6,11 @@ import {
   Settings,
   NotebookPen,
   CalendarDays,
+  CalendarClock,
   ListTodo,
   MessageSquare,
   Home,
+  Package,
 } from 'lucide-react';
 import type { NavSection, NavItem } from '../types';
 import type { KeyboardShortcut } from '@/hooks/use-keyboard-shortcuts';
@@ -110,10 +112,20 @@ export function useNavigation({
         shortcut: shortcuts.notes,
       },
       {
+        id: 'maintenance',
+        label: 'Maintenance',
+        icon: CalendarClock,
+      },
+      {
         id: 'chat',
         label: 'Chat',
         icon: MessageSquare,
         shortcut: shortcuts.chat,
+      },
+      {
+        id: 'inventory',
+        label: 'Inventory',
+        icon: Package,
       },
     ];
 

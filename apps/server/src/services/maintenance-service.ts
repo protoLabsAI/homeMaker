@@ -5,12 +5,11 @@
  * completion history, and provides due-date summaries. Links to optional
  * asset and vendor records via LEFT JOIN (those tables may or may not exist).
  *
- * Tables are created automatically on first instantiation. All timestamps
- * are stored as ISO-8601 strings.
+ * Operates on the shared homemaker.db instance; tables and indexes are
+ * created idempotently in the constructor. All timestamps are stored as
+ * ISO-8601 strings.
  */
 
-import { join } from 'node:path';
-import { mkdirSync } from 'node:fs';
 import { randomUUID } from 'node:crypto';
 import * as BetterSqlite3 from 'better-sqlite3';
 import { createLogger } from '@protolabsai/utils';
@@ -58,7 +57,7 @@ export interface CompleteMaintenanceInput {
   actualCostUsd?: number | null;
 }
 
-/** Row shape returned by SQLite for schedule queries */
+/** Row shape returned by SQLite for schedule queries (without JOINs) */
 interface ScheduleRow {
   id: string;
   title: string;
@@ -73,6 +72,8 @@ interface ScheduleRow {
   completedById: string | null;
   createdAt: string;
   updatedAt: string;
+  assetName?: string | null;
+  vendorName?: string | null;
 }
 
 /** Row shape returned by SQLite for completion queries */
@@ -106,6 +107,8 @@ function toSchedule(row: ScheduleRow): MaintenanceSchedule {
     completedById: row.completedById,
     createdAt: row.createdAt,
     updatedAt: row.updatedAt,
+    assetName: row.assetName ?? null,
+    vendorName: row.vendorName ?? null,
   };
 }
 
@@ -122,21 +125,21 @@ function toCompletion(row: CompletionRow): MaintenanceCompletion {
 
 export class MaintenanceService {
   private db: BetterSqlite3.Database;
+  private joinSupported: boolean = false;
 
-  constructor(dataDir: string) {
-    mkdirSync(dataDir, { recursive: true });
-    const dbPath = join(dataDir, 'maintenance.db');
-    logger.info(`Opening maintenance database at ${dbPath}`);
-
-    this.db = new BetterSqlite3.default(dbPath);
-    this.db.pragma('journal_mode = WAL');
-    this.createTables();
+  constructor(db: BetterSqlite3.Database) {
+    this.db = db;
+    this.ensureSchema();
+    this.detectJoinSupport();
   }
 
-  /** Create schema if it does not already exist */
-  private createTables(): void {
+  /**
+   * Idempotently create the maintenance tables and indexes.
+   * Safe to call on every startup — uses IF NOT EXISTS throughout.
+   */
+  private ensureSchema(): void {
     this.db.exec(`
-      CREATE TABLE IF NOT EXISTS maintenance_schedules (
+      CREATE TABLE IF NOT EXISTS maintenance (
         id TEXT PRIMARY KEY,
         title TEXT NOT NULL,
         description TEXT,
@@ -152,17 +155,56 @@ export class MaintenanceService {
         updatedAt TEXT NOT NULL
       );
 
+      CREATE INDEX IF NOT EXISTS idx_maintenance_nextDueAt ON maintenance(nextDueAt);
+
       CREATE TABLE IF NOT EXISTS maintenance_completions (
         id TEXT PRIMARY KEY,
-        scheduleId TEXT NOT NULL,
+        scheduleId TEXT NOT NULL REFERENCES maintenance(id),
         completedAt TEXT NOT NULL,
         completedBy TEXT NOT NULL,
         notes TEXT,
         actualCostUsd REAL,
-        FOREIGN KEY (scheduleId) REFERENCES maintenance_schedules(id) ON DELETE CASCADE
+        FOREIGN KEY (scheduleId) REFERENCES maintenance(id)
       );
+
+      CREATE INDEX IF NOT EXISTS idx_maintenance_completions_scheduleId ON maintenance_completions(scheduleId);
     `);
-    logger.info('Maintenance tables initialized');
+    logger.info('Maintenance schema initialized');
+  }
+
+  /**
+   * Check whether the assets and vendors tables exist so we can use
+   * LEFT JOINs for name resolution. If either table is missing we
+   * fall back to plain SELECT from maintenance only.
+   */
+  private detectJoinSupport(): void {
+    try {
+      const assetsExists = this.db
+        .prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='assets'")
+        .get();
+      const vendorsExists = this.db
+        .prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='vendors'")
+        .get();
+      this.joinSupported = !!(assetsExists && vendorsExists);
+    } catch {
+      this.joinSupported = false;
+    }
+  }
+
+  /** Build a SELECT with optional LEFT JOINs for asset/vendor names */
+  private selectWithJoins(whereClause: string = ''): string {
+    if (this.joinSupported) {
+      return `
+        SELECT m.*,
+               a.name AS assetName,
+               v.name AS vendorName
+        FROM maintenance m
+        LEFT JOIN assets a ON m.assetId = a.id
+        LEFT JOIN vendors v ON m.vendorId = v.id
+        ${whereClause}
+      `;
+    }
+    return `SELECT * FROM maintenance ${whereClause}`;
   }
 
   // ── Create ──────────────────────────────────────────────────────────────────
@@ -173,7 +215,7 @@ export class MaintenanceService {
     const nextDueAt = input.nextDueAt ?? addDays(new Date(), input.intervalDays).toISOString();
 
     const stmt = this.db.prepare(`
-      INSERT INTO maintenance_schedules
+      INSERT INTO maintenance
         (id, title, description, intervalDays, lastCompletedAt, nextDueAt, assetId, category, estimatedCostUsd, vendorId, completedById, createdAt, updatedAt)
       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `);
@@ -196,21 +238,8 @@ export class MaintenanceService {
 
     logger.info(`Schedule created: "${input.title}" (${id})`);
 
-    return {
-      id,
-      title: input.title,
-      description: input.description ?? null,
-      intervalDays: input.intervalDays,
-      lastCompletedAt: null,
-      nextDueAt,
-      assetId: input.assetId ?? null,
-      category: input.category,
-      estimatedCostUsd: input.estimatedCostUsd ?? null,
-      vendorId: input.vendorId ?? null,
-      completedById: input.completedById ?? null,
-      createdAt: now,
-      updatedAt: now,
-    };
+    // Re-read with JOINs for asset/vendor names
+    return this.get(id)!;
   }
 
   // ── List ────────────────────────────────────────────────────────────────────
@@ -219,27 +248,29 @@ export class MaintenanceService {
     const conditions: string[] = [];
     const params: Array<string | number> = [];
     const now = new Date().toISOString();
+    const prefix = this.joinSupported ? 'm.' : '';
 
     if (filters?.category) {
-      conditions.push('category = ?');
+      conditions.push(`${prefix}category = ?`);
       params.push(filters.category);
     }
     if (filters?.assetId) {
-      conditions.push('assetId = ?');
+      conditions.push(`${prefix}assetId = ?`);
       params.push(filters.assetId);
     }
     if (filters?.overdue) {
-      conditions.push('nextDueAt < ?');
+      conditions.push(`${prefix}nextDueAt < ?`);
       params.push(now);
     }
     if (filters?.upcoming != null) {
       const cutoff = addDays(new Date(), filters.upcoming).toISOString();
-      conditions.push('nextDueAt <= ?');
+      conditions.push(`${prefix}nextDueAt <= ?`);
       params.push(cutoff);
     }
 
     const where = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
-    const sql = `SELECT * FROM maintenance_schedules ${where} ORDER BY nextDueAt ASC`;
+    const orderBy = `ORDER BY ${prefix}nextDueAt ASC`;
+    const sql = this.selectWithJoins(`${where} ${orderBy}`);
 
     const rows = this.db.prepare(sql).all(...params) as ScheduleRow[];
     return rows.map(toSchedule);
@@ -248,9 +279,9 @@ export class MaintenanceService {
   // ── Get ─────────────────────────────────────────────────────────────────────
 
   get(id: string): MaintenanceSchedule | null {
-    const row = this.db.prepare('SELECT * FROM maintenance_schedules WHERE id = ?').get(id) as
-      | ScheduleRow
-      | undefined;
+    const prefix = this.joinSupported ? 'm.' : '';
+    const sql = this.selectWithJoins(`WHERE ${prefix}id = ?`);
+    const row = this.db.prepare(sql).get(id) as ScheduleRow | undefined;
 
     if (!row) return null;
     return toSchedule(row);
@@ -258,10 +289,10 @@ export class MaintenanceService {
 
   // ── Update ──────────────────────────────────────────────────────────────────
 
-  update(id: string, input: UpdateMaintenanceInput): MaintenanceSchedule {
+  update(id: string, input: UpdateMaintenanceInput): MaintenanceSchedule | null {
     const existing = this.get(id);
     if (!existing) {
-      throw new Error(`Schedule "${id}" not found`);
+      return null;
     }
 
     const now = new Date().toISOString();
@@ -283,12 +314,14 @@ export class MaintenanceService {
       input.intervalDays !== existing.intervalDays &&
       !input.nextDueAt
     ) {
-      const base = existing.lastCompletedAt ? new Date(existing.lastCompletedAt) : new Date();
+      const base = existing.lastCompletedAt
+        ? new Date(existing.lastCompletedAt)
+        : new Date(existing.createdAt);
       nextDueAt = addDays(base, input.intervalDays).toISOString();
     }
 
     const stmt = this.db.prepare(`
-      UPDATE maintenance_schedules
+      UPDATE maintenance
       SET title = ?, description = ?, intervalDays = ?, nextDueAt = ?,
           assetId = ?, category = ?, estimatedCostUsd = ?, vendorId = ?,
           completedById = ?, updatedAt = ?
@@ -311,35 +344,29 @@ export class MaintenanceService {
 
     logger.info(`Schedule updated: ${id}`);
 
-    return {
-      ...existing,
-      title,
-      description,
-      intervalDays,
-      nextDueAt,
-      assetId,
-      category,
-      estimatedCostUsd,
-      vendorId,
-      completedById,
-      updatedAt: now,
-    };
+    // Re-read with JOINs for updated asset/vendor names
+    return this.get(id);
   }
 
   // ── Delete ──────────────────────────────────────────────────────────────────
 
-  delete(id: string): void {
-    const result = this.db.prepare('DELETE FROM maintenance_schedules WHERE id = ?').run(id);
+  delete(id: string): boolean {
+    // Delete completions first (no ON DELETE CASCADE since we use a separate table reference)
+    this.db.prepare('DELETE FROM maintenance_completions WHERE scheduleId = ?').run(id);
+    const result = this.db.prepare('DELETE FROM maintenance WHERE id = ?').run(id);
     if (result.changes === 0) {
-      throw new Error(`Schedule "${id}" not found`);
+      return false;
     }
-    // Completions are removed via ON DELETE CASCADE
     logger.info(`Schedule deleted: ${id}`);
+    return true;
   }
 
   // ── Complete ────────────────────────────────────────────────────────────────
 
-  complete(scheduleId: string, input: CompleteMaintenanceInput): MaintenanceCompletion {
+  complete(
+    scheduleId: string,
+    input: CompleteMaintenanceInput
+  ): { schedule: MaintenanceSchedule; completion: MaintenanceCompletion } {
     const existing = this.get(scheduleId);
     if (!existing) {
       throw new Error(`Schedule "${scheduleId}" not found`);
@@ -368,7 +395,7 @@ export class MaintenanceService {
     const nextDueAt = addDays(new Date(completedAt), existing.intervalDays).toISOString();
     this.db
       .prepare(
-        `UPDATE maintenance_schedules
+        `UPDATE maintenance
          SET lastCompletedAt = ?, nextDueAt = ?, updatedAt = ?
          WHERE id = ?`
       )
@@ -376,7 +403,7 @@ export class MaintenanceService {
 
     logger.info(`Schedule completed: ${scheduleId} by ${input.completedBy}`);
 
-    return {
+    const completion: MaintenanceCompletion = {
       id: completionId,
       scheduleId,
       completedAt,
@@ -384,26 +411,33 @@ export class MaintenanceService {
       notes: input.notes ?? null,
       actualCostUsd: input.actualCostUsd ?? null,
     };
+
+    return {
+      schedule: this.get(scheduleId)!,
+      completion,
+    };
   }
 
   // ── Overdue & Upcoming ──────────────────────────────────────────────────────
 
   getOverdue(): MaintenanceSchedule[] {
     const now = new Date().toISOString();
-    const rows = this.db
-      .prepare('SELECT * FROM maintenance_schedules WHERE nextDueAt < ? ORDER BY nextDueAt ASC')
-      .all(now) as ScheduleRow[];
+    const prefix = this.joinSupported ? 'm.' : '';
+    const sql = this.selectWithJoins(
+      `WHERE ${prefix}nextDueAt < ? ORDER BY ${prefix}nextDueAt ASC`
+    );
+    const rows = this.db.prepare(sql).all(now) as ScheduleRow[];
     return rows.map(toSchedule);
   }
 
   getUpcoming(days: number): MaintenanceSchedule[] {
     const now = new Date().toISOString();
     const cutoff = addDays(new Date(), days).toISOString();
-    const rows = this.db
-      .prepare(
-        'SELECT * FROM maintenance_schedules WHERE nextDueAt >= ? AND nextDueAt <= ? ORDER BY nextDueAt ASC'
-      )
-      .all(now, cutoff) as ScheduleRow[];
+    const prefix = this.joinSupported ? 'm.' : '';
+    const sql = this.selectWithJoins(
+      `WHERE ${prefix}nextDueAt >= ? AND ${prefix}nextDueAt <= ? ORDER BY ${prefix}nextDueAt ASC`
+    );
+    const rows = this.db.prepare(sql).all(now, cutoff) as ScheduleRow[];
     return rows.map(toSchedule);
   }
 
@@ -418,14 +452,14 @@ export class MaintenanceService {
 
     const overdueCount = (
       this.db
-        .prepare('SELECT COUNT(*) as count FROM maintenance_schedules WHERE nextDueAt < ?')
+        .prepare('SELECT COUNT(*) as count FROM maintenance WHERE nextDueAt < ?')
         .get(nowIso) as { count: number }
     ).count;
 
     const dueThisWeekCount = (
       this.db
         .prepare(
-          'SELECT COUNT(*) as count FROM maintenance_schedules WHERE nextDueAt >= ? AND nextDueAt <= ?'
+          'SELECT COUNT(*) as count FROM maintenance WHERE nextDueAt >= ? AND nextDueAt <= ?'
         )
         .get(nowIso, endOfWeek) as { count: number }
     ).count;
@@ -433,13 +467,13 @@ export class MaintenanceService {
     const dueThisMonthCount = (
       this.db
         .prepare(
-          'SELECT COUNT(*) as count FROM maintenance_schedules WHERE nextDueAt >= ? AND nextDueAt <= ?'
+          'SELECT COUNT(*) as count FROM maintenance WHERE nextDueAt >= ? AND nextDueAt <= ?'
         )
         .get(nowIso, endOfMonth) as { count: number }
     ).count;
 
     const totalCount = (
-      this.db.prepare('SELECT COUNT(*) as count FROM maintenance_schedules').get() as {
+      this.db.prepare('SELECT COUNT(*) as count FROM maintenance').get() as {
         count: number;
       }
     ).count;
@@ -463,11 +497,5 @@ export class MaintenanceService {
       )
       .all(scheduleId) as CompletionRow[];
     return rows.map(toCompletion);
-  }
-
-  /** Close the database connection (for clean shutdown) */
-  close(): void {
-    this.db.close();
-    logger.info('Maintenance database closed');
   }
 }

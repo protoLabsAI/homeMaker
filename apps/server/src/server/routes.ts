@@ -93,6 +93,7 @@ import { createHivemindRoutes } from '../routes/hivemind/index.js';
 import { createDoraRoutes } from '../routes/dora/index.js';
 import { createAgentRoutes } from '../routes/agents.js';
 import { createBudgetRoutes } from '../routes/budget/index.js';
+import { createInventoryRoutes } from '../routes/inventory/index.js';
 import { createMaintenanceRoutes } from '../routes/maintenance/index.js';
 
 const logger = createLogger('Server:Routes');
@@ -447,6 +448,10 @@ export function registerRoutes(app: Express, services: ServiceContainer): void {
   // Budget tracking routes (household budget categories, transactions, summaries)
   app.use('/api/budget', createBudgetRoutes(services.budgetService));
   logger.info('Budget routes mounted at /api/budget');
+
+  // Inventory tracking routes (household asset CRUD, search, warranty reports, value aggregation)
+  app.use('/api/inventory', createInventoryRoutes(services.inventoryService));
+  logger.info('Inventory routes mounted at /api/inventory');
 
   // Maintenance scheduling routes (recurring home maintenance tasks and completion history)
   app.use('/api/maintenance', createMaintenanceRoutes(services.maintenanceService));
