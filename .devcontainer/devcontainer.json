@@ -4,10 +4,10 @@
   "features": {
     "ghcr.io/devcontainers/features/github-cli:1": {}
   },
-  "forwardPorts": [3007, 3008],
+  "forwardPorts": [8578, 8579],
   "portsAttributes": {
-    "3007": { "label": "UI (Vite)", "onAutoForward": "notify" },
-    "3008": { "label": "API Server", "onAutoForward": "silent" }
+    "8578": { "label": "UI (Vite)", "onAutoForward": "notify" },
+    "8579": { "label": "API Server", "onAutoForward": "silent" }
   },
   "postCreateCommand": "npm install && npm run build:packages",
   "remoteEnv": {

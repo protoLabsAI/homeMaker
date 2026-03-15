@@ -5,9 +5,9 @@ relevantTo: [api]
 importance: 0.7
 relatedFiles: []
 usageStats:
-  loaded: 525
-  referenced: 131
-  successfulFeatures: 131
+  loaded: 547
+  referenced: 147
+  successfulFeatures: 147
 ---
 <!-- domain: API Design & Integration | GitHub GraphQL, REST endpoints, HTTP client patterns -->
 
@@ -217,3 +217,188 @@ usageStats:
 - **Rejected:** Nested under agent object (agent.confidence) - couples confidence lifecycle to agent object, harder to version separately. Alternative: confidence as optional field on agent at call-site (agent?.confidence ?? null) - less explicit about what changed in the API.
 - **Trade-offs:** Slightly flatter API surface (one more top-level field), but clearer separation of concerns between agent identity and quality metric.
 - **Breaking if changed:** Clients expecting agent to be a bare ProjectAgent object with no confidence field will work (no field removed), but new clients expect separate confidence field to exist.
+
+### Month filtering uses query parameter (YYYY-MM format) rather than path parameter for summary endpoint (2026-03-15)
+- **Context:** GET /summary?month=2026-03 vs GET /summary/2026-03
+- **Why:** Query parameters are conventional for filters/options in REST; allows optional queries in future (e.g., ?month=2026-03&categoryId=foo) without explosion of path routes
+- **Rejected:** Path parameter - would require separate routes for each granularity (day, week, month, quarter)
+- **Trade-offs:** Query params require validation logic in handler (YYYY-MM regex); path params are validated by routing. Query approach is more flexible but less 'clean' REST
+- **Breaking if changed:** Clients expecting /summary/2026-03 path format would break. Changing to optional query breaks existing ?month= contract
+
+#### [Pattern] Uniform response envelope format (success flag + data/error) duplicates HTTP status code semantics (2026-03-15)
+- **Problem solved:** Every response: { success: true, data: {...} } or { success: false, error: '...' }, paired with HTTP 200/400/500
+- **Why this works:** Client-side convenience - single property check for success (response.success) vs parsing status codes. Language-agnostic, works through proxies that hide HTTP status. Explicit error message without parsing body
+- **Trade-offs:** Redundancy (status + success flag) adds bytes but improves developer experience. Clients can't rely on status alone; must check both. Creates implicit contract client must follow
+
+### Explicit DEFAULT_AGENT_SYSTEM_PROMPT reframes agent purpose from code-writing to research-and-recommendations for home tasks (2026-03-15)
+- **Context:** Without explicit framing, agents default to implementation mode; 'research best thermostat' would yield code instead of options
+- **Why:** Home management domain requires research/decision-support more than implementation; must override implicit code-writing bias
+- **Rejected:** Relying on task description alone to convey research intent - insufficient for LLM behavior steering
+- **Trade-offs:** Explicit framing reduces ambiguity but makes prompt more domain-specific; less generic/reusable
+- **Breaking if changed:** Removing or weakening the 'research vs implement' framing causes agents to write code for research tasks
+
+### Type coercion in PATCH updates: each optional field explicitly checked with typeof/Array.isArray before assignment, converting mistyped values to null rather than rejecting (2026-03-15)
+- **Context:** Partial updates need to distinguish between 'field not provided' (undefined) vs 'field cleared' (null) vs 'field set' (value)
+- **Why:** Allows clients to explicitly clear fields by sending correct type, but prevents invalid types from corrupting data by setting to null instead of rejecting
+- **Rejected:** Could reject mistyped updates entirely with 400 error, or allow any type and coerce client-side
+- **Trade-offs:** More lenient API (easier client integration) but silent type coercion could mask client bugs; verbose but type-safe
+- **Breaking if changed:** If code later assumes non-null string fields always contain valid strings, null values from type mismatches will cause failures
+
+#### [Gotcha] Error routing based on error.message.includes('not found') is fragile - depends on exact error message text from service layer (2026-03-15)
+- **Situation:** DELETE and GET endpoints check error message string to return 404 vs 500
+- **Root cause:** Avoids creating custom error types, reuses existing exception pattern
+- **How to avoid:** Simpler code but brittle - message changes break error handling without compile-time detection
+
+#### [Pattern] Full-text search across unstructured fields (name, manufacturer, model, serialNumber, location, notes) vs. structured filter endpoints (2026-03-15)
+- **Problem solved:** GET /search?q=X searches multiple fields; GET / accepts category/location/warrantyExpiring filters
+- **Why this works:** Users don't know which field to search (Is it in notes? manufacturer? model?), so full-text is more discoverable; structured filters for common queries
+- **Trade-offs:** Dual approach more powerful but increases API surface; full-text on notes field may return irrelevant results from unstructured text
+
+### sensorIds and photoUrls stored as arrays of strings (references) without validation that IDs/URLs actually exist (2026-03-15)
+- **Context:** Assets can reference sensors and photos but service doesn't verify references resolve
+- **Why:** Decouples inventory from sensor/photo services (no tight coupling), allows creating assets before sensors exist, URLs can be external
+- **Rejected:** Could validate IDs exist before save (requires sensor service dependency), or validate URLs are accessible
+- **Trade-offs:** Simpler code and fewer dependencies but can leave dangling references; discovery of invalid references only happens when consumed
+- **Breaking if changed:** If referenced sensor is deleted, inventory still holds stale ID; photo URL could return 404 at display time
+
+### Total value report returns aggregation by category (sum replacementCost per AssetCategory), not by location or other dimensions (2026-03-15)
+- **Context:** GET /total-value response groups by category only
+- **Why:** Insurance/budgeting typically organized by asset type (kitchen, bedroom, electronics) not location; category is the primary dimension
+- **Rejected:** Could aggregate by location (room-by-room value), or both dimensions, or user-configurable
+- **Trade-offs:** Simpler response but limited to single dimension; location info must be parsed from asset list separately
+- **Breaking if changed:** If user needs value breakdown by location, they must implement client-side grouping of individual assets
+
+#### [Gotcha] Error detection in route handlers uses error.message.includes('not found') string matching, creating tight coupling between route and service error messages (2026-03-15)
+- **Situation:** All delete and complete route handlers check: if (message.includes('not found')) → 404; else → 500
+- **Root cause:** Quick error classification without formal error types; avoids try-catch per error type
+- **How to avoid:** Simpler initial code but brittle; if service changes error message wording, routes fail silently; error classification spreads across codebase
+
+#### [Pattern] Filter-based list endpoint (GET /maintenance with ?category=, ?assetId=, ?upcoming=, ?overdue=) coexists with purpose-specific endpoints (/upcoming?days=30, /overdue, /summary) (2026-03-15)
+- **Problem solved:** GET /maintenance accepts filters; GET /upcoming?days=30 specialized for time window; GET /overdue simplified query
+- **Why this works:** Generic filtering for power users; specialized endpoints for common UI patterns (dashboard summaries); both serve different client needs
+- **Trade-offs:** More endpoints to maintain but clearer intent; clients can choose simple vs flexible queries; some parameter duplication possible
+
+### POST /:scheduleId/complete creates new MaintenanceCompletion record and advances nextDueAt by intervalDays (not by days since schedule creation) (2026-03-15)
+- **Context:** Completion handler recalculates nextDueAt = lastCompletedAt + intervalDays; supports optional completedAt parameter
+- **Why:** Interval scheduling semantics: 'every 30 days' means 30 days from last completion, not from original creation; prevents drift over time if completions delayed
+- **Rejected:** nextDueAt = now() + intervalDays (resets schedule clock); nextDueAt = createdAt + (completions.length + 1) * intervalDays (arithmetic interval)
+- **Trade-offs:** Correct interval semantics but requires completedAt tracking; prevents schedule drift but means missed completions don't cascade overdue dates
+- **Breaking if changed:** Changing to now()+interval semantics would shift all future schedules; changing to arithmetic would break recurring schedules that slip
+
+#### [Pattern] Graceful fallback UI ('No linked sensors') when asset has sensorIds but /api/sensors returns no matching data, per deviation rules (2026-03-15)
+- **Problem solved:** Sensor readings feature depends on sensors existing; data inconsistency is possible if sensor deleted after asset created
+- **Why this works:** Shows empty state rather than error, assuming temporary data inconsistency rather than true failure; user can still see asset
+- **Trade-offs:** Graceful degradation improves UX but masks data inconsistencies that might indicate sync bugs; easier to implement than orphan resolution
+
+#### [Gotcha] Return type inconsistency: `complete()` returns `{schedule, completion}` object pair, but `update()` returns null on missing record, and `delete()` returns boolean. (2026-03-15)
+- **Situation:** Different CRUD methods had different error handling philosophies
+- **Root cause:** complete() needs both objects to respond meaningfully to client. update()/delete() opted for nullable/boolean returns instead of throwing, assuming caller checks return value.
+- **How to avoid:** Nullable returns are lighter-weight but require caller discipline to check. Throwing would be safer but noisier. Inconsistency makes API harder to reason about.
+
+#### [Pattern] Merge conflict resolved by placing both services in ServiceContainer and both route mounts in order: inventory first, then maintenance. Order is deterministic and intentional. (2026-03-15)
+- **Problem solved:** Two features developed in parallel branches both needed to integrate into same ServiceContainer and route registration
+- **Why this works:** Order matters for logging (each prints mount message). Consistent ordering in exports prevents merge surprises on next conflict. Alphabetical order (inventory, maintenance) is arbitrary but stable.
+- **Trade-offs:** Creates an implicit ordering rule; developers must remember not to reorder arbitrarily. Single source of truth is stable.
+
+### Event emission threshold changed from any-change to 2+ point delta; pillarHints limited to max 3 items (2026-03-15)
+- **Context:** Preventing event spam and UX overwhelm from detailed suggestions
+- **Why:** 1-point fluctuations are noise (rounding, minor data changes). 2+ threshold meaningful to user. 3 suggestions is cognitive load limit (HCI principle). Larger delta = worthy of event/notification
+- **Rejected:** Emit on any change (causes spam); unlimited pillarHints (UX overwhelm)
+- **Trade-offs:** Users miss small score updates (good) but get focused, actionable suggestions. Prevents notification fatigue
+- **Breaking if changed:** Removing threshold re-introduces cascade events; >3 pillarHints would dilute UX priority signals
+
+#### [Pattern] WebSocket event-driven React Query cache invalidation for real-time gamification data sync (2026-03-15)
+- **Problem solved:** useGamificationEventSync hook listens to WebSocket events to invalidate React Query cache across multiple gamification queries
+- **Why this works:** Keeps profile view, dashboard widget, and sidebar XP all in sync without component-to-component event passing. WebSocket events are authoritative trigger for cache invalidation
+- **Trade-offs:** Requires WebSocket infrastructure and event naming contract, but eliminates need for shared state management library or context providers for gamification data
+
+#### [Pattern] Asymmetric XP rewards based on event conditions encode behavioral policy: maintenance on-time=50 vs late=25, inventory with-photo=25 vs without=15, budget under-target=100 or zero (2026-03-15)
+- **Problem solved:** Gamification system needs to incentivize specific user behaviors across different domains
+- **Why this works:** Different reward amounts directly encode which behaviors are encouraged; this is explicit policy, not just data variation
+- **Trade-offs:** Clear behavioral intent vs more complex reward logic; harder to change (changes are behavioral not config); easier to analyze user incentives
+
+### Budget API uses GET with query params (?month=YYYY-MM) rather than POST with request body (2026-03-15)
+- **Context:** Fetching transactions for a specific month requires passing the month parameter to the backend
+- **Why:** GET + query params enables URL bookmarking, browser caching (if headers allow), shareable URLs, and follows REST conventions for read operations. Confirmed from transactions.ts route pattern.
+- **Rejected:** POST with month in body (loses cacheability, non-standard for reads); client-side filtering after fetching all data (expensive, doesn't scale)
+- **Trade-offs:** RESTful and cacheable but query params limit filtering complexity - would need multiple params or POST for complex filter sets
+- **Breaking if changed:** If changed to POST, URL bookmarking and browser caching stop working; users can't share a specific month's budget view
+
+#### [Pattern] List endpoint returns secret metadata without decrypted values; single-item GET endpoint returns full object with decrypted value. Two response shapes for same resource type. (2026-03-15)
+- **Problem solved:** Vault needs both bulk listing capability and individual secret retrieval, but listing thousands of secrets with full decryption is expensive.
+- **Why this works:** Performance: avoid decrypting all secrets when client only needs to browse/search. Selective exposure: clients never receive all plaintext in one response.
+- **Trade-offs:** Clients must handle two different response schemas and make additional requests for values, but prevents thundering herd of decryption operations and reduces data exposure surface
+
+### Used apiFetch('PATCH') directly instead of creating missing apiPatch helper (2026-03-15)
+- **Context:** PATCH mutation for vendor updates - no apiPatch helper existed in api-fetch.ts
+- **Why:** Pragmatic unblocking - adding new helper introduces decision paralysis and potential duplication if others implement differently
+- **Rejected:** Create apiPatch helper for consistency with get/post pattern and future maintainability
+- **Trade-offs:** Faster implementation vs inconsistent API surface; if apiPatch is later added, this code becomes odd duck
+- **Breaking if changed:** If codebase standardizes on apiPatch helper pattern, this code diverges from convention. If someone later adds apiPatch, redundancy question arises.
+
+### Detail panel shows linked asset IDs only, not fetched asset names - deferred asset name loading as follow-on enhancement (2026-03-15)
+- **Context:** vendor-detail-panel displays list of linked asset IDs; full asset names available but would require additional API call per vendor
+- **Why:** Pragmatic N+1 avoidance; vendor endpoint likely already includes asset_ids in payload. Fetching names requires separate inventory API call, adds latency and complexity
+- **Rejected:** Fetch asset names eagerly (extra API call), include asset names in vendor response (API design change), show asset names in separate enrichment step (component complexity)
+- **Trade-offs:** Simpler immediate implementation, lower API load vs UX debt (users see IDs without context); acceptable for internal tools but poor for customer-facing
+- **Breaking if changed:** If linked assets become prominent (customers asking 'which assets?'), showing IDs becomes friction point requiring redesign to include asset names.
+
+#### [Gotcha] Sensor history routes mounted BEFORE /:id catch-all to avoid parameter conflicts (2026-03-15)
+- **Situation:** Both /sensors/:id/history and /sensors/:id exist; without correct order, :id route matches first and prevents history endpoint from being hit
+- **Root cause:** Express/fastify route matching is first-match-wins. More specific routes must be registered before catch-all patterns.
+- **How to avoid:** Explicit route ordering is fragile but required; documentation or linting rules would help prevent regression
+
+#### [Pattern] History endpoint includes limit parameter for pagination; prevents unbounded queries (2026-03-15)
+- **Problem solved:** getHistory() returns paginated results; client must explicitly request number of readings
+- **Why this works:** Protects against memory exhaustion and slow queries when someone queries 10 years of data. Explicit pagination limits encourage responsible API usage.
+- **Trade-offs:** Client must handle pagination logic vs. protection from query bombs
+
+#### [Pattern] Response shape validation pattern: each mutation checks `if (!result?.success)` before returning data, wrapping API contract enforcement in the hook (2026-03-15)
+- **Problem solved:** All three mutation hooks validate API response has success flag before extracting data
+- **Why this works:** Enforces API contract at consumption point. Prevents downstream code from receiving undefined/null data if API contract changes. Centralizes error narrative.
+- **Trade-offs:** Verbosity in each mutation hook vs robustness; moves error responsibility to hook author not consumer
+
+#### [Gotcha] Inconsistent API client helper usage: apiPost for create, apiFetch for update, apiDelete for delete—suggests different interfaces/signatures per operation type (2026-03-15)
+- **Situation:** Three mutations use three different fetch wrappers despite doing similar work (POST/PATCH/DELETE HTTP operations)
+- **Root cause:** Likely historical—wrappers may have evolved or have different response handling (e.g., delete returns empty, others return data). Different helpers for different concerns.
+- **How to avoid:** More helpers to understand vs semantically clear intent (apiDelete is explicit); harder to refactor if helpers need changes
+
+#### [Pattern] Service injection for Ava tools: `inventoryService`, `vendorService`, `maintenanceService` passed as dependencies to `buildAvaTools()` rather than imported as globals (2026-03-15)
+- **Problem solved:** Registering tools that need to query multiple service layers (inventory, vendors, maintenance schedules)
+- **Why this works:** Enables test mocking, keeps tools decoupled from service discovery, makes tool availability conditional on service existence. Services optional at registration time.
+- **Trade-offs:** More dependency injection boilerplate in chat/index.ts (3 lines added) but gains modularity and testability
+
+### Ava tools are primarily read-only query tools; only `complete_maintenance()` performs writes, delegating to existing service methods rather than duplicating business logic (2026-03-15)
+- **Context:** Designing 9 new tools for Ava assistant to query home management data and allow limited writes (marking maintenance complete)
+- **Why:** Keeps data consistency in one place (service layer), avoids duplicating validation/sequencing logic, reduces bug surface for writes. Ava assistant as query tool, not data mutator.
+- **Rejected:** Scattered write operations across multiple tools (e.g., `update_asset`, `reschedule_maintenance`, `add_vendor_note`) would duplicate business rules and risk inconsistency
+- **Trade-offs:** Limited Ava functionality but higher data integrity. Ava assistant becomes a smart query interface, not a full CRUD interface.
+- **Breaking if changed:** If Ava tools expand to multiple write operations, would need centralized transaction coordination and rollback logic, increasing complexity significantly
+
+### Two separate Ava tools (get_active_quests, suggest_quest) rather than single 'manage_quests' tool with sub-operations. (2026-03-15)
+- **Context:** Ava chat interface exposes get_active_quests (passive list) and suggest_quest (active generation) as distinct callable tools.
+- **Why:** Separation mirrors common query patterns (what can I work on now? vs. what should I work on?). Each tool has singular purpose, simpler documentation and invocation. Suggest_quest can have expensive logic (full state evaluation) vs. cheap get_active_quests (simple DB select).
+- **Rejected:** Single 'manage_quests' tool with operation parameter (e.g., {op: 'list' | 'suggest'}).
+- **Trade-offs:** More tool entries in UI but clearer semantics. Cost: each needs separate documentation; benefit: tool naming is self-documenting.
+- **Breaking if changed:** Combining into one tool makes operation discovery harder for LLM; tool invocation becomes more complex.
+
+### Payload validation deferred to mutation handler - textarea accepts any text, JSON.parse called during submit, not edit (2026-03-15)
+- **Context:** Dialog accepts freeform JSON payload; validation happens at send-time, not input-time
+- **Why:** Supports flexible payload schemas; no need to predefined structure in schema; allows copy-paste workflow
+- **Rejected:** Schema-driven validation with form fields - forces rigid structure; editor-like approach with JSON Schema UI
+- **Trade-offs:** Flexibility gained; poor error UX - users get parse errors after clicking Send, no IDE hints during editing
+- **Breaking if changed:** If schema validation added later, requires UI redesign; currently any malformed JSON silently fails on backend
+
+### Asymmetric API authentication: register endpoint requires no auth, report endpoint requires API_KEY as Bearer token (2026-03-15)
+- **Context:** Integrating Home Assistant sensors with IoT device data in a multi-source system
+- **Why:** Lower friction for initial sensor registration and setup, but protect the data ingestion pathway where credentials matter
+- **Rejected:** Requiring auth on both endpoints would complicate initial setup; no auth on report endpoint would expose data ingestion
+- **Trade-offs:** Registration is discoverable/easy but data is protected; asymmetry requires users to understand security boundary
+- **Breaking if changed:** Changing to symmetric auth or adding auth to register breaks deployment scripts; removing auth from report exposes the system
+
+### Merge strategy settings (allow_squash_merge, allow_merge_commit, allow_rebase_merge) require separate PATCH /repos endpoint call; they cannot be set via the branch protection endpoint (2026-03-15)
+- **Context:** Initial approach attempted to configure all settings in a single API call to the branch protection endpoint
+- **Why:** GitHub API architecture separates repository-level policies from branch-specific protection rules as distinct resources
+- **Rejected:** Single combined call would silently fail to apply merge settings while leaving branch protection partially configured
+- **Trade-offs:** Two API calls instead of one, but each is independently testable and idempotent with clearer failure semantics
+- **Breaking if changed:** Merge strategy enforcement won't apply if only the branch protection endpoint is called

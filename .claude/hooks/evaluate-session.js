@@ -14,7 +14,7 @@
  *   automation  — Repetitive manual steps worth automating
  *
  * Configuration (env vars):
- *   AUTOMAKER_API_URL  — Server base URL (default: http://localhost:3008)
+ *   AUTOMAKER_API_URL  — Server base URL (default: http://localhost:8579)
  *   AUTOMAKER_API_KEY  — API key for authenticating with the server
  *
  * Issues are created only when:
@@ -405,7 +405,7 @@ async function main() {
     process.exit(0);
   }
 
-  const apiUrl = process.env.AUTOMAKER_API_URL || 'http://localhost:3008';
+  const apiUrl = process.env.AUTOMAKER_API_URL || 'http://localhost:8579';
   const apiKey = process.env.AUTOMAKER_API_KEY || '';
   const projectPath = cwd;
 

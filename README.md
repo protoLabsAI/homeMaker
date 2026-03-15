@@ -77,7 +77,7 @@ Household notes with tabs, and task lists for quick items that don't need the fu
 git clone https://github.com/protoLabsAI/homeMaker.git
 cd homeMaker
 npm install
-npm run dev:full            # Web mode — starts UI (localhost:3007) AND server (localhost:3008)
+npm run dev:full            # Web mode — starts UI (localhost:8578) AND server (localhost:8579)
 ```
 
 Requires **Node.js 22+** and an [Anthropic API key](https://console.anthropic.com/).
@@ -95,7 +95,7 @@ export ANTHROPIC_API_KEY=your-key-here
 docker compose -f docker-compose.homemaker.yml up -d
 ```
 
-Access from any Tailscale device at `http://homemaker:3007`.
+Access from any Tailscale device at `http://homemaker:8578`.
 
 See [docs/deployment/tailscale.md](docs/deployment/tailscale.md) for the full deployment guide.
 
@@ -120,8 +120,8 @@ TypeScript monorepo with a React frontend, Express backend, and shared packages.
 ```
 homeMaker/
 ├── apps/
-│   ├── ui/              # React + Vite frontend (port 3007)
-│   └── server/          # Express + WebSocket backend (port 3008)
+│   ├── ui/              # React + Vite frontend (port 8578)
+│   └── server/          # Express + WebSocket backend (port 8579)
 └── libs/                # Shared packages
     ├── types/           # Core TypeScript definitions
     ├── utils/           # Logging, errors, context loading
@@ -143,7 +143,7 @@ homeMaker/
 | `ANTHROPIC_API_KEY`             | Yes       | Anthropic API key for AI agents                    |
 | `HOMEMAKER_VAULT_KEY`           | For vault | 64-char hex key for AES-256-GCM secrets encryption |
 | `AUTOMAKER_API_KEY`             | Optional  | API key for server authentication                  |
-| `PORT`                          | No        | Server port (default: 3008)                        |
+| `PORT`                          | No        | Server port (default: 8579)                        |
 | `HOST`                          | No        | Host to bind to (default: 0.0.0.0)                 |
 | `DATA_DIR`                      | No        | Data storage directory (default: ./data)           |
 | `OPENWEATHERMAP_API_KEY`        | Optional  | OpenWeatherMap API key                             |

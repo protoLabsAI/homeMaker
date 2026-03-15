@@ -8,7 +8,7 @@
  * setup and use stale server settings instead.
  */
 
-const API_PORT = process.env.TEST_SERVER_PORT || '3008';
+const API_PORT = process.env.TEST_SERVER_PORT || '8579';
 const API_BASE_URL = `http://localhost:${API_PORT}`;
 
 async function globalSetup() {

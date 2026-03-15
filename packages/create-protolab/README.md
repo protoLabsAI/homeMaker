@@ -48,7 +48,7 @@ Before running the setup, ensure you have the following installed:
 
 ### Running Automaker Server
 
-The setup script checks if the Automaker server is running on `http://localhost:3008`:
+The setup script checks if the Automaker server is running on `http://localhost:8579`:
 
 ```bash
 # In the Automaker repository
@@ -101,7 +101,7 @@ which jq
 which gh
 
 # Test Automaker connection
-curl -s http://localhost:3008/api/health | jq '.'
+curl -s http://localhost:8579/api/health | jq '.'
 
 # Verify project setup
 cd /path/to/project
@@ -149,7 +149,7 @@ The setup script supports the following options:
 # Specify Automaker API key (if different from default)
 AUTOMAKER_API_KEY=your-api-key ./scripts/setup-protolab.sh /path/to/project
 
-# Specify Automaker server URL (default: http://localhost:3008)
+# Specify Automaker server URL (default: http://localhost:8579)
 AUTOMAKER_URL=http://automaker.example.com ./scripts/setup-protolab.sh /path/to/project
 
 # Enable debug logging

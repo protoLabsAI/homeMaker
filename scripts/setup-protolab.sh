@@ -104,7 +104,7 @@ log_success "jq is installed"
 
 # Check if Automaker server is running
 log_info "Checking if Automaker server is running..."
-if ! curl -f -S -s --connect-timeout 2 --max-time 5 http://localhost:3008/api/health &> /dev/null; then
+if ! curl -f -S -s --connect-timeout 2 --max-time 5 http://localhost:8579/api/health &> /dev/null; then
   log_warning "Automaker server is not running"
   log_info "Start it with: npm run dev"
   read -p "Continue anyway? (y/n) " -n 1 -r
@@ -128,7 +128,7 @@ if [ -d "$PROJECT_PATH/.automaker" ]; then
   else
     log_info "Calling setup_lab MCP tool..."
     # Use the MCP tool via API
-    RESPONSE=$(curl -f -S -s --connect-timeout 2 --max-time 15 -X POST http://localhost:3008/api/setup/project \
+    RESPONSE=$(curl -f -S -s --connect-timeout 2 --max-time 15 -X POST http://localhost:8579/api/setup/project \
       -H "Content-Type: application/json" \
       -H "X-API-Key: ${AUTOMAKER_API_KEY:-dev-key}" \
       -d "{\"projectPath\": \"$PROJECT_PATH\"}")
@@ -148,7 +148,7 @@ else
   log_info "Calling setup_lab MCP tool..."
 
   # Use the MCP tool via API
-  RESPONSE=$(curl -f -S -s --connect-timeout 2 --max-time 15 -X POST http://localhost:3008/api/setup/project \
+  RESPONSE=$(curl -f -S -s --connect-timeout 2 --max-time 15 -X POST http://localhost:8579/api/setup/project \
     -H "Content-Type: application/json" \
     -H "X-API-Key: ${AUTOMAKER_API_KEY:-dev-key}" \
     -d "{\"projectPath\": \"$PROJECT_PATH\"}")
@@ -227,7 +227,7 @@ if [[ ! -f "$PLUGIN_ENV" ]]; then
     {
       echo "AUTOMAKER_ROOT=$AUTOMAKER_ROOT"
       echo "AUTOMAKER_API_KEY=${AUTOMAKER_API_KEY:-your-dev-key-2026}"
-      echo "AUTOMAKER_API_URL=http://localhost:3008"
+      echo "AUTOMAKER_API_URL=http://localhost:8579"
     } > "$PLUGIN_ENV"
     log_success "Plugin .env written with AUTOMAKER_ROOT=$AUTOMAKER_ROOT"
   fi

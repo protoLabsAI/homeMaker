@@ -307,7 +307,7 @@ export function DeveloperSection() {
                   });
                 }
               }}
-              placeholder="http://localhost:3008"
+              placeholder="http://localhost:8579"
               className={cn(
                 'flex-1 px-3 py-2 rounded-lg',
                 'bg-accent/30 border border-border/50',

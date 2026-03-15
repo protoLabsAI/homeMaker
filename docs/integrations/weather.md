@@ -35,7 +35,7 @@ Restart the server after updating `.env`.
 
 ## Step 4: Verify the widget
 
-1. Open homeMaker at `http://localhost:3007`.
+1. Open homeMaker at `http://localhost:8578`.
 2. The weather widget on the dashboard should show current temperature, conditions, and a short forecast.
 
 If the widget shows an error, check:

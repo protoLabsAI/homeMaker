@@ -101,8 +101,8 @@ export const PORT_PROTECTION = `## Port Protection
 
 | Port | Service      |
 | ---- | ------------ |
-| 3007 | UI (Vite)    |
-| 3008 | Server (API) |
+| 8578 | UI (Vite)    |
+| 8579 | Server (API) |
 | 3009 | Docs site    |
 
 The dev server is managed by the user. Starting, stopping, or restarting it yourself will break the development environment.`;

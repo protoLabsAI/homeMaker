@@ -113,11 +113,11 @@ export default defineConfig(({ command }) => {
     },
     server: {
       host: process.env.HOST || '0.0.0.0',
-      port: parseInt(process.env.TEST_PORT || '3007', 10),
+      port: parseInt(process.env.TEST_PORT || '8578', 10),
       allowedHosts: true,
       proxy: {
         '/api': {
-          target: process.env.VITE_SERVER_URL || 'http://localhost:3008',
+          target: process.env.VITE_SERVER_URL || 'http://localhost:8579',
           changeOrigin: true,
           ws: true,
         },

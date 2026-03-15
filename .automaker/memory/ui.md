@@ -66,3 +66,115 @@ usageStats:
 - **Rejected:** Defaulting to 'docs' would increase template adoption but breaks expectation for blank projects. Required radio selection increases friction for blank-project path.
 - **Trade-offs:** Simpler UX (toggle) vs. clearer multi-select semantics (checkboxes). Optional path vs. higher template adoption. Fewer clicks to skip templates vs. explicit mutual exclusivity.
 - **Breaking if changed:** If logic later assumes a starter kit is always present, optional starterKit field becomes a problem. Schema migrations needed if making selection required.
+
+#### [Pattern] Icon selection aligned to home management domain: Home (dashboard), MessageSquare (chat), CalendarDays, ListTodo, NotebookPen instead of original dev-focused Palette, FolderKanban, Network, FileText icons (2026-03-15)
+- **Problem solved:** Rebranding from protoLabs dev-focused UI to homeMaker home management application
+- **Why this works:** Visual metaphors reinforce domain identity and improve cognitive load for end users. Home icon for dashboard, Chat bubble for messaging are universally understood in home management context.
+- **Trade-offs:** Easier: clearer affordances for home users. Harder: lost dev-focused visual language if tool ever needs to serve dev audience again.
+
+#### [Gotcha] All button elements must use Button component from @protolabsai/ui/atoms, never bare <button> HTML tags (2026-03-15)
+- **Situation:** UI library has strict conformance requirement (per ui-standards.md) that native HTML breaks
+- **Root cause:** Design system consistency; bare buttons don't respect theme/accessibility/styling conventions of component library
+- **How to avoid:** Must import Button component everywhere = more boilerplate, but ensures consistent styling/accessibility across app
+
+#### [Pattern] Filter chips implemented as Button variant='default'/'outline' with rounded-full className for toggle state management (2026-03-15)
+- **Problem solved:** Inventory view needs category and location filter chips that toggle selected/unselected state
+- **Why this works:** Button variants provide semantic styling (outline for unselected, default for selected); rounded-full provides chip appearance without custom component
+- **Trade-offs:** Reusing Button simplifies code but ties filter appearance to Button component evolution; if Button changes, filters visually change
+
+#### [Pattern] Optional form fields in add-asset-dialog hidden behind collapsible toggle to reduce cognitive load on required-only view (2026-03-15)
+- **Problem solved:** Asset creation has many optional fields (warranty details, maintenance notes, etc.) but primary path only needs name/category/location
+- **Why this works:** Progressive disclosure pattern improves UX for common case (simple asset) while allowing power users to add details; balances completeness vs simplicity
+- **Trade-offs:** Users add details intentionally (good) vs hidden fields might be missed; implementation requires form state splitting
+
+#### [Gotcha] PanelHeader.actions expects PanelHeaderAction[] array, not ReactNode. Must use 'extra' prop for arbitrary ReactNode content in header. (2026-03-15)
+- **Situation:** Building ScheduleDetailPanel slide-out sheet with header actions
+- **Root cause:** PanelHeader has typed API that enforces specific action structure for consistent UX; doesn't accept generic children
+- **How to avoid:** Strict typing prevents flexible layouts but ensures consistency; requires knowing about 'extra' prop workaround
+
+#### [Pattern] DueSummary uses clickable color-coded cards (red overdue, yellow due-soon, blue due-month, green up-to-date) that filter tab selection rather than separate views. (2026-03-15)
+- **Problem solved:** MaintenanceView needs to show maintenance status at-a-glance and enable filtering
+- **Why this works:** Summary cards provide visual status overview; making them clickable for filtering eliminates separate tab UI and maintains shared state across view
+- **Trade-offs:** Faster filter switching and smaller code footprint, but card interactivity is non-obvious (users must discover they're clickable); makes card purpose dual (summary + filter control)
+
+### Sidebar XP bar remains visible in both expanded and collapsed sidebar states (2026-03-15)
+- **Context:** XP bar integrated into sidebar with design supporting both expanded (full width) and collapsed (compact) display modes
+- **Why:** Gamification is primary user goal, XP progress is always-visible signal of progress. Keeps motivation visible even in collapsed state
+- **Rejected:** Could have hidden XP bar entirely in collapsed state to save space, or only shown in expanded state
+- **Trade-offs:** Takes sidebar space in both states, but communicates XP progress continuously without requiring sidebar expansion
+- **Breaking if changed:** If XP bar is removed or hidden in collapsed state, users lose visibility into gamification progress when sidebar is minimized
+
+#### [Pattern] Portal-based full-screen overlay for level-up animation escapes parent layout constraints via createPortal(component, document.body) (2026-03-15)
+- **Problem solved:** Level-up overlay needs true full-screen coverage without being constrained by parent component's stacking context or overflow settings
+- **Why this works:** React components in tree are constrained by parent position/overflow/z-index; portaling to document.body removes these constraints for unobstructed full-screen experience
+- **Trade-offs:** Portal adds DOM node outside React tree (slight mental model complexity) but guarantees full-screen rendering regardless of parent layout
+
+#### [Pattern] Sonner toast position override per-call (toast.custom(msg, { position: 'top-center' })) enables multi-zone toast system within single Toaster instance (2026-03-15)
+- **Problem solved:** Different celebrations need different visual zones: bottom-right for XP/streak toasts, top-center for achievement banner
+- **Why this works:** Single Toaster instance supports per-call position override via toast.custom()—avoids DOM bloat and CSS scope conflicts of multiple Toaster instances
+- **Trade-offs:** Simpler DOM and CSS but requires knowing Sonner's override API; multiple instances would be more obvious but heavier
+
+### Conditional loading indicator based on sensor presence: skeleton only when `isLoading && sensors.length === 0`, subtle corner spinner only when `isLoading && sensors.length > 0`. Different UX signals for initial data load vs background refresh. (2026-03-15)
+- **Context:** Showing loading state during both initial data fetch and periodic polling without jarring the user with repeated skeletons
+- **Why:** Initial load with no data requires immediate user feedback (skeleton). Background refresh with existing data should not interrupt user (subtle corner spinner). Skeleton re-rendering during each 10s poll would be visually jarring and break user focus. Conditioning on `sensors.length` distinguishes between 'no data context' and 'refreshing known data'.
+- **Rejected:** Show skeleton on all loads (jarring UX during polls), show nothing (users don't know refresh is happening), show toast (too intrusive)
+- **Trade-offs:** More conditional logic in component vs better UX. Spinner visibility is subtle but unambiguous.
+- **Breaking if changed:** Removing the `sensors.length` condition causes skeleton flashing every 10s, destroying usability during real-time polling.
+
+### Offline sensor visibility using `opacity-50` preserves grid layout and context while providing visual distinction. Sensors remain in grid flow, grayed out but present. (2026-03-15)
+- **Context:** Displaying offline sensors without losing information density or disrupting grid layout
+- **Why:** Opacity preserves grid structure (hidden items would break CSS Grid flow), keeps offline sensors visible for context (users see which sensors are down), and provides immediate visual scan (no need to check separate list). Alternative of separate 'offline' section adds complexity and breaks single unified view.
+- **Rejected:** Hide offline sensors entirely (loses context and operational visibility), move to separate collapsed section (adds UI complexity), use different row styling (harder to scan visually than opacity shift)
+- **Trade-offs:** Slightly harder to distinguish offline sensors than separate section vs preserving clean grid layout and information density
+- **Breaking if changed:** Removing opacity makes offline sensors visually identical to online ones (critical operational issue). Hiding them breaks situational awareness for operations.
+
+### Category breakdown uses CSS-only proportional bars instead of a charting library (Recharts, Chart.js) (2026-03-15)
+- **Context:** Visualizing spend per category as horizontal stacked bars showing relative proportions
+- **Why:** Reduces bundle size (no library overhead), simpler implementation, avoids dependency maintenance. CSS flexbox proportional widths are sufficient for this use case.
+- **Rejected:** Chart.js (more features but heavier); Recharts (React-friendly but larger bundle); custom canvas (more powerful but complex)
+- **Trade-offs:** Simpler code and smaller bundle vs. limited interactivity (no hover tooltips, no animations, no drill-down). If drill-down or advanced interactions needed later, requires library addition.
+- **Breaking if changed:** If requirements change to need interactive features (click category to filter transactions), the CSS-only approach hits a wall
+
+#### [Pattern] Two-tier search: instant client-side filter on loaded entries, with 400ms debounced server fallback if no matches found (2026-03-15)
+- **Problem solved:** Search must feel responsive (avoid network latency) but also handle queries where matching entries aren't in current paginated view
+- **Why this works:** Client-side search provides snappy UX for common case; debounced server search handles rare case of querying entries not yet fetched without hammering API
+- **Trade-offs:** More code complexity for better perceived performance. Debounce timing (400ms) empirically chosen to balance responsiveness vs API cost
+
+#### [Pattern] Category filtering uses fixed tab set with 'Other' catch-all for non-standard categories instead of dynamic tab generation or dropdown (2026-03-15)
+- **Problem solved:** 6 named category tabs (Plumber, Electrician, etc.) plus 'Other' for remaining - discovered this approach from UI requirements
+- **Why this works:** Fixed tabs provide clean, predictable UX for the happy path. 'Other' defer rare categories without UI complexity
+- **Trade-offs:** Simple UX for common cases vs discoverability issue for edge categories; 'Other' tab combines disparate types
+
+#### [Pattern] Used Sheet for read-only detail panel, Dialog for form-based add/edit - semantic distinction between viewing and writing data (2026-03-15)
+- **Problem solved:** vendor-detail-panel opens as Sheet, add-vendor-dialog and edit as Dialog from detail panel or grid
+- **Why this works:** Clear UX signal: Sheet = temporary reading/browsing (slide-in, secondary), Dialog = focused form entry (modal, primary action). Inherited from maintenance-view pattern
+- **Trade-offs:** Consistent UX experience vs must maintain both Sheet and Dialog components; leverages existing Shadcn components effectively
+
+#### [Gotcha] Merge conflict in navigation hooks revealed parallel feature development: vendors (Wrench icon) and vault (KeyRound icon) both needed in sidebar, not exclusive (2026-03-15)
+- **Situation:** Feature branch diverged from dev; both branches added different nav items causing UU (both updated) conflict
+- **Root cause:** Solution kept both icons—indicates sidebar supports multiple parallel navigation targets. Initial conflict suggested they were competing features when actually complementary.
+- **How to avoid:** Manual conflict resolution required understanding of feature interdependencies; teaches that concurrent UI features need coordination
+
+### Client-side sender name persistence in localStorage with key 'household-chat:sender-name' (2026-03-15)
+- **Context:** Chat requires sender identification; users should not need to re-enter name on page reload
+- **Why:** localStorage survives page reloads and tab closures. No server state required, reducing latency and complexity. Key scoped to feature ('household-chat:') prevents collision with other localStorage keys.
+- **Rejected:** Query parameter (lost on reload, visible in URL). Server session state (adds backend complexity, doesn't survive browser restart). No persistence (frustrating UX).
+- **Trade-offs:** Storage is per-domain and per-browser (not synced across devices), but avoids server state and provides good single-device UX. Vulnerable to localStorage clearing.
+- **Breaking if changed:** Removing localStorage fallback requires users to re-enter name repeatedly (poor UX). Changing key name from 'household-chat:sender-name' loses existing user preferences.
+
+### Action selector implemented as button group (variant toggle pattern), not dropdown or form field (2026-03-15)
+- **Context:** SensorCard UI shows action choices; COMMAND_ACTIONS array mapped to Button components
+- **Why:** Visual affordance clear; fast selection for small action set; immediate feedback on current selection
+- **Rejected:** Dropdown/Select - takes less space but hides options; radio group - more semantic but less visual
+- **Trade-offs:** UX clarity for 2-3 actions; scales poorly if actions grow to 10+ - layout breaks, becomes unusable
+- **Breaking if changed:** If actions grow, UI requires redesign; changing to Select component alters component API for SendCommandDialog
+
+#### [Pattern] SendCommandDialog owns mutation state (sendCommand, pending status) and coordinates dialog lifecycle (onOpenChange callback) (2026-03-15)
+- **Problem solved:** Dialog component handles React Query mutation, loading state, error display, and dialog open/close
+- **Why this works:** Encapsulates submission flow; keeps SensorCard simple; Dialog becomes self-contained feature
+- **Trade-offs:** SensorCard simplified; Dialog component becomes stateful - harder to test in isolation, couples to React Query
+
+#### [Pattern] Native APIs (dialog, notification, tray) all provide web browser fallbacks in same module (2026-03-15)
+- **Problem solved:** Single codebase needs to work as both desktop (Tauri) and web app without conditional imports
+- **Why this works:** Progressive enhancement: graceful degradation enables web-first development/testing without desktop build; detects platform at runtime
+- **Trade-offs:** More code per module but enables same feature set on web (reduced) and desktop (full); simplifies testing

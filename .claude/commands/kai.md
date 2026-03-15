@@ -224,7 +224,7 @@ Run server tests: `npm run test:server`
 ## Monorepo Context
 
 ```
-apps/server/      # Express 5 + WebSocket backend (port 3008)
+apps/server/      # Express 5 + WebSocket backend (port 8579)
 libs/types/       # @protolabsai/types (shared TypeScript definitions)
 libs/utils/       # @protolabsai/utils (logging, errors)
 libs/platform/    # @protolabsai/platform (paths, security)

@@ -1,142 +1,112 @@
 # Connect Home Assistant sensors
 
-This guide shows you how to stream sensor readings from Home Assistant (HA) into the homeMaker sensor dashboard. HA pushes state changes to homeMaker's existing sensor registry via HTTP POST — no homeMaker code changes are needed.
+This guide shows you how to bridge Home Assistant sensor data into homeMaker's sensor registry. After completing it, HA entity states will appear in the homeMaker Sensors view and feed into the context aggregator.
 
-**Command flow:** HA sends data to homeMaker. homeMaker does NOT control HA devices.
+## How it works
+
+homeMaker exposes two sensor API endpoints:
+
+- `POST /api/sensors/register` — register a sensor on startup
+- `POST /api/sensors/report` — post a periodic reading
+
+You configure Home Assistant automations to call these endpoints whenever a sensor updates.
 
 ## Prerequisites
 
-- Home Assistant instance accessible from your homeMaker host (Tailscale recommended)
-- homeMaker running and reachable on your network (default port `3008`)
-- `AUTOMAKER_API_KEY` set in your homeMaker `.env` (required for sensor report endpoint)
-- HA version 2023.1 or newer (`rest_command` service with template payloads)
+- Home Assistant running on your local network
+- homeMaker accessible from Home Assistant (same network, or via Tailscale)
+- A long-lived access token from your HA profile
 
-## Sensor ID naming convention
+## Step 1: Register a sensor
 
-homeMaker sensor IDs for HA devices follow this format:
-
-```
-ha:{entity_id}
-```
-
-Examples:
-
-| HA entity_id                     | homeMaker sensorId                  |
-| -------------------------------- | ----------------------------------- |
-| `sensor.living_room_temperature` | `ha:sensor.living_room_temperature` |
-| `binary_sensor.front_door`       | `ha:binary_sensor.front_door`       |
-| `sensor.energy_meter_power`      | `ha:sensor.energy_meter_power`      |
-
-This prefix lets you filter HA sensors from native sensors in the homeMaker dashboard.
-
-## Step 1: Enable HA packages
-
-Home Assistant [packages](https://www.home-assistant.io/docs/configuration/packages/) let you define automations and services in separate files. Add this to your `configuration.yaml`:
+Call `POST /api/sensors/register` once per sensor, typically in a startup automation.
 
 ```yaml
-homeassistant:
-  packages: !include_dir_named packages
+# configuration.yaml — REST command for registration
+rest_command:
+  register_homemaker_sensor:
+    url: "http://homemaker:8579/api/sensors/register"
+    method: POST
+    headers:
+      Content-Type: application/json
+    payload: >
+      {
+        "id": "ha:{{ sensor_id }}",
+        "name": "{{ sensor_name }}",
+        "type": "{{ sensor_type }}",
+        "unit": "{{ unit }}"
+      }
 ```
 
-Create the directory if it doesn't exist:
+## Step 2: Report readings via automation
 
-```bash
-mkdir -p /config/packages
-```
-
-## Step 2: Add the register-sensors automation
-
-Copy [`templates/ha-register-sensors.yaml`](./templates/ha-register-sensors.yaml) to `/config/packages/homeMaker-register.yaml`.
-
-Edit the file:
-
-1. Replace `YOUR_HOMEMAKER_HOST` with your homeMaker IP or hostname (e.g. `100.64.1.10` for Tailscale)
-2. Add one `service: rest_command.homeMaker_register_sensor` block per sensor you want to track
-3. Use the `ha:{entity_id}` naming convention for each `id` field
-
-This automation fires once on HA startup and registers every listed sensor in homeMaker.
-
-## Step 3: Add the sensor bridge automation
-
-Copy [`templates/ha-sensor-bridge.yaml`](./templates/ha-sensor-bridge.yaml) to `/config/packages/homeMaker-bridge.yaml`.
-
-Edit the file:
-
-1. Replace `YOUR_HOMEMAKER_HOST` with your homeMaker host
-2. Replace `YOUR_AUTOMAKER_API_KEY` with the value of `AUTOMAKER_API_KEY` from your homeMaker `.env`
-3. Add each HA entity you want to stream under `trigger.entity_id`
-
-Whenever a listed entity changes state, the automation POSTs the new reading to homeMaker.
-
-## Step 4: Restart Home Assistant
-
-```bash
-# Via HA CLI
-ha core restart
-
-# Or in the UI: Settings → System → Restart
-```
-
-## Step 5: Verify readings in homeMaker
-
-Open the homeMaker sensor dashboard (`http://YOUR_HOMEMAKER_HOST:3007/sensors`). Each registered HA sensor should appear. After any state change in HA, the **Last Seen** timestamp updates and the sensor moves to `active` state.
-
-To trigger a test reading manually from HA Developer Tools:
+Create one automation per sensor (or use a template automation):
 
 ```yaml
-# Developer Tools → Services → rest_command.homeMaker_report_sensor
-service: rest_command.homeMaker_report_sensor
-data:
-  sensor_id: 'ha:sensor.living_room_temperature'
-  value: '21.5'
-  unit: '°C'
-  entity_id: 'sensor.living_room_temperature'
-  attributes: '{}'
+# automations.yaml
+- alias: "Report living room temperature to homeMaker"
+  trigger:
+    - platform: state
+      entity_id: sensor.living_room_temperature
+  action:
+    - service: rest_command.report_homemaker_sensor
+      data:
+        sensor_id: "ha:sensor.living_room_temperature"
+        value: "{{ states('sensor.living_room_temperature') }}"
+        unit: "°F"
 ```
 
-## API reference
+Add the matching REST command:
 
-| Endpoint                | Method | Auth                   | Purpose                            |
-| ----------------------- | ------ | ---------------------- | ---------------------------------- |
-| `/api/sensors/register` | POST   | None                   | Register or re-register a sensor   |
-| `/api/sensors/report`   | POST   | API key (Bearer token) | Post a new sensor reading          |
-| `/api/sensors`          | GET    | None                   | List all sensors with latest state |
-
-### Register payload
-
-```json
-{
-  "id": "ha:sensor.living_room_temperature",
-  "name": "Living Room Temperature",
-  "description": "Optional free-form description"
-}
+```yaml
+rest_command:
+  report_homemaker_sensor:
+    url: "http://homemaker:8579/api/sensors/report"
+    method: POST
+    headers:
+      Content-Type: application/json
+    payload: >
+      {
+        "id": "{{ sensor_id }}",
+        "value": {{ value }},
+        "unit": "{{ unit }}"
+      }
 ```
 
-### Report payload
+## Step 3: Register on HA startup
 
-```json
-{
-  "sensorId": "ha:sensor.living_room_temperature",
-  "data": {
-    "value": "22.5",
-    "unit": "°C",
-    "entity_id": "sensor.living_room_temperature",
-    "attributes": {}
-  }
-}
+To ensure sensors are registered after a restart, add a trigger to the automation:
+
+```yaml
+trigger:
+  - platform: homeassistant
+    event: start
+  - platform: state
+    entity_id: sensor.living_room_temperature
 ```
 
-## Troubleshooting
+## Sensor naming convention
 
-| Symptom                                 | Likely cause                        | Fix                                                                                     |
-| --------------------------------------- | ----------------------------------- | --------------------------------------------------------------------------------------- |
-| Sensor not appearing in dashboard       | Registration automation didn't fire | Check HA logs, re-run automation manually                                               |
-| Sensor shows `offline`                  | No readings received                | Check bridge automation trigger entities, verify API key                                |
-| `401 Unauthorized` on report calls      | Wrong or missing API key            | Verify `AUTOMAKER_API_KEY` in homeMaker `.env` and HA package file                      |
-| `404 Not Found` on report calls         | Sensor not registered               | Run the register automation first, then retry                                           |
-| Readings appear but state stays `stale` | Too-infrequent HA state changes     | Adjust the TTL in homeMaker settings or add a periodic trigger to the bridge automation |
+Use `ha:domain.entity_id` for all HA-sourced sensors:
+
+```
+ha:sensor.living_room_temperature
+ha:sensor.basement_humidity
+ha:binary_sensor.front_door
+ha:sensor.electricity_usage
+```
+
+This namespace keeps HA sensors distinct from directly-registered IoT devices.
+
+## Verify in homeMaker
+
+1. Open homeMaker at `http://homemaker:8578`.
+2. Click **Sensors** in the sidebar.
+3. Your registered sensors should appear with their latest reading and an `online` status.
+
+If a sensor shows `stale` or `offline`, check that the HA automation is firing and that the homeMaker server is reachable from HA.
 
 ## Next steps
 
-- [Sensor registry reference](../reference/sensors) — sensor states, TTL configuration, data schema
-- Add HA sensors to inventory items for warranty and valuation tracking
+- [Sensor module reference](../modules/sensors.md)
+- [Weather widget](./weather.md)

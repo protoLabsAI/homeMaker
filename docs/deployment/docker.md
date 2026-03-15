@@ -18,19 +18,19 @@ services:
     image: ghcr.io/your-org/homemaker:latest
     restart: unless-stopped
     ports:
-      - "3007:3007"
-      - "3008:3008"
+      - "8578:8578"
+      - "8579:8579"
     environment:
       - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
       - HOMEMAKER_VAULT_KEY=${HOMEMAKER_VAULT_KEY}
-      - PORT=3008
+      - PORT=8579
       - HOST=0.0.0.0
       - DATA_DIR=/data
     volumes:
       - homemaker-data:/data
       - homemaker-db:/app/homemaker.db
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:3008/api/health"]
+      test: ["CMD", "curl", "-f", "http://localhost:8579/api/health"]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -68,12 +68,12 @@ Check the logs:
 docker compose logs -f homemaker
 ```
 
-The UI is at `http://your-server:3007` and the API at `http://your-server:3008`.
+The UI is at `http://your-server:8578` and the API at `http://your-server:8579`.
 
 ## Verify the deployment
 
 ```bash
-curl http://localhost:3008/api/health
+curl http://localhost:8579/api/health
 # Expected: {"status":"ok"}
 ```
 

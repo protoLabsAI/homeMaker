@@ -27,7 +27,7 @@ services:
       target: ui
     restart: on-failure
     ports:
-      - '3007:80'
+      - '8578:80'
     depends_on:
       server:
         condition: service_healthy
@@ -72,7 +72,7 @@ services:
         GID: ${GID:-1001}
     restart: on-failure
     ports:
-      - '3008:3008'
+      - '8579:8579'
     secrets:
       - anthropic_api_key
       - automaker_api_key
@@ -103,8 +103,8 @@ services:
 
       # Network
       - HOST=0.0.0.0
-      - PORT=3008
-      - CORS_ORIGIN=http://localhost:3007
+      - PORT=8579
+      - CORS_ORIGIN=http://localhost:8578
 
       # Monitoring
       - ENABLE_METRICS=true
@@ -139,7 +139,7 @@ services:
         monitor: 60s
         order: start-first
     healthcheck:
-      test: ['CMD', 'curl', '-f', 'http://localhost:3008/api/health']
+      test: ['CMD', 'curl', '-f', 'http://localhost:8579/api/health']
       interval: 15s
       timeout: 5s
       retries: 3

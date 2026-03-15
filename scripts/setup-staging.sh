@@ -239,7 +239,7 @@ start_services() {
   local max_retries=30
 
   while [ $retries -lt $max_retries ]; do
-    if curl -sf http://localhost:${API_PORT:-3008}/api/health &>/dev/null; then
+    if curl -sf http://localhost:${API_PORT:-8579}/api/health &>/dev/null; then
       ok "Server is healthy"
       break
     fi
@@ -316,8 +316,8 @@ show_status() {
   echo ""
 
   # Endpoints
-  local api_port="${API_PORT:-3008}"
-  local ui_port="${UI_PORT:-3007}"
+  local api_port="${API_PORT:-8579}"
+  local ui_port="${UI_PORT:-8578}"
   echo -e "  UI:     ${GREEN}http://localhost:${ui_port}${NC}"
   echo -e "  API:    ${GREEN}http://localhost:${api_port}${NC}"
   echo -e "  Docs:   ${GREEN}https://docs.protolabs.studio${NC} (Cloudflare Pages)"
@@ -350,8 +350,8 @@ setup_tailscale_https() {
     return 0
   fi
 
-  local ui_port="${UI_PORT:-3007}"
-  local api_port="${API_PORT:-3008}"
+  local ui_port="${UI_PORT:-8578}"
+  local api_port="${API_PORT:-8579}"
 
   info "Configuring Tailscale HTTPS proxy..."
 
@@ -382,7 +382,7 @@ setup_tailscale_https() {
 drain_agents() {
   info "Draining running agents before deploy..."
 
-  local api_port="${API_PORT:-3008}"
+  local api_port="${API_PORT:-8579}"
   local api_key="${AUTOMAKER_API_KEY:-}"
 
   if [ -z "$api_key" ]; then

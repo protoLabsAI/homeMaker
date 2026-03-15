@@ -5,11 +5,10 @@ relevantTo: [database]
 importance: 0.7
 relatedFiles: []
 usageStats:
-  loaded: 3
-  referenced: 0
-  successfulFeatures: 0
+  loaded: 8
+  referenced: 3
+  successfulFeatures: 3
 ---
-
 <!-- domain: Database & Persistence | Data storage patterns, query optimization, schema decisions -->
 
 # database
@@ -241,3 +240,142 @@ usageStats:
 - **Rejected:** Per-file pattern would require directory enumeration on list(), separate file handles per automation, and directory-level transaction handling
 - **Trade-offs:** Gained: atomic guarantees, simple list implementation. Lost: file-level isolation, easier concurrent access patterns
 - **Breaking if changed:** Switching to per-file requires rewriting persistence layer: map-reduce across directory, handle file conflicts in concurrent scenarios, deal with orphaned files
+
+### SQLite file-based database with auto-table creation on BudgetService instantiation (2026-03-15)
+- **Context:** Service initialized with dataDir parameter, creates/initializes SQLite DB automatically without migration tools
+- **Why:** Zero external service dependencies, no ops burden, embedded with application, automatic schema initialization avoids migration drift
+- **Rejected:** PostgreSQL/MySQL - adds deployment complexity, separate service management, migration versioning burden. Cloud DB (Firebase) - loses offline capability, increases vendor lock-in
+- **Trade-offs:** Single-machine bottleneck - can't distribute across servers. File locking under concurrent writes limits throughput. Easy backup (copy file) vs hard replication
+- **Breaking if changed:** Scaling to multiple backend instances requires migration to shared DB (PostgreSQL) - all queries must change, connection pooling patterns change. Multi-region scenarios impossible
+
+### SQLite chosen as backing store; only ciphertext + IV + auth tag are persisted—never plaintext. Encryption happens in-process before write. (2026-03-15)
+- **Context:** Choosing persistence layer for encrypted secrets vault
+- **Why:** SQLite keeps secrets local (no external service needed), and in-process encryption means plaintext never touches disk. Simplifies deployment and reduces external dependencies.
+- **Rejected:** External key-value store (Redis/Memcached) would require trusting network transport and another service's memory. Relational DB (PostgreSQL) adds complexity.
+- **Trade-offs:** Single-instance only; no distributed vault across multiple servers. Backup/restore must preserve SQLite file and HOMEMAKER_VAULT_KEY separately.
+- **Breaking if changed:** Migrating to external database requires rearchitecting encryption boundaries. Plaintext cannot be stored in external DB without changing entire security model.
+
+#### [Gotcha] BetterSqlite3 instantiation requires .default(path) not new BetterSqlite3(path) (2026-03-15)
+- **Situation:** The codebase uses BetterSqlite3 with CommonJS module resolution pattern
+- **Root cause:** CommonJS default export handling differs from ES6 modules; the package exports default as the constructor
+- **How to avoid:** None if understood; critical blocker if pattern is inverted
+
+### Table creation deferred until first access (CREATE TABLE IF NOT EXISTS), not via separate migration system (2026-03-15)
+- **Context:** 7 related tables must exist before any service can operate, but no migration framework is present
+- **Why:** Reduces deployment complexity, works across fresh and existing databases, eliminates migration ordering concerns
+- **Rejected:** Separate migration framework - adds dependency, requires ordering, fails if migrations already partially applied
+- **Trade-offs:** Easier: simpler deployment; Harder: schema evolution becomes ad-hoc, no version tracking, difficult to roll back schema changes
+- **Breaking if changed:** Removing CREATE TABLE IF NOT EXISTS means tables must be pre-created or first access will fail; schema changes require manual intervention
+
+### WAL mode and PRAGMA foreign_keys=ON enabled at initialization, not lazily or per-query (2026-03-15)
+- **Context:** Concurrency and referential integrity are requirements; configuration must be consistent across all access patterns
+- **Why:** WAL enables concurrent readers while writes are happening; foreign keys enforced at engine level prevent data corruption from app bugs
+- **Rejected:** Skipping WAL - serialized read/write access; skipping foreign keys - schema violations become possible in buggy code
+- **Trade-offs:** Easier: built-in protection; Harder: WAL creates .wal/.shm files (not just .db), foreign keys add query validation overhead
+- **Breaking if changed:** Disabling foreign keys allows orphaned references (transactions without categories); disabling WAL reverts to serialized access, breaking concurrent sensor reads
+
+#### [Gotcha] BudgetService creates legacy budget.db; budget_categories and transactions tables now exist in both homemaker.db and budget.db (2026-03-15)
+- **Situation:** Shared DB was introduced without migrating existing BudgetService, deferred to separate feature
+- **Root cause:** Reduces scope of this PR, avoids cascading refactoring of BudgetService, allows parallel work on other services first
+- **How to avoid:** Easier: smaller PR; Harder: temporary schema duplication, hidden sync risk if both tables are mutated separately
+
+### Store inventory in shared homemaker.db SQLite rather than separate file, using InventoryService wrapper around database queries (2026-03-15)
+- **Context:** BudgetService uses file-based JSON storage, but inventory needs complex querying (search, filters, aggregations)
+- **Why:** SQLite enables full-text search, aggregation queries (sum costs by category), efficient filtering, and shared single-file backup with other homeMaker data
+- **Rejected:** Could use separate JSON file per asset (unscalable), or file-based like BudgetService (impossible to aggregate/search efficiently)
+- **Trade-offs:** More complex schema management but enables sophisticated queries and better performance; single point of failure if db corrupts but atomic with other data
+- **Breaking if changed:** If SQLite database file is deleted or schema migrations fail, all inventory data lost and APIs return errors
+
+### WARRANTY fields stored as ISO date strings, with warranty expiration status computed at query-time rather than pre-calculated (2026-03-15)
+- **Context:** Warranty report endpoint groups assets by warranty status (active/expiring/expired)
+- **Why:** Dates never change in database, only 'now' changes, so query-time comparison gives fresh results without scheduled recalculation
+- **Rejected:** Could cache warranty status in a boolean column (requires update jobs), or precompute expiration warnings
+- **Trade-offs:** Query is slightly more expensive but always current; no background jobs needed
+- **Breaking if changed:** If warranty calculation logic changes, all old assets instantly get different status without migration
+
+### nextDueAt is maintained as a recalculated derived field (not just queried on-the-fly) and updated after create/update/complete operations (2026-03-15)
+- **Context:** MaintenanceSchedule stores nextDueAt; it's recalculated when intervalDays changes (update) or schedule completed (complete) based on lastCompletedAt + intervalDays
+- **Why:** Enables efficient filtering and sorting for /upcoming and summary endpoints without computing for entire dataset; query performance optimization
+- **Rejected:** Calculate nextDueAt on-the-fly for every query; store only intervalDays and lastCompletedAt and compute at read-time
+- **Trade-offs:** Faster queries but requires synchronization logic at multiple write points; easier to get out-of-sync if update paths are missed; simpler if computed at query-time
+- **Breaking if changed:** Removing nextDueAt recalculation would require changing /upcoming and /summary query logic to compute from intervalDays+lastCompletedAt
+
+#### [Pattern] MaintenanceCompletion records are immutable audit trail separate from MaintenanceSchedule, not embedded/updated in schedule record (2026-03-15)
+- **Problem solved:** Each completion creates a new MaintenanceCompletion record; schedule's lastCompletedAt points to latest; full history available via /completions endpoint
+- **Why this works:** Preserves complete audit trail of all maintenance performed; enables historical analysis and cost rollups; schedule state remains 'current' not historical
+- **Trade-offs:** More storage and schema complexity but richer historical data; easy audit trail but requires JOIN to see completion details; enables cost tracking and analysis
+
+#### [Pattern] MaintenanceService follows exact InventoryService pattern: DB singleton injection, idempotent schema init, same service registration in ServiceContainer (2026-03-15)
+- **Problem solved:** New domain entity (maintenance schedules) needed to be added to system that already had InventoryService pattern established
+- **Why this works:** Reduces risk of introducing inconsistencies, ensures MaintenanceService works with existing DI and service lifecycle patterns without surprises
+- **Trade-offs:** Consistency and safety vs less flexibility if maintenance needs diverge from inventory later
+
+### MaintenanceSchedule.nextDueAt is a plain date string field (YYYY-MM-DD) not a timestamp, consistent with CalendarEvent.date (2026-03-15)
+- **Context:** Scheduling system needs to track when maintenance is due. Calendar events also use date-only format without time-of-day
+- **Why:** Aligns with existing CalendarEvent domain model which is date-centric; simplifies 'due within 7 days' query logic; reduces timezone complexity
+- **Rejected:** Using Unix timestamps would add timezone handling complexity and break consistency with CalendarEvent.date representation
+- **Trade-offs:** Simpler queries and consistency vs cannot express time-of-day precision (all schedules are treated as 'due by end of day')
+- **Breaking if changed:** If business logic requires scheduling at specific times (e.g., 'due at 2pm'), field design must change and all dependent queries break
+
+#### [Pattern] Separated maintenance state into two tables: `maintenance` (current schedule) and `maintenance_completions` (history). Added index on `nextDueAt` for query efficiency. (2026-03-15)
+- **Problem solved:** Needed to track both current maintenance tasks and completion history without data loss
+- **Why this works:** Normalization prevents update anomalies; completion history is immutable audit trail. Index on nextDueAt is critical for 'what's due soon' queries that drive UI dashboards.
+- **Trade-offs:** Requires JOIN on select queries, but enables independent querying of completions without scanning full schedules. Completion history never gets overwritten.
+
+#### [Learned] Health score aggregates 4 equal-weight independent pillars (maintenance, inventory, budget, systems: each 0-25 points) into 0-100 total, rather than weighted formula or single metric. (2026-03-15)
+- **Problem solved:** Need single metric representing overall home health from multiple independent factors.
+- **Why this works:** Equal weighting is transparent/understandable (each pillar is 25%) and allows independent progress. User can improve budget without touching maintenance. Simpler to explain than weighted formula.
+- **Trade-offs:** Equal weights might not match actual importance (maintenance arguably more critical than inventory). Benefit is clarity—users understand which areas impact health equally.
+
+#### [Pattern] LEFT JOINs to vendor/asset tables to gracefully handle missing foreign key data (2026-03-15)
+- **Problem solved:** MaintenanceService queries need to return maintenance schedules even when vendor or asset records don't exist yet
+- **Why this works:** Allows feature to work with partial data dependencies; doesn't break if vendor/asset features are incomplete or not yet populated. Enables incremental feature rollout.
+- **Trade-offs:** Application code must handle null fields for vendor/asset; simpler schema requirements trade off for more complex null-safety in queries
+
+### Synchronous better-sqlite3 API used consistently across all services despite potential scalability limits (2026-03-15)
+- **Context:** MaintenanceService and other services use blocking synchronous DB calls rather than async/await
+- **Why:** Consistency with existing service architecture in codebase; simpler transactional guarantees; avoids mixing sync/async patterns
+- **Rejected:** Async pool (SQLite with async drivers) would be more scalable but break consistency with existing sync services
+- **Trade-offs:** Simpler, more consistent codebase vs potential event loop blocking under load; consistency easier to reason about vs harder to scale
+- **Breaking if changed:** Mixing sync and async service calls creates blocking in async request handlers, starving other requests
+
+#### [Pattern] Computed date buckets (overdue/thisWeek/thisMonth/upToDate) via ISO date arithmetic in getDueSummary() rather than storing pre-computed fields (2026-03-15)
+- **Problem solved:** DueSummary query buckets schedules using date comparisons at query time, not storing summary counts
+- **Why this works:** Summaries are always fresh; no cache invalidation logic needed; works correctly across time boundaries without periodic recalculation
+- **Trade-offs:** Query-time computation cost vs always-correct data; slightly slower reads vs no invalidation complexity
+
+#### [Pattern] Amounts stored in cents (integers) requiring division by 100 for display with Intl.NumberFormat (2026-03-15)
+- **Problem solved:** Storing monetary values as cents avoids floating-point precision errors (classic financial software pattern)
+- **Why this works:** Integer arithmetic is exact; floating-point ($123.45 as 123.45) can lose precision in calculations. Every display location must divide by 100.
+- **Trade-offs:** Mathematically sound and queryable but creates a distributed conversion responsibility - easy to forget a division somewhere and show cents as dollars
+
+### Single shared homemaker.db SQLite database for all modules (not separate DB per module) (2026-03-15)
+- **Context:** Architecture section specifies shared DB with WAL mode, foreign keys enabled, constructor injection across all modules
+- **Why:** Enables atomic transactions across modules (e.g., inventory decrement + maintenance trigger + XP award all succeed or all fail). Simpler deployment (one DB connection pool). Consistency is managed at database level.
+- **Rejected:** Multiple DBs per module (microservices pattern) would allow independent scaling but lose ACID guarantees across modules; would require distributed transactions or eventual consistency
+- **Trade-offs:** Single point of contention (DB lock) vs modularity. Schema changes require coordination across team.
+- **Breaking if changed:** If you split to separate DBs, operations like 'asset deleted, remove maintenance tasks, deduct XP' become non-atomic; inconsistent state becomes possible. Foreign key constraints enforcing relationships between modules stop working.
+
+#### [Pattern] SQLite schema stores only encrypted bytes—no schema columns for secret_category, secret_value, etc. All metadata and content encrypted together. Decryption happens in application code, never in database queries. (2026-03-15)
+- **Problem solved:** Vault needs to store secrets securely without database having access to plaintext, even accidentally through query logs or backups.
+- **Why this works:** Database itself becomes untrusted—even if database file is leaked, it contains only gibberish. Encryption key never touches database. Prevents SQL injection from exposing secrets.
+- **Trade-offs:** Application must handle serialization/deserialization of encrypted payloads. Cannot query secrets by content, only by ID. Indexing limited to non-sensitive fields.
+
+### Aggregation uses SQLite json_extract() + strftime() for server-side GROUP BY hour/day/week, not client-side aggregation (2026-03-15)
+- **Context:** Endpoint needs historical data aggregated (avg/min/max/count) over time intervals
+- **Why:** Server-side aggregation reduces data transfer and leverages database query optimization. Single query result vs. sending thousands of raw readings to aggregate client-side.
+- **Rejected:** Client-side aggregation would fetch all raw readings (network overhead, memory usage client-side); hard-coded intervals are simpler than dynamic SQL building
+- **Trade-offs:** Requires understanding SQLite JSON functions and strftime; fixed intervals (hour/day/week) vs. unlimited flexibility
+- **Breaking if changed:** If someone tries to remove json_extract or strftime, aggregation endpoint breaks. Changing interval enum requires schema design changes.
+
+### Quest status tracked in single table (active_quests) with `status` enum column and `completedAt` nullable timestamp, rather than separate 'completed_quests' table or soft-delete pattern. (2026-03-15)
+- **Context:** Table schema extended with `status` (pending|in-progress|completed|expired) and `completedAt` fields for lifecycle tracking.
+- **Why:** Single-table approach keeps quest history queryable without joins; nullable `completedAt` provides completion timestamp for achievements/stats; status column makes query filtering simple.
+- **Rejected:** Separate completed_quests table (requires INSERT/DELETE + triggers), or soft-delete pattern (wastes space, confuses 'deleted' semantics with 'completed').
+- **Trade-offs:** Single table is simpler for the common case (what quests is user doing now?) but if need full quest history analytics, would require archival process. Status enum provides type safety but any new status requires schema migration.
+- **Breaking if changed:** Removing `completedAt` loses completion timestamp data (can't build 'achievements' timeline); removing status column forces discriminating via table membership.
+
+#### [Pattern] Time-series aggregation support (getHistoryAggregated with min/max/avg/sum): query methods typed for computed summaries, not just raw readings (2026-03-15)
+- **Problem solved:** SQLite sensor_readings table accumulates rapidly; historical queries need to span weeks/months
+- **Why this works:** Raw reading counts grow unsustainably; aggregation at query time allows efficient storage and analysis without pre-computation
+- **Trade-offs:** Query-time computation is slower but flexible; keeps code simple and data lossless

@@ -5,9 +5,9 @@ relevantTo: [auth]
 importance: 0.7
 relatedFiles: []
 usageStats:
-  loaded: 94
-  referenced: 28
-  successfulFeatures: 28
+  loaded: 99
+  referenced: 30
+  successfulFeatures: 30
 ---
 <!-- domain: Authentication & Authorization | OAuth, token management, access control -->
 
@@ -97,3 +97,8 @@ usageStats:
 - **Problem solved:** Avoid collisions with other localStorage keys in shared browser environment (esp. with iframes or multiple tabs)
 - **Why this works:** Prevents accidental overwrites from other scripts; makes feature keys searchable and auditable in DevTools
 - **Trade-offs:** Gained: namespace isolation and discoverability; lost: shorter keys
+
+#### [Pattern] Master encryption key (HOMEMAKER_VAULT_KEY) is validated at VaultService instantiation and throws immediately if missing or malformed (must be 64 hex chars). This fail-fast approach prevents silent failures. (2026-03-15)
+- **Problem solved:** Securing access to encrypted secrets storage at startup
+- **Why this works:** Configuration errors for encryption keys must surface immediately in development/testing, not revealed during first encrypt/decrypt operation on production.
+- **Trade-offs:** Startup delay/ceremony (validation overhead is negligible). Forces explicit key management in all environments.

@@ -13,7 +13,7 @@
 
 import { test, expect } from '@playwright/test';
 
-const API_BASE_URL = process.env.AUTOMAKER_API_URL || 'http://localhost:3008';
+const API_BASE_URL = process.env.AUTOMAKER_API_URL || 'http://localhost:8579';
 const API_KEY = process.env.AUTOMAKER_API_KEY || 'test-key';
 
 const headers = {

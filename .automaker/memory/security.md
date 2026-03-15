@@ -5,9 +5,9 @@ relevantTo: [security]
 importance: 0.7
 relatedFiles: []
 usageStats:
-  loaded: 86
-  referenced: 26
-  successfulFeatures: 26
+  loaded: 94
+  referenced: 32
+  successfulFeatures: 32
 ---
 <!-- domain: Security | Auth guards, input validation, secure file operations, HMAC verification -->
 
@@ -235,3 +235,70 @@ usageStats:
 - **Rejected:** Keeping void: Hides errors entirely. Using await: Would block event handler. Using Promise.resolve().then(): Verbose and less idiomatic than .catch().
 - **Trade-offs:** 3 extra lines of code; gains observability into async failures without changing execution semantics (still non-blocking).
 - **Breaking if changed:** If .catch() is removed, unhandled rejections from stopFeature will silently fail and not be logged, making it hard to debug feature shutdown issues.
+
+#### [Pattern] List and search endpoints intentionally never return decrypted secret values—only metadata (id, label, category). Individual GET endpoint is the only access point for plaintext. (2026-03-15)
+- **Problem solved:** Designing API surface for encrypted vault to minimize blast radius of bulk operations
+- **Why this works:** Creates a security boundary: bulk operations can only reveal structure/metadata, not content. Prevents accidental exposure of all secrets via list operations.
+- **Trade-offs:** Client must make individual GET requests per secret instead of fetching all-at-once. Increased request volume but better security posture.
+
+### AES-256-GCM chosen for encryption cipher. GCM mode provides both confidentiality (encryption) and authenticity (authentication) in single algorithm, preventing tampering detection gaps. (2026-03-15)
+- **Context:** Selecting encryption algorithm for stored secrets
+- **Why:** AEAD (Authenticated Encryption with Associated Data) ciphers like GCM ensure that if ciphertext is modified, decryption fails catastrophically rather than silently returning corrupted plaintext.
+- **Rejected:** CBC or CTR mode would require separate HMAC, doubling key management complexity. ECB is insecure (same plaintext = same ciphertext). Stream ciphers lack built-in authentication.
+- **Trade-offs:** GCM requires 96-bit nonce (IV) per encryption; must be stored with ciphertext. Slightly higher computational cost than CBC.
+- **Breaking if changed:** Switching to non-authenticated mode means corrupted ciphertext could decrypt to garbage instead of failing, corrupting application state.
+
+#### [Pattern] Branch protection rules now enforce single main branch as required integration gate via pr-check.yml main-only targeting (2026-03-15)
+- **Problem solved:** CI validation concentrated on main branch; staging and dev branches no longer have pre-merge validation
+- **Why this works:** Simplifies validation matrix and ensures all changes pass checks before reaching production integration point. Single gate is easier to audit and control
+- **Trade-offs:** Gained: clear security boundary on main. Lost: staging has no CI safety net; bugs can exist longer before main integration
+
+#### [Pattern] Event payload extraction uses strict equality (payload['key'] === true) rather than truthiness, preventing type coercion issues from JSON payloads (2026-03-15)
+- **Problem solved:** Event payloads originate from JSON and may contain mixed types (1, '1', true, null); strict checking prevents silent failures
+- **Why this works:** JSON deserialization can produce unexpected types; strict equality ensures only boolean true matches, not 1 or 'true' or other truthy values
+- **Trade-offs:** Safety and explicitness vs brevity; prevents bugs from type confusion; also silently fails for missing fields (undefined === true is false)
+
+### AES-256-GCM encryption with separate IV and auth tag storage in SQLite. Server stores only ciphertext, initialization vector, and authentication tag—never plaintext. (2026-03-15)
+- **Context:** Implementing encrypted secrets vault storage where SQLite persists encrypted data without ever seeing plaintext values.
+- **Why:** GCM mode provides authenticated encryption (detects tampering). IV prevents identical plaintexts from producing identical ciphertexts. Authenticated tag prevents silent decryption failures from undetected corruption.
+- **Rejected:** Simpler ECB or CBC modes; storing IV outside database; ignoring authentication
+- **Trade-offs:** Additional 16-32 bytes overhead per secret (IV + auth tag), but cryptographic guarantees prevent tampering and plaintext inference attacks
+- **Breaking if changed:** Switching to non-authenticated cipher loses tampering detection; moving IV storage breaks decryption
+
+### Server refuses to start if HOMEMAKER_VAULT_KEY environment variable is missing or wrong length. Fails fast at startup, not at request time. (2026-03-15)
+- **Context:** Vault service requires a valid encryption key to function. Configuration error during deployment could leave system in insecure state.
+- **Why:** Fail-fast principle: catch deployment/configuration errors immediately rather than during operation. Prevents running with no encryption or weak keys.
+- **Rejected:** Default fallback key; lazy validation at first request; runtime warnings only
+- **Trade-offs:** Requires ops to set key before deploying, but guarantees security posture from boot. No 'accidentally unsecured' running state possible.
+- **Breaking if changed:** If validation removed, server could run unencrypted; if validation moved to request time, early requests could fail or expose keys
+
+### Decrypt vault entry values on-demand via GET /api/vault/:id on eye-toggle click, rather than including decrypted values in list response (2026-03-15)
+- **Context:** Vault UI displays encrypted secrets and needs lazy loading of plaintext values
+- **Why:** Reduces attack surface by keeping decrypted values out of initial API response. Only transmitted when user explicitly requests reveal via UI interaction
+- **Rejected:** Pre-fetch all decrypted values in list endpoint (simpler code but more sensitive data in flight; larger response payload)
+- **Trade-offs:** Eye-toggle reveal adds fetch latency on first click; requires loading state UX. Subsequent toggles are instant (cached in state)
+- **Breaking if changed:** If single-entry decrypt endpoint removed or caching disabled, reveal becomes slow/unusable. Missing loading state causes confusion during fetch
+
+### Clipboard write via navigator.clipboard.writeText() directly, never rendering plaintext to DOM; auto-clears after 30s with countdown toast (2026-03-15)
+- **Context:** Copy-to-clipboard UX for secrets must prevent credential leakage via DOM exposure or indefinite clipboard retention
+- **Why:** Plaintext never touching DOM eliminates XSS attack surface. Visible countdown on auto-clear provides security feedback and prevents accidental clipboard leakage if user walks away
+- **Rejected:** Render to hidden DOM element then copy (DOM exposure risk), skip auto-clear (indefinite clipboard retention), render plaintext in UI
+- **Trade-offs:** Auto-clear creates UX expectation (user must see and act on toast); doesn't handle background tab scenarios where timer may not fire
+- **Breaking if changed:** If navigator.clipboard API unavailable (older browsers), copy silently fails. If 30s timer removed, credentials persist in clipboard indefinitely. If toast system unavailable, user has no feedback
+
+#### [Gotcha] URL path parameters must be encoded with encodeURIComponent() — e.g. `/api/vendors/${encodeURIComponent(vendorId)}` not `/api/vendors/${vendorId}` (2026-03-15)
+- **Situation:** Update and delete operations construct URLs with dynamic vendorId. Without encoding, IDs containing special chars (/, ?, &, spaces) break routing or expose directory traversal
+- **Root cause:** Vendor IDs from user input or external systems may contain characters that have special meaning in URLs. Encoding ensures they're treated as literal values.
+- **How to avoid:** Tiny performance cost vs significant security/reliability gain; necessary defensive programming
+
+### RateLimiter enforces dual constraints: 60-second cooldown per Ava + 10 messages per hour per household (2026-03-15)
+- **Context:** Preventing Ava from spamming chat channel and controlling API costs
+- **Why:** Cooldown prevents rapid-fire responses that degrade UX. Hourly cap prevents sustained abuse from exhausting quotas. Neither alone is sufficient—cooldown allows 60 requests/hour; hourly cap alone allows bursts.
+- **Rejected:** Single constraint (either cooldown or cap) leaves gap exploitable for either spam or quota exhaustion. No rate limiting—uncontrolled API costs.
+- **Trade-offs:** Dual constraints are stricter than alternatives but necessary for production safety. Slightly more complex implementation but critical for cost control.
+- **Breaking if changed:** Removing cooldown allows rapid message spam degrading chat experience. Removing hourly cap allows sustained abuse to exhaust API quotas and budgets.
+
+#### [Gotcha] Status check context names in branch protection rules must match exact job names in workflow files. Using wrong names creates unmergeable PRs that cannot be fixed without admin intervention. (2026-03-15)
+- **Situation:** Feature description specified 'build', 'lint', 'format' as required checks but actual workflow jobs are named 'checks' and 'test'
+- **Root cause:** GitHub Actions requires exact context name matches; non-existent context names become permanent merge blockers with no way for users to satisfy them
+- **How to avoid:** Required verification of actual job names against docs (implementation cost) but prevents production blocking (high safety gain)

@@ -2,7 +2,8 @@
   "version": 1,
   "activeTabId": "f35b89fb-3cc2-4e1f-8e58-98165c82df08",
   "tabOrder": [
-    "f35b89fb-3cc2-4e1f-8e58-98165c82df08"
+    "f35b89fb-3cc2-4e1f-8e58-98165c82df08",
+    "a3f1f2e9-abbc-4ae1-9380-7d0416dc1e32"
   ],
   "tabs": {
     "f35b89fb-3cc2-4e1f-8e58-98165c82df08": {
@@ -19,7 +20,22 @@
         "wordCount": 106,
         "characterCount": 728
       }
+    },
+    "a3f1f2e9-abbc-4ae1-9380-7d0416dc1e32": {
+      "id": "a3f1f2e9-abbc-4ae1-9380-7d0416dc1e32",
+      "name": "Ava",
+      "content": "<h2>homeMaker — Ava Operations</h2><h3>Project Direction</h3><p>Domestic home management hub. AI agent pipeline is core — agents research, plan, organize household tasks. Tailscale-only deployment.</p><h3>Git Flow</h3><p>feature/* → dev → main (no staging). PRs target dev, promote dev→main when ready.</p><h3>Priority Order</h3><ol><li>M1: Adapt Platform (rebrand, agent context, CI, TS strict)</li><li>M6: Home Inventory + Vendors (shared SQLite DB foundation)</li><li>M7: Maintenance Scheduling (killer feature)</li><li>M2: Sensor Dashboard + History</li><li>M3/M4: Budget + Vault</li><li>M5: Security Hardening</li><li>M8: Integrations (HA, Weather)</li></ol>",
+      "permissions": {
+        "agentRead": true,
+        "agentWrite": true
+      },
+      "metadata": {
+        "createdAt": 1773561423684,
+        "updatedAt": 1773561423684,
+        "wordCount": 69,
+        "characterCount": 541
+      }
     }
   },
-  "workspaceVersion": 31
+  "workspaceVersion": 32
 }

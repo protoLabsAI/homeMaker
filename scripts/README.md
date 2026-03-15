@@ -42,7 +42,7 @@ npm run setup-lab -- /path/to/project
 - **claude CLI**: https://claude.ai/code
 - **jq**: JSON processor (for parsing API responses)
 - **curl**: For API calls
-- **Automaker server**: Must be running on localhost:3008
+- **Automaker server**: Must be running on localhost:8579
 
 ### Environment Variables
 

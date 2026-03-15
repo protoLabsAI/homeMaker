@@ -232,7 +232,7 @@ git init
 /path/to/automaker/scripts/setup-protolab.sh . --yes
 
 # Verify Automaker integration
-curl -s http://localhost:3008/api/health | jq -e '.status == "ok"'
+curl -s http://localhost:8579/api/health | jq -e '.status == "ok"'
 
 # Cleanup
 rm -rf "$TEST_DIR"
@@ -347,9 +347,9 @@ dmesg | tail -20
 Test individual API calls:
 
 ```bash
-curl -v http://localhost:3008/api/health
+curl -v http://localhost:8579/api/health
 
-curl -X POST http://localhost:3008/api/setup/project \
+curl -X POST http://localhost:8579/api/setup/project \
   -H "Content-Type: application/json" \
   -d '{"projectPath": "/path/to/project"}' | jq '.'
 ```

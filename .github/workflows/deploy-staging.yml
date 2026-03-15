@@ -108,7 +108,7 @@ jobs:
           # Uses the API key from .env (same machine as staging server).
           AUTOMAKER_API_KEY=$(grep -oP 'AUTOMAKER_API_KEY=\K.*' "$ENV_SOURCE" || echo "")
           echo "::add-mask::$AUTOMAKER_API_KEY"
-          curl -sf -X POST http://localhost:3008/api/deploy/drain \
+          curl -sf -X POST http://localhost:8579/api/deploy/drain \
             -H "Content-Type: application/json" \
             -H "X-API-Key: $AUTOMAKER_API_KEY" \
             --max-time 180 || echo "Drain skipped (server not running or no agents)"
@@ -148,9 +148,9 @@ jobs:
           # Check server readiness (verifies API key, data dir, service init)
           retries=0
           while [ $retries -lt 15 ]; do
-            if curl -sf http://localhost:3008/api/health/ready > /dev/null; then
+            if curl -sf http://localhost:8579/api/health/ready > /dev/null; then
               echo "Server is ready"
-              curl -sf http://localhost:3008/api/health/ready
+              curl -sf http://localhost:8579/api/health/ready
               break
             fi
             retries=$((retries + 1))
@@ -180,7 +180,7 @@ jobs:
           # Source API key from .env (same machine as staging server)
           export AUTOMAKER_API_KEY=$(grep -oP 'AUTOMAKER_API_KEY=\K.*' .env || echo "")
           echo "::add-mask::$AUTOMAKER_API_KEY"
-          ./scripts/smoke-test.sh http://localhost:3008
+          ./scripts/smoke-test.sh http://localhost:8579
         env:
           DISCORD_ALERTS_WEBHOOK: ${{ secrets.DISCORD_ALERTS_WEBHOOK }}
 
@@ -226,7 +226,7 @@ jobs:
           # Verify rollback readiness
           retries=0
           while [ $retries -lt 15 ]; do
-            if curl -sf http://localhost:3008/api/health/ready > /dev/null; then
+            if curl -sf http://localhost:8579/api/health/ready > /dev/null; then
               echo "Rollback successful — server is ready"
               break
             fi
@@ -251,7 +251,7 @@ jobs:
       - name: Notify Discord
         if: always()
         run: |
-          VERSION=$(curl -sf http://localhost:3008/api/health | python3 -c "import sys,json; print(json.load(sys.stdin).get('version','unknown'))" 2>/dev/null || echo "unknown")
+          VERSION=$(curl -sf http://localhost:8579/api/health | python3 -c "import sys,json; print(json.load(sys.stdin).get('version','unknown'))" 2>/dev/null || echo "unknown")
           COMMIT="${{ github.sha }}"
           COMMIT="${COMMIT:0:8}"
           STATUS="${{ job.status }}"

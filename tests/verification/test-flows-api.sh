@@ -3,7 +3,7 @@
 # Simple verification script for flows API endpoints
 # Run this after starting the server with: npm run dev:web
 
-API_URL="${AUTOMAKER_API_URL:-http://localhost:3008}"
+API_URL="${AUTOMAKER_API_URL:-http://localhost:8579}"
 API_KEY="${AUTOMAKER_API_KEY:-test-key}"
 
 echo "Testing Antagonistic Review Flow API..."

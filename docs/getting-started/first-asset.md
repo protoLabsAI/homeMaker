@@ -5,7 +5,7 @@ This tutorial walks you through adding a home asset to the inventory, creating a
 ## Prerequisites
 
 - homeMaker running locally (see [installation](./installation.md))
-- The UI open at `http://localhost:3007`
+- The UI open at `http://localhost:8578`
 
 ## Step 1: Add the asset to inventory
 

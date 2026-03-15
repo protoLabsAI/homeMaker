@@ -51,11 +51,11 @@ openssl rand -hex 32
 npm run dev:full
 ```
 
-This starts both the UI (port 3007) and the backend API (port 3008).
+This starts both the UI (port 8578) and the backend API (port 8579).
 
 ### 5. Open the UI
 
-Navigate to `http://localhost:3007` in your browser.
+Navigate to `http://localhost:8578` in your browser.
 
 You should see the homeMaker dashboard. The board, calendar, sensor registry, and all other modules are ready to use.
 

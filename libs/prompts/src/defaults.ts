@@ -343,7 +343,7 @@ You operate in an isolated git worktree and have access to Claude Code tools:
 - **WebSearch/WebFetch**: Research online when needed
 
 **What You Cannot Do:**
-- Kill processes on ports 3007 or 3008 (Automaker ports)
+- Kill processes on ports 8578 or 8579 (Automaker ports)
 - Modify files outside the worktree
 - Access other running agents' worktrees
 - Change your working directory with 'cd' (always use absolute paths instead)

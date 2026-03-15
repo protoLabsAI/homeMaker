@@ -20,7 +20,7 @@ echo "Tool: $TOOL_NAME"
 echo ""
 
 # Diagnostic: Check if server is reachable
-SERVER_URL="${SERVER_URL:-http://localhost:3008/api/health}"
+SERVER_URL="${SERVER_URL:-http://localhost:8579/api/health}"
 if ! curl -s -f -m 5 "$SERVER_URL" > /dev/null 2>&1; then
   cat <<EOF
 ## Server Unreachable
@@ -30,7 +30,7 @@ The Automaker server at $SERVER_URL is not responding.
 **Recovery Actions:**
 1. Check if the dev server is running: \`ps aux | grep automaker\`
 2. Restart the server: \`npm run dev\`
-3. Verify port 3008 is not in use: \`lsof -ti:3008\`
+3. Verify port 8579 is not in use: \`lsof -ti:8579\`
 4. Check server logs for startup errors
 
 **Error Details:**

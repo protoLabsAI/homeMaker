@@ -5,9 +5,9 @@ relevantTo: [cost-optimization]
 importance: 0.7
 relatedFiles: []
 usageStats:
-  loaded: 41
-  referenced: 12
-  successfulFeatures: 12
+  loaded: 43
+  referenced: 14
+  successfulFeatures: 14
 ---
 <!-- domain: Cost Optimization | Token usage, API cost reduction, model selection efficiency -->
 

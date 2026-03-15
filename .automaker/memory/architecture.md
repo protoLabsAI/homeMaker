@@ -5,9 +5,9 @@ relevantTo: [architecture]
 importance: 0.9
 relatedFiles: []
 usageStats:
-  loaded: 491
-  referenced: 89
-  successfulFeatures: 89
+  loaded: 540
+  referenced: 129
+  successfulFeatures: 129
 ---
 <!-- domain: Architecture Decisions | System-wide structural decisions that have breaking consequences if changed -->
 
@@ -836,3 +836,600 @@ usageStats:
 - **Situation:** When writing add-a-starter.md, the absence of extension from the scaffold validation list needed explanation. Investigation revealed this is intentional: WXT bundler and native browser extension tooling require repo-level distribution.
 - **Root cause:** Browser extension projects require WXT build tools, manifest configuration, and specific directory structures that are better maintained in a git repo than scaffolded from a template. Cloning ensures the complete working toolchain is present without users having to install and configure separate build tools.
 - **How to avoid:** Clone approach (works out-of-the-box, users don't configure tooling) vs scaffold approach (smaller, users can update kit version independently). Chose clone because the repo IS the distribution mechanism for the complete, working toolchain.
+
+### Removed conditional visibility logic for dev-specific nav items (hideSpecEditor, hideDesigns, hideFileEditor, hideSystemView) and replaced with hard-coded single 'Home' section (2026-03-15)
+- **Context:** Navigation restructure from dual 'Project'+'Tools' sections to single 'Home' section for home management domain
+- **Why:** Simplifies component complexity, eliminates state management overhead for feature flags, creates predictable UX aligned to single domain (home vs dev tools). Reduces memoization dependency array from 9 to 3 items.
+- **Rejected:** Could have kept conditional flag logic but set all flags to false, leaving infrastructure for future toggle. Creates technical debt with dead conditional branches.
+- **Trade-offs:** Easier: simpler code, smaller component. Harder: can't dynamically show/hide dev tools without code changes; lost ability to serve both dev and home user modes from same codebase.
+- **Breaking if changed:** Any code expecting hideSpecEditor, hideDesigns, hideFileEditor, hideSystemView props will fail. Users can no longer toggle dev-specific nav items at runtime.
+
+#### [Gotcha] Shortcut key remapping: `shortcuts.systemView` reused for new 'dashboard' nav item instead of being removed or redirected (2026-03-15)
+- **Situation:** Navigation item IDs changed (system-view → dashboard) but shortcut bindings reused from old structure
+- **Root cause:** Preserves existing keyboard shortcuts users may have muscle memory for; avoids breaking existing keybind infrastructure
+- **How to avoid:** Easier: no new shortcut bindings needed. Harder: 'systemView' shortcut now opens 'Dashboard' - semantic mismatch that could confuse users if not communicated.
+
+### Flattened navigation from 2-section model (Project + Tools) to single 'Home' section with 6 items (2026-03-15)
+- **Context:** Original architecture separated project management concerns from utility tools; rebrand requires unified home focus
+- **Why:** Information architecture simplification reduces cognitive load; single conceptual model (everything is home-related) vs dual model (some project, some tools). Eliminates conditional section building logic.
+- **Rejected:** Could have kept sections with new names like 'Home' + 'Utilities' - but single flat section is more appropriate for home management domain without complex sub-features
+- **Trade-offs:** Easier: simpler rendering, faster navigation. Harder: no grouping for organization as feature count grows; may need to re-implement sections if home app expands significantly.
+- **Breaking if changed:** Any code relying on navigation section structure (accessing `sections[0]` for Project, `sections[1]` for Tools) will break. CSS/styling rules targeting specific section selectors need update.
+
+#### [Gotcha] Removed unused `createElement` import after simplification, but dependency cleanup not systematized (2026-03-15)
+- **Situation:** Code refactoring removed conditional rendering that was using createElement
+- **Root cause:** Unused imports increase bundle size and create false dependencies. However, detection was manual rather than linted.
+- **How to avoid:** Easier: cleaner imports, smaller bundle. Harder: manual effort to spot unused imports; easy to miss in larger refactors.
+
+### Service container pattern with explicit dependency injection for BudgetService into routes (2026-03-15)
+- **Context:** BudgetService created in services.ts, added to ServiceContainer object, then passed to route factory functions
+- **Why:** Enables testability (mock service in tests), loose coupling (routes don't know service creation), and single source of truth for service lifecycle
+- **Rejected:** Global service registry or singleton pattern - would make testing difficult and hide dependencies
+- **Trade-offs:** Slightly more boilerplate (pass-through parameters) but gains explicit dependency graph. Easy to add service lifecycle hooks (init/shutdown) in container
+- **Breaking if changed:** If routes tried to instantiate BudgetService directly or access from global state, dependency injection model collapses. Can't lazy-load or conditionally enable services
+
+#### [Pattern] Aggregate router pattern - main router mounts independent sub-routers (categories, transactions, summary) created separately (2026-03-15)
+- **Problem solved:** createBudgetRoutes() mounts three independent router factory calls, each with own isolation
+- **Why this works:** Sub-router separation enables: (1) independent feature evolution - add/remove endpoints without touching main router, (2) scalable testing - test each sub-router independently, (3) potential dynamic loading - could conditionally mount routers based on config
+- **Trade-offs:** Adds file structure complexity (categories.ts, transactions.ts, summary.ts) but prevents monolithic route handler. Must ensure each sub-router is self-contained (can't share router-level middleware implicitly)
+
+#### [Gotcha] Authoritative default complexity lives in proto-config.ts Zod schema, not in feature.ts type definition (2026-03-15)
+- **Situation:** Needed to change default complexity from 'medium' to 'small'. Initially unclear where runtime default is defined.
+- **Root cause:** TypeScript types don't enforce runtime defaults; only runtime schemas (Zod) do. Type files are purely for compilation.
+- **How to avoid:** Must maintain defaults in two places (schema + type doc) for clarity, but only schema enforces it
+
+#### [Pattern] Agent behavior configured via injected CLAUDE.md context file that's automatically loaded into prompts (2026-03-15)
+- **Problem solved:** Need to frame agents as household assistants rather than software developers without modifying core prompt code
+- **Why this works:** Decouples domain-specific agent framing from prompt library code; allows context injection without recompilation
+- **Trade-offs:** Configuration becomes file-based (less discoverable, magic filename) but more flexible and maintainable
+
+### Default feature complexity changed from 'medium' to 'small' to reflect home task distribution (quick research vs complex engineering) (2026-03-15)
+- **Context:** Home management tasks are predominantly quick lookups/research; 'medium' default routes to unnecessarily expensive models
+- **Why:** Complexity defaults affect model routing and cost; matching distribution to actual task types improves efficiency
+- **Rejected:** Keep 'medium' as conservative default - works but misallocates resources
+- **Trade-offs:** Faster/cheaper for majority of tasks, but occasional complex tasks may be under-resourced and need manual override
+- **Breaking if changed:** Changing back to 'medium' increases costs without proportional quality gain for research-heavy workloads
+
+### Singleton getHomemakerDb() ensures one DB instance shared across all modules/services (2026-03-15)
+- **Context:** Multiple services (budget, maintenance, sensors) need access to the same SQLite database
+- **Why:** Single connection avoids resource exhaustion, ensures transaction consistency, prevents concurrent access deadlocks on shared file
+- **Rejected:** Each service creates own DB instance - wastes connections, breaks transactional integrity across services
+- **Trade-offs:** Easier: single source of truth for schema; Harder: requires careful lifecycle management, harder to isolate for testing
+- **Breaking if changed:** Removing singleton forces consumers to manage connection lifecycle, introduces connection pool management complexity, breaks transaction boundaries between services
+
+#### [Pattern] Services receive db instance via constructor injection, not via global getHomemakerDb() calls (2026-03-15)
+- **Problem solved:** Services (budget, maintenance, sensors) all depend on database access but need decoupling for testability and composition
+- **Why this works:** Constructor injection inverts control - allows tests to inject mock/in-memory DB, allows composition over call-site coupling
+- **Trade-offs:** Easier: swappable implementations, testable in isolation; Harder: requires service container/factory setup, one more parameter to thread
+
+### Made TypeScript strict mode explicit at each package level (15 tsconfig.json files) despite the base config already enforcing it via inheritance (2026-03-15)
+- **Context:** Monorepo with shared base tsconfig.base.json that already had 'strict': true, inherited by all 15 lib packages
+- **Why:** Transforms implicit inherited constraints into explicit package-level contracts. Prevents silent regression if someone later modifies the base config. Makes compiler expectations discoverable at package level without tracing inheritance chain.
+- **Rejected:** Relying solely on base config inheritance—simpler but invisible to individual package developers
+- **Trade-offs:** Added 15 config declarations (verbose) gained explicit per-package visibility and regression protection. Future maintainers can audit each package's constraints without understanding inheritance chain.
+- **Breaking if changed:** If removed, packages revert to completely implicit inheritance. If base config changes, packages without explicit declaration lose the safety net and silently adopt new constraints.
+
+#### [Gotcha] TypeScript tsconfig inheritance is entirely implicit—child configs silently inherit from parent without visible reference or documentation. Developers can't easily discover what constraints actually apply to their package. (2026-03-15)
+- **Situation:** Codebase was already strict-mode compliant (via inheritance) but this fact was invisible at the package level, making the actual configuration opaque.
+- **Root cause:** In monorepos, implicit inheritance creates two problems: (1) lack of discoverability—developers don't see their actual config without tracing chain, (2) silent risk—base config changes affect packages without explicit acknowledgment.
+- **How to avoid:** Implicit inheritance reduces config verbosity but creates clarity debt, especially as monorepos scale. Explicit declaration adds lines but makes contracts auditable.
+
+### InventoryService initialized with database handle from getHomemakerDb(), not filesystem path like BudgetService (2026-03-15)
+- **Context:** BudgetService takes dataDir, InventoryService takes db connection
+- **Why:** Inventory needs querying/transactions (SQLite), while Budget uses file-based JSON; different storage paradigms require different initialization
+- **Rejected:** Could have both use same pattern (both DB or both files), but would either complicate Budget or make Inventory inefficient
+- **Trade-offs:** Inconsistent initialization pattern but each service optimized for its data model
+- **Breaking if changed:** If InventoryService refactored to file-based, would need to reimplement search/aggregation queries in application code
+
+#### [Gotcha] Static routes must be defined before dynamic /:id routes in Express routers, otherwise /overdue and /upcoming will be captured by the /:scheduleId handler (2026-03-15)
+- **Situation:** Implementation logs show explicit ordering: POST /maintenance, GET /maintenance, GET /overdue, GET /upcoming, GET /summary, then GET /:id handlers
+- **Root cause:** Express matches routes in definition order. A request to /overdue would match /:scheduleId pattern if defined first, causing 404 or wrong handler
+- **How to avoid:** Requires disciplined route ordering discipline; becomes a maintenance burden as more static routes added; documentation/comments help (which this implementation has)
+
+### Request validation (type checks, required fields) is performed in route handlers before calling service methods (2026-03-15)
+- **Context:** Every route validates completedBy, actualCostUsd, etc. inline with res.status(400) before passing to service
+- **Why:** Early rejection at API boundary; clear HTTP semantics (400 for bad input); prevents invalid data reaching service layer
+- **Rejected:** Service validates all inputs and throws; route handlers trust input types; shared validation function middleware
+- **Trade-offs:** Route handlers know business rules (validation duplication risk) but guarantees API contract; service stays simpler but less defensive
+- **Breaking if changed:** Moving validation into service requires changing error handling; removing validation lets malformed requests reach service and return 500 instead of 400
+
+#### [Pattern] Services instantiated in central ServiceContainer and injected into route factories (createMaintenanceRoutes(service)) rather than direct imports or singletons (2026-03-15)
+- **Problem solved:** MaintenanceService created in services.ts, stored in ServiceContainer, passed to createMaintenanceRoutes factory in routes.ts
+- **Why this works:** Testability (inject mocks); loose coupling (routes don't import services); single source of truth for service instances; clear dependency graph
+- **Trade-offs:** Slightly more wiring code but explicit dependencies; enables testing with mock services; ServiceContainer becomes single point of configuration
+
+### Used useState/useEffect hooks for inventory data fetching instead of React Query's useQuery pattern (2026-03-15)
+- **Context:** Feature needed to fetch assets, apply filters, and handle real-time updates via WebSocket
+- **Why:** Codebase established pattern via use-calendar-events.ts hook precedent - consistency matters more than modern best practices here
+- **Rejected:** React Query useQuery would provide caching/deduplication/refetch helpers but adds dependency and complexity diverging from existing code
+- **Trade-offs:** Simpler setup/smaller bundle vs manual cache invalidation on WebSocket events; state management logic must handle event subscriptions in useEffect
+- **Breaking if changed:** Removing this pattern would require rewriting all data hooks in codebase simultaneously; other components depend on this pattern
+
+#### [Gotcha] Navigation item (Inventory with Package icon) must be registered in use-navigation.ts sidebar hook, NOT in route file (inventory.tsx) (2026-03-15)
+- **Situation:** Placement is unintuitive - route file contains the route but navigation item belongs elsewhere
+- **Root cause:** Codebase centralizes all navigation UI registration in one hook to enable dynamic nav menus and consistent sidebar management
+- **How to avoid:** Centralized nav hook requires bouncing between two files but enables feature flags/dynamic nav; route file stays clean of navigation concerns
+
+#### [Pattern] WebSocket event subscriptions (inventory:asset:*) in useEffect for real-time asset updates, with proper cleanup (2026-03-15)
+- **Problem solved:** Feature needs to reflect asset changes across tabs/instances without polling or manual refresh
+- **Why this works:** Event-driven architecture allows decoupling UI from backend; WebSocket chosen over polling to reduce server load and provide low-latency updates
+- **Trade-offs:** Real-time updates = complex state coordination vs polling = simpler but chatty network traffic and stale data window
+
+### Built complete UI in isolation while backend service exists in separate worktree and is not yet implemented. UI calls /api/maintenance/schedules endpoints that don't exist. (2026-03-15)
+- **Context:** Feature requires both frontend UI and backend API; both developed in parallel across worktrees
+- **Why:** Enables parallel development, frontend can be reviewed/tested independently, allows UI-first design before API contract finalizes
+- **Rejected:** Waiting for backend to be complete before building UI; building monolithic frontend+backend
+- **Trade-offs:** Frontend is reviewable and architecture can be validated early, but UI is non-functional until backend endpoints exist; requires clear API contract negotiation
+- **Breaking if changed:** UI is dead code until companion backend service implements /api/maintenance/schedules endpoints
+
+### Asset/vendor links in schedule cards are display-only (show names but don't navigate). Full asset/vendor navigation deferred due to unavailable inventory data. (2026-03-15)
+- **Context:** ScheduleCard displays associated asset and vendor but inventory system not available
+- **Why:** Allows UI to present complete maintenance context without hard dependency on inventory system; inventory can be integrated later without UI restructuring
+- **Rejected:** Implementing full navigation to inventory; omitting asset/vendor references entirely
+- **Trade-offs:** Cards show more context but links are non-functional; easier to integrate inventory later without breaking cards
+- **Breaking if changed:** If asset/vendor links become functional, needs careful coordination to not break users who expect stale/missing inventory states
+
+### Eliminated staging/dev branch triggers entirely. Workflows now only run on push to main and PRs to main. (2026-03-15)
+- **Context:** Simplifying CI/CD strategy when adopting homeMaker from protoLabs infrastructure
+- **Why:** Removes complexity of multi-environment parallel testing. Assumes: staging/dev are not active deployment targets, all validation happens via PR checks, no per-branch special handling needed.
+- **Rejected:** Could maintain staging/dev triggers with different job configurations (e.g., staging deploys on success), but that adds operational overhead
+- **Trade-offs:** Simpler CI model vs. loss of branch-level automation. If staging is used for integration testing or canary deployments, that workflow is now unsupported.
+- **Breaking if changed:** If homeMaker team relies on staging branch for pre-production testing or deployments, this change breaks that workflow and requires alternative process.
+
+#### [Pattern] Stripped to minimal viable CI: kept only essential workflows (checks, test, pr-check, e2e, housekeeping) and deleted 12 protoLabs-specific integrations (deploy, release, Electron build, langfuse sync, issue automation). (2026-03-15)
+- **Problem solved:** Removing project-specific infrastructure when adopting generic repository
+- **Why this works:** Minimal viable CI is easier to understand, maintain, and reason about. Each workflow has clear purpose. ProtoLabs integrations (Electron release, langfuse prompt sync, promotion checks) are not applicable to homeMaker.
+- **Trade-offs:** Cleaner repository vs. need to re-add workflows if homeMaker later adopts those features. If homeMaker does adopt Electron builds or langfuse integration later, must recreate workflows from git history.
+
+#### [Pattern] Calendar event deduplication uses sourceId field format (maintenance:{scheduleId}:{dueDate}) rather than creating new unique constraints or using schedule ID alone (2026-03-15)
+- **Problem solved:** Multiple systems need to create calendar events for maintenance schedules without duplicating. CalendarEvent already has a sourceId field.
+- **Why this works:** Leverages existing field designed for external system IDs, avoids adding new constraint columns, enables composite dedup (scheduleId + dueDate combination)
+- **Trade-offs:** Cleaner schema design vs sourceId format becomes a system contract that must be maintained consistently across all code creating maintenance events
+
+### Auto-created MaintenanceService as critical blocker without full design completion, following [auto-fix-critical] deviation rule (2026-03-15)
+- **Context:** Daily scheduler tick required MaintenanceService.getUpcoming() and getOverdue(), but service didn't exist yet. Scheduler tick was critical path.
+- **Why:** Unblocking critical scheduler path took precedence over fully designing service API first. Service skeleton was sufficient to enable scheduler to proceed.
+- **Rejected:** Waiting to fully design MaintenanceService before creating scheduler tick would have delayed critical scheduler feature
+- **Trade-offs:** Faster critical path delivery vs service API was created with minimal query methods, not a complete CRUD service
+- **Breaking if changed:** If scheduler requirements change (e.g., needing additional getRecent() method), must add to service; if schedule update logic changes, entire scheduler logic may need refactoring
+
+#### [Pattern] Todo deduplication uses title field matching against existing uncompleted items, not scheduleId or other domain ID (2026-03-15)
+- **Problem solved:** Scheduler creates high-priority todos for overdue schedules. Multiple scheduler runs should not create duplicate todos.
+- **Why this works:** TodoItem likely lacks scheduleId field or it's not queryable; title is human-readable and already unique per use case (overdue tasks typically have unique names)
+- **Trade-offs:** Simpler implementation vs todo title becomes implicit dedup contract—title uniqueness must be maintained by scheduler caller
+
+### Schedule progression (lastCompletedAt, nextDueAt updates) explicitly left for separate CRUD routes feature, not implemented in scheduler (2026-03-15)
+- **Context:** Maintenance scheduler tick creates todos and events for overdue schedules. Someone must mark schedules as completed and advance them.
+- **Why:** Scheduler tick is read-only and event-driven; update logic belongs in explicit CRUD API (PUT /schedules/:id) not in scheduled job. Separation of concerns.
+- **Rejected:** Adding schedule auto-update logic to scheduler would couple scheduler to completion tracking and create circular dependencies
+- **Trade-offs:** Cleaner scheduler code vs users/external systems must explicitly call update API to advance schedules (no auto-progression)
+- **Breaking if changed:** If advancement is never implemented, schedules will remain stuck in overdue state indefinitely; scheduler will recreate same todos daily
+
+#### [Pattern] MaintenanceService uses LEFT JOINs to optional `assets` and `vendors` tables with graceful null handling rather than enforcing foreign keys. (2026-03-15)
+- **Problem solved:** Service needs to work independently; those tables may exist in one deployment context but not another
+- **Why this works:** Loose coupling allows this service to be integrated before dependency services are fully built. Returns object with nullable `assetName`/`vendorName` fields instead of failing on missing references.
+- **Trade-offs:** Must handle nulls in service layer (simple null coalescing), but gains architectural flexibility and independent deployability.
+
+### MaintenanceService receives `homemaker.db` instance via constructor, not a separate database file. Uses shared `getHomemakerDb()` singleton pattern, consistent with InventoryService. (2026-03-15)
+- **Context:** Feature branch had to integrate with existing InventoryService pattern in monorepo
+- **Why:** Single database file simplifies deployment, backup, and query consistency. Avoids schema coordination headaches when multiple services need to reference each other's data.
+- **Rejected:** Separate `maintenance.db` would give service autonomy but creates cross-db transaction issues and data silos when maintenance needs to reference assets.
+- **Trade-offs:** Shared DB means schema changes affect multiple services (coordination cost), but enables consistent point-in-time snapshots and eliminates replication complexity.
+- **Breaking if changed:** If database connection pooling limits change or DB file is corrupted, affects both inventory and maintenance simultaneously.
+
+### Migrated CI runners from self-hosted (namespace-profile-protolabs-linux) to GitHub-managed (ubuntu-latest) for checks.yml, test.yml, and pr-check.yml (2026-03-15)
+- **Context:** Reconfiguring protoLabs CI infrastructure for new homeMaker project; self-hosted runners represent project-specific infra overhead
+- **Why:** GitHub-managed runners eliminate infrastructure maintenance burden and reduce ops complexity during project transition; leverage GitHub's scaling and uptime guarantees
+- **Rejected:** Maintain self-hosted runners—would require porting infrastructure definitions and ops support to new project context
+- **Trade-offs:** GitHub-managed runners trade raw performance (slower, less customizable) for operational simplicity (auto-scaled, auto-patched, cost-predictable); reduces feedback speed but removes infrastructure bottleneck
+- **Breaking if changed:** Reverting to self-hosted requires: runner labels registered in Actions settings, network/firewall config for self-hosted agents, ops team supporting infrastructure
+
+### Removed staging and dev branch push triggers; CI now only runs on main branch pushes (checks.yml, test.yml, pr-check.yml) (2026-03-15)
+- **Context:** CI reconfiguration; reducing execution scope post-migration to simpler project structure with fewer deployment targets
+- **Why:** Fewer branch triggers = reduced CI execution frequency = lower cost and faster feedback on main branch; aligns with simplified deployment model (main-only protected branch)
+- **Rejected:** Preserve staging/dev triggers—provides earlier detection of issues before main branch, catches merge conflicts and integration problems
+- **Trade-offs:** Cost/speed savings on main branch vs. loss of early warning signal on staging/dev; shifts risk to PR review stage instead of pre-merge CI validation
+- **Breaking if changed:** Re-adding triggers requires: staging/dev infrastructure still exists and is deployable, stakeholders expect staging builds, release/promotion flow is multi-branch
+
+#### [Pattern] Partial runner migration: checks.yml, test.yml updated to ubuntu-latest, but e2e-tests.yml and pr-check.yml left on self-hosted runners (2026-03-15)
+- **Problem solved:** Different workflow classes have different infrastructure assumptions; feature scope didn't explicitly mandate uniform runner migration
+- **Why this works:** E2E tests and PR checks may require specific hardware/environment (browser runtimes, performance isolation); workflow-specific constraints take precedence over uniform infrastructure
+- **Trade-offs:** Mixed infrastructure (some jobs github-hosted, some self-hosted) creates tech debt and operational complexity vs. respecting legitimate workflow-specific constraints; defers full migration decision
+
+#### [Pattern] XP awards are triggered via domain event subscriptions (maintenance:tick, sensor:registered, feature:completed) in separate xp-event-listeners.ts file rather than direct calls from core domain services. Listeners subscribe to events and call GamificationService.awardXp(). (2026-03-15)
+- **Problem solved:** XP needs to be awarded when maintenance completes, sensors register, features toggle. Could embed awardXp() calls in those services or query database afterward.
+- **Why this works:** Decouples gamification from core domain logic—maintenance/sensor/feature services don't import gamification code. New XP-earning events can be added by adding listeners without modifying existing services. Gamification feature is orthogonal plugin.
+- **Trade-offs:** Events are harder to trace (must find listeners to understand XP flow) but enable independent feature teams. Requires event infrastructure; adds latency if events are async.
+
+#### [Pattern] Achievement evaluation conditions are implemented as pure functions taking Database context that query specific tables, separate from GamificationService. Each function is independently testable with explicit data dependencies. (2026-03-15)
+- **Problem solved:** 20+ achievements with different conditions (earned X XP, owned Y homes, completed Z quests, maintained streak). Conditions need access to user statistics requiring database queries.
+- **Why this works:** Pure functions decouple condition logic from service state management. Explicit DB context parameter makes data dependencies obvious (what does this condition need to query?). Each condition is independently testable without mocking the entire service.
+- **Trade-offs:** Requires passing DB context as parameter instead of implicit access. Many function signatures. Benefit: condition failures are obvious, can add new conditions without service changes.
+
+### Achievement definitions (name, description, condition, category) are hardcoded static array in achievement-catalog.ts, not database-driven. Achievements are versioned/deployed with code. (2026-03-15)
+- **Context:** Need to manage 20 achievements across 6 categories. Could store definitions in database for runtime management.
+- **Why:** Static definitions mean achievements are source-controlled and released with code versions. No database schema for achievement configuration. Catalog is authoritative—if it's not defined there, it doesn't exist.
+- **Rejected:** Database-driven (adds migration complexity, schema overhead), JSON config file (still requires deployment, less type-safe than TypeScript)
+- **Trade-offs:** Cannot add/modify achievements at runtime without redeployment (more rigid). Benefit: simpler schema, no sync issues, achievements always match code.
+- **Breaking if changed:** Removing an achievement definition leaves earned_achievements rows orphaned—users have earned it but it won't appear in catalog/UI. No forward compatibility.
+
+#### [Pattern] Runtime schema bootstrap via migrations in service constructor rather than startup phase (2026-03-15)
+- **Problem solved:** MaintenanceService runs SQLite migrations in its constructor, ensuring schema exists before operations
+- **Why this works:** Lazy initialization; service doesn't depend on external bootstrap process; schema and service lifecycle are coupled and clear
+- **Trade-offs:** Simpler (one initialization point) vs less flexible (can't control migration timing); tightly coupled vs self-contained
+
+### Migrated CI runners from proprietary namespace-specific runners (namespace-profile-protolabs-linux) to GitHub-managed ubuntu-latest (2026-03-15)
+- **Context:** Reconfiguring CI infrastructure to decouple from protoLabs-specific infrastructure
+- **Why:** Reduces operational complexity and infrastructure-specific dependencies. Enables portable, cloud-managed execution that doesn't require namespace provisioning
+- **Rejected:** Maintain proprietary runners for feature parity; gradual migration to managed runners
+- **Trade-offs:** Gained: simplicity, cost reduction via managed infrastructure. Lost: any custom tools/configurations that namespace runners provided. Builds now must work with standard ubuntu-latest image
+- **Breaking if changed:** If namespace runners had special hardware (GPU, high memory) or pre-installed tools not in ubuntu-latest, builds will fail silently. No pre-flight check exists for runner compatibility
+
+#### [Pattern] Consolidated CI branch triggers: removed staging/dev from push triggers, moved to main-only; pr-check.yml now targets main exclusively (2026-03-15)
+- **Problem solved:** CI previously validated across multiple branches (main, staging, dev); now validates only integration point
+- **Why this works:** Enforces trunk-based development and single integration gate. Reduces CI matrix sprawl and makes clear which commits are validated before deployment
+- **Trade-offs:** Gained: clarity on validation point, reduced CI load. Lost: pre-deployment validation for staging/dev branches, fast feedback on feature branches
+
+### Hard cutover: deleted 12 legacy protoLabs workflows (deploy, promotion, electron, docs, langfuse-sync, issue-automation) rather than deprecation period (2026-03-15)
+- **Context:** Removing infrastructure tied to protoLabs-specific processes during rebranding to homeMaker
+- **Why:** Clean break with legacy infrastructure. Avoids confusion about which workflows are active. Prevents accidental reliance on deleted workflows
+- **Rejected:** Gradual deprecation with warning labels; maintain compatibility shims; announce removal timeline
+- **Trade-offs:** Gained: no legacy cruft, unambiguous active workflow set. Lost: no migration grace period, no fallback if removed workflows still needed
+- **Breaking if changed:** Any automation, monitoring, or scripts referencing deleted workflows immediately fail. No gradual failure signals
+
+### Split health score into 4 independent pillars (Maintenance, Inventory, Budget, Systems) rather than unified single algorithm (2026-03-15)
+- **Context:** Computing overall home health with multiple dimensions (maintenance, assets, spending, sensors)
+- **Why:** Allows independent scoring per domain, enables targeted pillarHints suggestions, makes scoring interpretable and debuggable. Each pillar can be optimized without affecting others
+- **Rejected:** Single unified algorithm combining all factors into one calculation
+- **Trade-offs:** More complex (4 separate algorithms) but dramatically more actionable feedback. Enables different scoring ranges per pillar (Maintenance 0-15, others 0-25)
+- **Breaking if changed:** Merging pillars would eliminate ability to provide targeted improvement hints and lose domain-specific scoring tuning
+
+### Use SensorRegistryService (in-memory) for Systems pillar sensor state instead of querying sensor_readings table (2026-03-15)
+- **Context:** Computing active sensor ratio as part of Systems pillar score
+- **Why:** Sensors update in real-time; querying DB would be stale and expensive. In-memory registry is single source of truth for current connectivity state. Avoids DB join/aggregation
+- **Rejected:** Query sensor_readings table with aggregation (SELECT COUNT(DISTINCT sensorId) WHERE receivedAt > NOW-1hr)
+- **Trade-offs:** More consistent (reflects live state) and faster, but depends on SensorRegistryService being up-to-date. Tightly couples to registry implementation
+- **Breaking if changed:** Querying DB instead re-introduces staleness (30min+ lag) and DB load; removing SensorRegistryService breaks Systems pillar calculation
+
+#### [Pattern] Penalty system in Maintenance pillar: -2 points per overdue task (minimum 0) combined with streak bonus (+1 per 5 consecutive completions, max +5) (2026-03-15)
+- **Problem solved:** Gamification scoring for maintenance behavior - need to discourage backlog vs encourage consistency
+- **Why this works:** Penalties create urgency (overdue tasks hurt score), streaks reward consistency over one-time fixes. Asymmetric scoring encourages proactive behavior. Min floor prevents total collapse
+- **Trade-offs:** More complex scoring but better behavioral incentives. Users must complete overdue tasks to recover penalty damage
+
+#### [Pattern] HTTP Client mixin composition chain for extending API client functionality (2026-03-15)
+- **Problem solved:** Added gamification endpoints to HTTP client via withGamificationClient mixin rather than modifying core client
+- **Why this works:** Allows feature-specific API logic to be added modularly without coupling to base client. Supports composition of multiple mixins (e.g., withGamificationClient + withOtherFeature) in a chain
+- **Trade-offs:** Requires understanding mixin composition pattern but gains clean separation of concerns and ability to compose features independently
+
+### Inventory progress uses heuristic formula (assets.length * 1.5) as placeholder for 'estimated total' (2026-03-15)
+- **Context:** No real target for asset count available from gamification API or settings, so multiplied actual count by 1.5 as placeholder
+- **Why:** Pragmatic choice: needed progress indicator for MVP but target not available. Chose multiplication heuristic as simple placeholder until real data available
+- **Rejected:** Could have hard-coded fixed target (100 assets) or skipped inventory progress bar entirely until API available
+- **Trade-offs:** Enables feature delivery now, but progress bar calculations are unreliable and will change when real target arrives
+- **Breaking if changed:** When real asset target endpoint is added, all existing progress calculations become incorrect. UI will show wrong percentages until formula updated
+
+#### [Pattern] Fine-grained component decomposition in profile view (level-card, achievement-grid, streak-display, health-breakdown, quest-list, xp-history) (2026-03-15)
+- **Problem solved:** Profile page broken into 6 specialized sub-components rather than single monolithic profile component
+- **Why this works:** Supports independent re-rendering, easier testing/maintenance, and potential reuse (e.g., xp-history could appear elsewhere). Each component owns its own React Query hook
+- **Trade-offs:** More files and prop passing, but each component is independently optimizable and testable. Supports future reuse and parallel development
+
+### Achievement grid uses three distinct states (earned/full-color, locked/grayed, secret/???) rather than boolean earned flag (2026-03-15)
+- **Context:** UI design accounts for earned achievements, locked achievements, and secret achievements with different visual treatments
+- **Why:** Supports gamification best practice of secret/hidden achievements to encourage exploration and community discussion about achievement unlock conditions
+- **Rejected:** Could have used binary earned/not-earned, but secret achievements add engagement and retention mechanics
+- **Trade-offs:** More complex rendering logic and state handling, but richer user engagement and motivation to unlock hidden achievements
+- **Breaking if changed:** If secret achievement type is removed, UI for '??' state becomes unused and could cause rendering bugs if not handled
+
+### Quest progress tracking implemented as observability-only (debug logging) rather than actual database updates, because GamificationService does not yet expose incrementQuestProgress() method (2026-03-15)
+- **Context:** Quest feature requires tracking progress toward completion, but the API doesn't exist yet
+- **Why:** Allows shipping gamification hooks without blocking on downstream GamificationService API design; observability helps identify gaps without coupling to missing code
+- **Rejected:** Blocking feature until API exists; creating stub API that doesn't update DB
+- **Trade-offs:** Faster feature delivery vs incomplete quest progression; observability cost is minimal, actual progression is deferred
+- **Breaking if changed:** When incrementQuestProgress() is added later, logging-only calls won't automatically start progressing quests—must refactor listeners to call new API
+
+### Maintenance route receives EventEmitter via dependency injection and explicitly emits maintenance:tick events; services do not import or reference gamification module (2026-03-15)
+- **Context:** Gamification must react to existing service events without creating circular dependencies or hardcoding gamification into services
+- **Why:** Enables true loose coupling: services don't know gamification exists, gamification listener subscribes to events. DI allows route to emit without hardcoding
+- **Rejected:** Services importing gamification directly and calling awardXp(); hardcoded event names in routes; shared event bus owned by gamification
+- **Trade-offs:** Clean decoupling vs implicit contract that route must emit events; testing friendly vs harder to discover event protocol
+- **Breaking if changed:** If EventEmitter injection is removed from maintenance route constructor, events stop being emitted without compilation error (runtime failure only)
+
+#### [Pattern] Hybrid polling + WebSocket pattern for sensor data: 10s React Query polling for resilience + WebSocket subscriptions for real-time updates. Subscribes to both 'sensor:data-received' (state updates) and 'sensor:registered' (new entity creation) events. (2026-03-15)
+- **Problem solved:** Syncing distributed IoT sensor state across multiple clients and handling both data updates and new sensor registrations
+- **Why this works:** Polling alone is slow (10s latency), WebSocket alone is fragile (connection drops lose updates). Dual approach combines resilience (polling recovers from WebSocket failure) with responsiveness (WebSocket gives real-time feedback for user actions). Separate subscriptions because registration events don't flow through data-received channel.
+- **Trade-offs:** Network overhead from dual updates vs reliability and responsiveness. Polling provides recovery path if WebSocket fails; WebSocket prevents stale data between polls.
+
+### Using Tailwind opacity variant modifiers (`bg-emerald-500/15`, `bg-yellow-500/15`) for state badge colors instead of hard-coded RGB values. Opacity variants scale from theme color definitions. (2026-03-15)
+- **Context:** Implementing semantic state colors (active, stale, offline) that work across light/dark modes without duplication
+- **Why:** Opacity variants inherit from Tailwind theme colors, respecting dark mode and custom theme configurations automatically. Hard-coded colors would not scale to dark mode variants or future theme changes. Shows architectural thinking: state styling logic lives in config, not component.
+- **Rejected:** Hard-coded RGB colors (breaks theming), CSS-in-JS with color variables (more complex, less maintainable), separate dark mode classes (duplicates styling logic)
+- **Trade-offs:** Dependency on Tailwind theme system vs automatic dark mode support without component-level theme awareness
+- **Breaking if changed:** Switching to hard-coded colors removes dark mode support. Changing Tailwind colors requires theme config update rather than component edits.
+
+#### [Gotcha] Dual WebSocket event subscriptions required: 'sensor:registered' drives new sensor appearances in UI, separate from 'sensor:data-received' which only updates existing sensor state. Both subscriptions necessary for complete sync. (2026-03-15)
+- **Situation:** Real-time synchronization with backend where sensors can be added (registered) and updated (data received) through different event channels
+- **Root cause:** Backend event model separates entity lifecycle (registration) from state updates (data). Subscribing only to data-received means new sensors don't appear in UI until next poll cycle (~10s delay). Registering sensors must trigger UI addition immediately in real-time scenario.
+- **How to avoid:** Must maintain two event listeners and handlers vs guaranteed consistency between backend and UI for all change types
+
+#### [Pattern] Fetch counter ref prevents stale data race conditions when month changes during concurrent API requests (2026-03-15)
+- **Problem solved:** useBudget hook fetches transactions, categories, and summary in parallel. If user changes month while fetches are in flight, slower responses could overwrite newer month's data.
+- **Why this works:** Each fetch increments a ref counter. Responses only apply if their counter matches the current active fetch. Simple, manual race condition handling without AbortController complexity.
+- **Trade-offs:** Simpler than AbortController but requires discipline - every async operation must check if it's still relevant before applying state
+
+#### [Pattern] Budget view reuses calendar view navigation pattern: PanelHeader with < and > action buttons, useState for month, parallel data refresh on month change (2026-03-15)
+- **Problem solved:** Two separate features (calendar, budget) need to navigate months - code could duplicate patterns or share architecture
+- **Why this works:** User familiarity - consistent navigation behavior across features. Reduces cognitive load. Both features benefit from same month-state architecture.
+- **Trade-offs:** Consistency and code reuse vs. locked into calendar view patterns - if calendar UI changes, budget must follow
+
+#### [Pattern] Separate CLAUDE.md files for developers (project root) vs AI agents (.automaker/context/) (2026-03-15)
+- **Problem solved:** Project contains both main CLAUDE.md and .automaker/context/CLAUDE.md with different content
+- **Why this works:** Developers need architecture/services; AI agents need module awareness, gamification context, sidebar nav items. Different information needs require separate docs.
+- **Trade-offs:** Maintenance burden (two files to keep in sync) vs clarity (each audience gets exactly what they need). Agent context kept synchronized in .automaker/ folder.
+
+#### [Pattern] Domain-specific coding rules that prevent module-specific failure modes (stored in .automaker/context/coding-rules.md) (2026-03-15)
+- **Problem solved:** Each module has distinct data integrity requirements: Gamification (unauthorized XP), Inventory (float precision), Maintenance (auto-calc), Vendors (phone formatting), Home Health Score (staleness)
+- **Why this works:** Different domains fail in different ways. Explicit rules encoded as constraints prevent entire bug classes (e.g., 'Gamification: all XP through service' prevents DB bypass attacks on scoring system).
+- **Trade-offs:** Learners must understand domain-specific rules vs generic patterns. Rules create enforcement point but require documentation discipline.
+
+#### [Gotcha] Documentation task was already complete; reveals ongoing documentation drift problem (2026-03-15)
+- **Situation:** The task was to update docs but prior commit a5a252e8d had already implemented all changes; working directory clean with no changes needed
+- **Root cause:** Indicates this feature was built and implemented without documentation-first approach; docs had to catch up retroactively. Documentation stays in sync with code only through continuous effort.
+- **How to avoid:** Fast iteration without docs vs slower iteration with docs. Retroactive docs risk incompleteness if code details are forgotten.
+
+#### [Pattern] Multi-tier documentation structure mirrors audience complexity: README → CLAUDE.md → docs/modules/* → .automaker/context/* (2026-03-15)
+- **Problem solved:** Documentation is layered: high-level features (README), architecture (CLAUDE.md), API references (docs/modules/), agent context (.automaker/context/), coding rules (coding-rules.md)
+- **Why this works:** Different stakeholders need different information depth. Users need setup (README); developers need architecture (CLAUDE.md); API consumers need references (docs/modules/); AI agents need context (coding-rules, navigation, gamification awareness).
+- **Trade-offs:** More files to maintain vs better signal-to-noise for each audience. Requires discipline to keep tiers in sync.
+
+#### [Pattern] Gamification system designed as cross-cutting concern affecting multiple modules, not isolated feature (2026-03-15)
+- **Problem solved:** Gamification includes: Home Health Score 0-100, XP/levels, 10-tier progression, 30 achievements, streaks, AI quests. Quests triggered by other module actions.
+- **Why this works:** Gamification needs to be woven throughout (every module action can earn XP/trigger quest/affect score). If added as afterthought, requires redesigning other modules to emit events.
+- **Trade-offs:** Upfront architectural burden to integrate gamification vs later major refactoring. Service layer (gamificationService.awardXp) makes it testable despite cross-module nature.
+
+#### [Pattern] Forced service layer per module (InventoryService, MaintenanceService, etc.) with explicit rules preventing direct DB access (2026-03-15)
+- **Problem solved:** Every module must have a service; coding rule states 'Gamification: all XP awards go through gamificationService.awardXp(), never direct DB writes'
+- **Why this works:** Service layer enables cross-cutting concerns (logging, validation, gamification events, authorization). Direct DB access bypasses these layers, breaking consistency.
+- **Trade-offs:** Extra abstraction layer (slightly more code) vs consistency and auditability. Service layer also makes mocking and testing easier.
+
+### When resolving merge conflicts between vault feature and parallel home-management features (budget/inventory/maintenance), keep all services. Vault service AND others coexist in service registry and route mounting. (2026-03-15)
+- **Context:** Parallel feature branches created merge conflicts in services.ts and routes.ts. Choosing between vault feature vs home-management features during integration.
+- **Why:** No functional dependency between vault and budget/inventory/maintenance. Both features are independent and valuable. Merging both maximizes feature set with no conflicts.
+- **Rejected:** Cherry-picking vault over others; keeping only home-management; sequencing feature development to avoid conflicts
+- **Trade-offs:** Larger service registry and more API routes, but complete feature set available. Merge resolution is straightforward (both/and instead of either/or).
+- **Breaking if changed:** Removing any service breaks corresponding /api/* routes; clients expecting those endpoints fail
+
+#### [Pattern] Centralized React Query hooks (use-vendors.ts) for all CRUD operations rather than inline API calls in components (2026-03-15)
+- **Problem solved:** Single hook exports: useVendors (list/search), useCreateVendor, useUpdateVendor, useDeleteVendor - all components consume from hook
+- **Why this works:** Separates data fetching concern from UI logic; single source of truth for API contract; enables reuse across components and easier testing
+- **Trade-offs:** More files but better testability and reusability; hook layer adds indirection but centralizes error handling, caching, and loading states
+
+### SensorRegistryService accepts optional SQLite Database in constructor, gracefully degrades to in-memory-only when absent (2026-03-15)
+- **Context:** Need sensor history persistence without making it mandatory for all deployments
+- **Why:** Allows service to function in memory-only mode (testing, simple deployments) while supporting persistence when needed. Constructor injection pattern enables dependency injection and testing.
+- **Rejected:** Requiring DB would break existing deployments; lazy initialization would complicate null-checking throughout code
+- **Trade-offs:** Simpler deployment paths vs. code that must handle optional DB state; every history method must check DB existence
+- **Breaking if changed:** If code assumes DB always exists, getHistory/getHistoryAggregated/cleanupOldReadings will fail silently. Callers must check if DB was provided.
+
+#### [Pattern] Selective React Query cache invalidation per mutation type: create invalidates global list only, update invalidates both list AND specific detail query, delete invalidates list only (2026-03-15)
+- **Problem solved:** Three separate mutation hooks for vendor CRUD operations with different cache dependencies
+- **Why this works:** Prevents over-fetching. Updating a single vendor shouldn't refetch all vendors. Deleting doesn't need detail cache. This balances consistency with performance.
+- **Trade-offs:** More cache keys to track (QUERY_KEYS.vendors vs QUERY_KEYS.vendor(id)) but avoids cascade refetches and improves perceived performance
+
+### Query key factory pattern: QUERY_KEYS.vendors and QUERY_KEYS.vendor(vendorId) as centralized constants instead of inline strings (2026-03-15)
+- **Context:** Cache invalidation references QUERY_KEYS for both list and detail queries; keys must match query definitions elsewhere
+- **Why:** Single source of truth for query identifiers. String typos in cache invalidation silently fail (queries don't update). Factory pattern catches at compile time.
+- **Rejected:** Inline query keys like 'vendors' and `vendor-${id}` work but cause mismatches if query definition uses different string
+- **Trade-offs:** Requires QUERY_KEYS module maintenance vs prevents silent cache bugs; more files to edit when changing query structure
+- **Breaking if changed:** Change QUERY_KEYS.vendors string: mutations invalidate wrong cache, detail queries never update after operations
+
+#### [Pattern] Dual-layer gating for feature-flag safety: tools are guarded by BOTH config flag (`config.homeManagement`) AND null service checks (`services.inventoryService != null`) (2026-03-15)
+- **Problem solved:** Enabling a new Ava tool group for home management modules in a partially-complete feature rollout
+- **Why this works:** Provides independent optionality at both config and service layers. Config gates the tool registration; service nullness gates execution. Either layer failing safe prevents cascading errors.
+- **Trade-offs:** More defensive but slightly more boilerplate. Removes implicit ordering requirements between config and service initialization.
+
+#### [Pattern] Config spreading pattern: `avaConfig.toolGroups` spread directly into `buildAvaTools(config)`, making feature activation a simple JSON config edit without code changes (2026-03-15)
+- **Problem solved:** Registering 9 new tools with a feature flag that may not be enabled in all deployments
+- **Why this works:** Separates tool implementation (TypeScript) from tool activation (config JSON). Deployment teams can enable/disable tool groups without rebuilds or code review.
+- **Trade-offs:** Cleaner deployment story; requires explicit config awareness (tools exist but are inactive until config enables them)
+
+### No new event types added to system; Ava tools are self-contained registration changes with no coupling to event dispatch system (2026-03-15)
+- **Context:** Adding 9 new Ava tools that query inventory, vendors, maintenance data
+- **Why:** Ava tools are synchronous query/command interfaces; they don't need async event notifications. Keeps integration minimal and reduces coupling between AI assistant layer and event system.
+- **Rejected:** Could have emitted `MaintenanceCompleted` events when `complete_maintenance()` runs, but service already manages state; Ava just calls service method
+- **Trade-offs:** Simpler tool registration; reduces visibility into Ava-driven state changes but avoids redundant event dispatch
+- **Breaking if changed:** If future Ava tools need to publish domain events for other system components to react to, this decision would need re-evaluation and event emission added
+
+#### [Gotcha] Monorepo worktrees require explicit NODE_PATH pointing to node_modules from a different worktree (WORKTREE_WITH_MODS) when running tsc for type checking. Isolated worktree environments don't automatically resolve dependencies from shared locations. (2026-03-15)
+- **Situation:** Type checking story files in isolated worktree failed with module resolution errors. Pre-existing worktree setup issue where each worktree has incomplete node_modules.
+- **Root cause:** Worktrees have isolated file systems but may not have dependencies installed; must explicitly reference working worktree's node_modules for type checking to succeed
+- **How to avoid:** Reduced disk space by sharing node_modules vs. added complexity in build scripts; requires developers to understand worktree setup
+
+### State-based quest generation with hierarchical condition evaluation (maintenance > inventory > budget > sensor > seasonal) rather than event-triggered or user-requested quest creation. (2026-03-15)
+- **Context:** QuestGeneratorService evaluates home state across 5 categories and generates 1-3 prioritized candidates. Each category has distinct triggers based on DB queries.
+- **Why:** Enables contextual, automatic suggestions tied to actual home state rather than explicit user actions. Hierarchy prevents overwhelming users with low-priority quests when high-priority issues exist.
+- **Rejected:** Event-triggered (waits for user action) or explicit request API (requires user awareness of quest system).
+- **Trade-offs:** More complex condition logic but highly contextual; could generate unwanted quests if conditions not carefully scoped.
+- **Breaking if changed:** Removing prioritization would create conflicting quest suggestions; removing state evaluation entirely removes the core value proposition.
+
+#### [Pattern] Separate lifecycle methods (insertQuest, incrementQuestProgress, completeQuestById, expireQuest) with individual event emissions rather than single state machine or unified updateQuestState method. (2026-03-15)
+- **Problem solved:** Each quest operation is exposed as distinct service method, each emitting specific event (quest-generated, quest-progress, quest-completed, quest-expired).
+- **Why this works:** Enables granular event-driven tracking (listeners can react to progress vs. completion differently); makes preconditions/postconditions explicit for each operation; prevents accidental state transitions.
+- **Trade-offs:** More methods to maintain but clearer intent and easier to add cross-cutting concerns (validation, side effects) per operation. Risk of inconsistent state if developer bypasses the public methods.
+
+### Constraint enforcement: max 3 active quests per user + no duplicate quest categories simultaneously active. (2026-03-15)
+- **Context:** Service logic checks these limits before inserting new quest; prevents quest overflow and category collision.
+- **Why:** Prevents UI/UX confusion (too many simultaneous quests); ensures quest diversity so user isn't asked to repeat same action (e.g., two 'Home Census' quests). These are emergent properties from user perspective.
+- **Rejected:** No limits (overwhelming), per-category limits only (allows 5 unrelated quests), or separate active/archived distinction.
+- **Trade-offs:** Easier UX but may frustrate users if quest they want is blocked by max limit. Duplicate category check prevents gaming system (user can't farm same category).
+- **Breaking if changed:** Removing max 3 limit could create overwhelming quest UI; removing no-duplicate check allows redundant suggestions.
+
+#### [Pattern] Event-driven quest lifecycle (quest-generated, quest-completed, quest-expired, quest-progress events) enables XP listeners to react without coupling quest service to gamification logic. (2026-03-15)
+- **Problem solved:** QuestGeneratorService and GamificationService emit events; xp-event-listeners.ts subscribes and awards/deducts XP based on event type.
+- **Why this works:** Decouples quest mechanics from reward mechanics; allows multiple listeners (achievements, stats, notifications) without quest service knowing about them; makes double-XP prevention explicit and testable.
+- **Trade-offs:** Event-driven requires event type discipline and listener coordination but enables extensibility. Risk: listeners could disagree on state (race condition if two listeners emit quest-completed simultaneously).
+
+### Used Diataxis framework (Tutorial/How-to/Explanation/Reference) as primary information organization principle rather than topic-based hierarchy (2026-03-15)
+- **Context:** Rebuilt docs from scratch after deleting inherited protoMaker structure; chose new organization scheme
+- **Why:** Diataxis maps to user intent (how to achieve X, understand Y) rather than system topics, improving discoverability and reducing cognitive load. Categorized: installation/first-asset as Tutorials, home-assistant/weather as How-tos, architecture/concepts as Explanations, modules as Reference
+- **Rejected:** Topic-based organization (e.g., /sensors, /integrations as conceptual areas) would group related concepts but require readers to know where to look before finding solutions
+- **Trade-offs:** Easier for new users to find task-oriented guidance; harder for system exploration and conceptual understanding if skipped; requires strict content classification discipline upfront
+- **Breaking if changed:** If content is miscategorized, users searching for explanations find procedures instead; requires consistent categorization as new docs are added
+
+#### [Pattern] Implemented dynamic sidebar generation from H1 headers: `generateSidebar()` reads .md files, extracts first H1 as nav label, filters README/index, sorts alphabetically (2026-03-15)
+- **Problem solved:** VitePress config needed to automatically wire new pages into sidebar without manual navigation updates
+- **Why this works:** Reduces manual config maintenance; adding a doc file with proper H1 auto-integrates into nav; prevents orphaned pages; works with git workflow (docs author doesn't touch config)
+- **Trade-offs:** Docs are discoverable by default; but creates invisible coupling: renaming a file's first H1 silently changes nav labels; alphabetical sorting may not match editorial intent or user mental model; breaks silently if H1 is missing
+
+### Used destructive 'clean sweep' strategy: deleted 150 inherited protoMaker files entirely and rebuilt, rather than incrementally migrating/updating (2026-03-15)
+- **Context:** Repository contained 158 inherited docs from protoLabs/protoMaker; needed to remove old content and establish new structure
+- **Why:** Guarantees no orphaned/outdated protoMaker content remains; provides psychological reset and clean audit trail; forces re-validation of what's actually valuable for homeMaker; avoids partial-migration technical debt
+- **Rejected:** Incremental approach: keep old docs, mark deprecated, gradually rebuild would preserve links/history but risks accumulating stale content and confusing users about what's current
+- **Trade-offs:** Complete confidence required that nothing essential was missed; one wrong decision deletes content permanently; but ensures no legacy baggage and forces intentional curation; enables grep verification that protoLabs refs are gone
+- **Breaking if changed:** Any inbound links to old doc URLs (external sites, SEO) break; team loses access to 158 files of context/history (mitigated by git history); if a file was incorrectly assessed as 'not useful', it's permanently gone from main branch
+
+#### [Pattern] Mapped Diataxis content types directly to file paths/directory structure (/getting-started for Tutorials, /integrations for How-tos, /platform for Explanations, /modules for Reference) (2026-03-15)
+- **Problem solved:** Rebuilding docs needed clear mental model for where each type of content belongs
+- **Why this works:** Makes content type immediately obvious from URL and filesystem; guides authors where to place new docs; matches user navigation flow (If I want a tutorial, I go to /getting-started; if I need API details, I go to /modules/reference)
+- **Trade-offs:** Clear intent in folder structure; but creates silos (all tutorials clustered, all references elsewhere); if content naturally spans types (e.g., a guide that explains AND instructs), it must choose one directory; easier to author when structure matches mental model
+
+### Two-tier Claude model pipeline: Haiku for topic classification, Sonnet for response generation with tool access (2026-03-15)
+- **Context:** Building intelligent chat that must classify messages and generate contextual responses in real-time
+- **Why:** Haiku is 10x cheaper and faster for simple classification tasks; Sonnet reserved for complex reasoning that requires home-management context (maintenance, inventory, budget, vendor data). Avoids wasting expensive Sonnet calls on message classification.
+- **Rejected:** Single Sonnet model for both—would 10x the cost and latency for every message. Single Haiku—lacks reasoning capability for tool-based response generation.
+- **Trade-offs:** Added service complexity and content-hash caching logic, but reduced API costs and improved latency. Misclassification by Haiku can lead to wasted Sonnet calls, so classification accuracy is critical.
+- **Breaking if changed:** Removing classifier layer would either lose message filtering or force expensive Sonnet on all messages. Removing Sonnet response layer would lose contextual tool-based answers.
+
+#### [Pattern] Event type registration enforced at build time: all events must be added to EventType union in libs/types/src/event.ts (2026-03-15)
+- **Problem solved:** New chat:message-received event required registration for type-safe event routing across codebase
+- **Why this works:** TypeScript discriminated unions provide compile-time verification that all event handlers match defined event types. Prevents runtime event routing failures caused by typos or forgotten registrations.
+- **Trade-offs:** Build-time enforcement catches errors early but requires explicit registration step for each new event. More verbose than ad-hoc strings but prevents production bugs.
+
+### Hybrid WebSocket + React Query architecture: WebSocket for real-time new messages, React Query for paginated historical fetch (2026-03-15)
+- **Context:** Need both instant message delivery and ability to load historical chat without overwhelming server
+- **Why:** WebSocket ensures real-time feel (sub-second delivery). React Query pagination prevents full chat dump and enables efficient backward-scrolling. Combined they avoid expensive full-load while maintaining UX responsiveness.
+- **Rejected:** WebSocket only—pagination not practical with streaming. REST polling—too expensive for real-time feel. Single full fetch—doesn't scale with chat history.
+- **Trade-offs:** Requires deduplication logic (message from both WebSocket and initial fetch would show twice), but provides best UX for both new and historical messages. More complex client state management.
+- **Breaking if changed:** Removing WebSocket makes chat feel laggy (polling latency). Removing pagination forces loading entire chat history, scaling poorly.
+
+#### [Pattern] Content-hash caching for message classification results rather than message-based caching (2026-03-15)
+- **Problem solved:** AvaClassifier must avoid redundant Haiku calls for identical message content
+- **Why this works:** Same message content always classifies the same way (deterministic). Content-based cache key is simpler than message ID and survives across conversations. Reduces Haiku API calls for repeated content.
+- **Trade-offs:** Assumes classification is context-independent; time or sender context might change ideal classification but optimizes for common case of identical content. Simple cache key vs. potentially stale results.
+
+### Background service pattern for AvaProactiveService with max 2 alerts per day per household (2026-03-15)
+- **Context:** Delivering proactive maintenance warnings and warranty expiration notices without spamming users
+- **Why:** Background service lifecycle (start/stop in ServiceContainer) ensures proper initialization and cleanup. Hard cap of 2/day prevents notification fatigue while still providing value. Follows existing pattern in codebase (QuestGeneratorService).
+- **Rejected:** On-demand proactive alerts (would trigger on every chat message—spam). Unlimited proactive alerts (notification fatigue). No proactive service (users miss maintenance alerts).
+- **Trade-offs:** Adds service infrastructure complexity, but caps alert volume preventing alert fatigue. User might miss occasional important alert due to 2/day limit.
+- **Breaking if changed:** Removing service eliminates proactive features. Removing frequency cap allows unlimited alerts causing user-facing spam. Removing ServiceContainer lifecycle causes memory leaks (service never stops).
+
+#### [Pattern] Dynamic Dockerfile COPY validation in CI: rather than hardcoding lib names in the workflow validation logic, parse the actual libs/ directory at runtime and compare against Dockerfile COPY entries. This scales without maintenance as libs are added/removed. (2026-03-15)
+- **Problem solved:** Monorepo with ~15 libs where incomplete Dockerfile COPY would silently create broken production builds. Needed validation that catches deletions or new additions automatically.
+- **Why this works:** Hardcoded lists create maintenance burden and diverge from source of truth (libs/ directory). Dynamic validation stays synchronized automatically. Problem: without this, a deleted lib could still be COPY'd in Dockerfile (or vice versa), causing silent build corruption.
+- **Trade-offs:** Dynamic validation requires slightly more complex bash/grep logic, but eliminates entire class of silent failures and scales to any number of libs without workflow changes.
+
+### Use hardcoded repository guards (if: github.repository == 'protoLabsAI/protoMaker') as an indicator of dead code. When a workflow contains such guards for a *different* repo, it's a copy-paste artifact that should be deleted rather than adapted. (2026-03-15)
+- **Context:** Inheriting workflows from a fork/template (protoMaker) that were never intended to run on homeMaker. Had to decide: delete prepare-release.yml or try to adapt it?
+- **Why:** Repository-specific guards indicate the author explicitly restricted execution elsewhere. If the code isn't meant to run in this repo, adapting it introduces technical debt and false logic. Cleaner to delete dead code than maintain it.
+- **Rejected:** Strip the guard and adapt the workflow to homeMaker. Problem: scripts referenced (release:prepare, changeset:version) are protoMaker-specific; guard wasn't arbitrary but fundamental to the workflow's intent.
+- **Trade-offs:** Deletion is clean cut but loses any future protoMaker updates. Keeping requires ongoing maintenance of unrelated code. Given disjoint scripts, deletion is lower-cost long-term.
+- **Breaking if changed:** If the workflow is needed later, it must be re-implemented from scratch — but repo guards suggest it was never meant to run here anyway.
+
+### Integrated WeatherService via existing SensorRegistryService rather than creating new event types or standalone event system (2026-03-15)
+- **Context:** Needed to expose weather data to downstream consumers (maintenance scheduling, dashboards)
+- **Why:** Reuse existing infrastructure and event emission patterns; SensorRegistryService already handles emitting 'sensor:data-received' events automatically
+- **Rejected:** Creating custom weather:data event type; building new event bus; standalone weather event emitter
+- **Trade-offs:** Easier: automatic event propagation, consistent with codebase patterns. Harder: weather data constrained to sensor shape; less flexible for weather-specific metadata
+- **Breaking if changed:** If SensorRegistryService is refactored or removed, weather data propagation breaks; any code expecting 'sensor:data-received' for weather must still handle sensor shape schema
+
+### Graceful degradation pattern: WeatherService silently no-ops if OPENWEATHERMAP_API_KEY not configured; logs warning instead of crashing (2026-03-15)
+- **Context:** API key is optional for deployment; service should not block system startup
+- **Why:** Allows system to run without weather context; avoids runtime crashes in deployments without weather; follows resilience principle for non-critical features
+- **Rejected:** Making API key required (fail-fast); throwing error during initialization; defaulting to synthetic weather data
+- **Trade-offs:** Easier: predictable startup, works in dev/test without config. Harder: developers may not realize weather isn't working without checking logs; can mask misconfiguration
+- **Breaking if changed:** If this changes to fail-fast, deployments without API key will crash; code consuming weather readings must handle absence of weather data
+
+### Command queue implemented as in-memory Map in SensorRegistryService, not persisted to database (2026-03-15)
+- **Context:** Needed to queue IoT commands until device polls; initial implementation choice made for simplicity
+- **Why:** Minimizes complexity; no migration/schema changes needed; no DB latency for queue operations
+- **Rejected:** Database persistence - adds schema, transactions, potential bottleneck at scale
+- **Trade-offs:** MVP speed gained; loss of durability - commands evaporate on server restart or deployment
+- **Breaking if changed:** If persistence is added later, endpoints must change behavior; clients expecting durable commands will lose data during redeploys
+
+#### [Gotcha] Feature named 'push endpoint' but implemented as polling model - GET /:id/commands returns queue, doesn't proactively notify devices (2026-03-15)
+- **Situation:** Device must call GET to check for commands; won't be notified of commands until next poll interval
+- **Root cause:** HTTP polling simpler than WebSocket/SSE infrastructure; no server-to-client push capability needed initially
+- **How to avoid:** Simpler deployment; delayed command delivery until device's next poll cycle - not true real-time
+
+#### [Pattern] New EventType 'sensor:command-queued' registered in event system union; event emitted on successful queue (2026-03-15)
+- **Problem solved:** Event system is central to domain events; command queueing integrated as first-class event
+- **Why this works:** Maintains audit trail; allows other services (notifications, logging, analytics) to subscribe without coupling; Event Sourcing readiness
+- **Trade-offs:** Loose coupling gain; minor overhead in event dispatch; enables future features (webhooks, external system notifications)
+
+#### [Pattern] Command logic encapsulated in SensorRegistryService (queueCommand, pollCommands methods) - endpoints delegate to service (2026-03-15)
+- **Problem solved:** Routes file only handles HTTP contract; service owns queue map and command lifecycle
+- **Why this works:** Separates HTTP concerns from domain logic; enables testing without HTTP layer; allows service reuse in other contexts (gRPC, messaging)
+- **Trade-offs:** Testability and reusability gain; indirection cost - one more call stack layer
+
+#### [Pattern] Event-driven cleanup and command delivery: sensor:history-cleanup and sensor:command-queued events instead of synchronous execution (2026-03-15)
+- **Problem solved:** Time-series sensor data needs pruning; IoT devices have transient connectivity and may be offline
+- **Why this works:** Decouples request handlers from long-running operations; enables retries and handles intermittent device availability
+- **Trade-offs:** Eventual consistency and latency vs guaranteed immediate execution; system becomes more resilient but harder to debug
+
+#### [Pattern] Sensor source disambiguation via namespace prefix: ha:{entity_id} naming convention distinguishes Home Assistant entities from native IoT devices (2026-03-15)
+- **Problem solved:** System ingests sensors from multiple sources (HA integration + native IoT devices); dashboard and queries need to know origin
+- **Why this works:** Single unified sensor table with mixed sources; prefix enables filtering, lineage tracking, and source-specific handling without separate schemas
+- **Trade-offs:** Minimal storage overhead; transparent in query results; but users must remember naming convention
+
+#### [Pattern] Command queue pattern: queueCommand + pollCommands instead of direct command delivery (2026-03-15)
+- **Problem solved:** Delivering commands to unreliable IoT devices that may be offline or sleeping
+- **Why this works:** Decouples command submission from delivery; enables retry logic, polling for device availability, and command persistence across restarts
+- **Trade-offs:** Adds latency and system complexity; solves unreliability at the cost of eventual-delivery semantics
+
+### Selective merge conflict resolution: accepted time-series persistence features from origin/dev while keeping documentation branch changes (2026-03-15)
+- **Context:** Feature branch with comprehensive HA integration docs conflicted with origin/dev that added query/aggregation/cleanup to sensor service
+- **Why:** Both feature sets are independent and additive; modular design allowed clean resolution without choosing one over the other
+- **Rejected:** Taking only HEAD documentation loses persistence features; taking only dev loses integration documentation
+- **Trade-offs:** Successfully combined two parallel efforts; indicates good interface boundaries but required careful manual merge
+- **Breaking if changed:** If modules were tightly coupled, this merge would have required rewriting either persistence or documentation layer
+
+#### [Pattern] When direct API calls cannot be made due to missing authentication in automated contexts, create a documented manual setup script for human execution with elevated privileges rather than trying to automate auth (2026-03-15)
+- **Problem solved:** gh CLI was not authenticated in the CI worktree; branch protection requires admin token that should not be stored in CI secrets
+- **Why this works:** Maintains security separation: automated CI changes stay automation-scoped; repository-level settings requiring admin access remain explicitly human-controlled
+- **Trade-offs:** Requires post-deployment manual step but eliminates unnecessary credential exposure in automated pipelines
+
+#### [Gotcha] Tauri v2 requires explicit permission grants in `capabilities/default.json` beyond just listing plugins in `tauri.conf.json` (2026-03-15)
+- **Situation:** Migrating from Electron to Tauri; plugins are registered but won't actually have permissions without capabilities
+- **Root cause:** Tauri uses an explicit security model requiring fine-grained capability declarations; prevents privilege escalation
+- **How to avoid:** More verbose configuration but better security audit trail
+
+### Server URL configured via VITE_SERVER_URL environment variable instead of Electron IPC (2026-03-15)
+- **Context:** Frontend needs to know where backend server is; previously used Electron IPC to query main process
+- **Why:** Environment variables work with containerized/Docker deployments; no need for tight frontend-to-desktop coupling; server can be discovered via infrastructure (Tailscale, DNS)
+- **Rejected:** Runtime IPC discovery (more dynamic but tightly couples frontend to Electron/Tauri runtime)
+- **Trade-offs:** Simpler and deployment-friendly, but requires rebuild to change server URL; less flexible at runtime
+- **Breaking if changed:** Any code expecting to query server URL at runtime without rebuilding will fail
+
+#### [Pattern] Backend server runs independently via Docker/Tailscale; Tauri is a thin webview-only wrapper (2026-03-15)
+- **Problem solved:** Reducing binary size from ~300MB (Electron with embedded server logic) to under 20MB (Tauri webview only)
+- **Why this works:** Separates concerns: allows independent server deployment, scaling, and testing; enables smaller, simpler desktop binary
+- **Trade-offs:** Simpler desktop codebase and smaller binary, but requires separate backend infrastructure and coordination
+
+#### [Pattern] Frontend codebase was already HTTP-first before Tauri migration; only auth.ts and use-os-detection.ts used Electron APIs (2026-03-15)
+- **Problem solved:** Most of frontend already worked via HTTP; Electron IPC was minimal coupling point
+- **Why this works:** Good prior architectural practice: keep platform concerns separate; enables easier future platform transitions
+- **Trade-offs:** Requires discipline in architecture but enables clean platform abstraction layers
+
+### Kept isElectronMode() as a no-op returning false instead of removing it entirely (2026-03-15)
+- **Context:** Migrating away from Electron; old code might still check isElectronMode()
+- **Why:** Safe backwards compatibility: all auth is HTTP-based so function is safe to no-op; avoids breaking unknown code that might reference it
+- **Rejected:** Removing isElectronMode() entirely (cleaner code but riskier if unknown dependencies exist)
+- **Trade-offs:** Slightly more technical debt but smoother migration with less risk of runtime breakage
+- **Breaking if changed:** Code that treats isElectronMode() === false as 'web only' will now run on desktop (but it's safe since auth is HTTP)
+
+### Deleted 1654-line Electron main.ts containing IPC handlers, preload logic, auto-update, and window lifecycle (2026-03-15)
+- **Context:** Main process logic unnecessary in Tauri model; Tauri handles lifecycle and plugins natively
+- **Why:** Tauri's plugin system handles cross-platform concerns natively (dialog, notification, updates, shell); no need for custom main process
+- **Rejected:** Attempting to reuse Electron IPC patterns with Tauri (architectural mismatch)
+- **Trade-offs:** Massive complexity reduction (from 1654 lines to 0 in main process), but now committed to Tauri's plugin architecture
+- **Breaking if changed:** Any undocumented IPC protocol that was defined in main.ts becomes unavailable; must migrate to standard Tauri plugin APIs

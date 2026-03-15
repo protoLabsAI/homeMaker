@@ -32,8 +32,8 @@ elif [[ "$OSTYPE" == "darwin"* ]]; then
 fi
 
 # Port configuration
-DEFAULT_WEB_PORT=3007
-DEFAULT_SERVER_PORT=3008
+DEFAULT_WEB_PORT=8578
+DEFAULT_SERVER_PORT=8579
 PORT_SEARCH_MAX_ATTEMPTS=100
 WEB_PORT=$DEFAULT_WEB_PORT
 SERVER_PORT=$DEFAULT_SERVER_PORT
@@ -110,7 +110,7 @@ USAGE:
   start-automaker.sh [MODE] [OPTIONS]
 
 MODES:
-  web              Launch in web browser (localhost:3007)
+  web              Launch in web browser (localhost:8578)
   electron         Launch as desktop app (Electron)
   docker           Launch in Docker container (dev with live reload)
   docker-electron  Launch Electron with Docker API backend
@@ -530,7 +530,7 @@ kill_zombie_processes() {
     fi
 
     # Kill orphaned vite dev server processes for this project
-    zombie_pids=$(pgrep -f "vite.*dev.*3007" 2>/dev/null | head -20 || true)
+    zombie_pids=$(pgrep -f "vite.*dev.*8578" 2>/dev/null | head -20 || true)
     if [ -n "$zombie_pids" ]; then
         echo "${C_YELLOW}Killing stale Vite processes...${RESET}"
         echo "$zombie_pids" | xargs kill -9 2>/dev/null || true
