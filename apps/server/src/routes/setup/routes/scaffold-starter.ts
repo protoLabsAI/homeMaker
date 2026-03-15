@@ -2,13 +2,17 @@ import type { RequestHandler } from 'express';
 import path from 'node:path';
 import fs from 'node:fs/promises';
 import { createLogger } from '@protolabsai/utils';
-import { scaffoldDocsStarter, scaffoldPortfolioStarter } from '@protolabsai/templates';
+import {
+  scaffoldDocsStarter,
+  scaffoldPortfolioStarter,
+  scaffoldGeneralStarter,
+} from '@protolabsai/templates';
 
 const logger = createLogger('setup:scaffold-starter');
 
 interface ScaffoldStarterRequest {
   projectPath: string;
-  kitType: 'docs' | 'portfolio';
+  kitType: 'docs' | 'portfolio' | 'general';
   projectName?: string;
 }
 
@@ -42,40 +46,33 @@ export function createScaffoldStarterHandler(): RequestHandler<
         return;
       }
 
-      if (!kitType || (kitType !== 'docs' && kitType !== 'portfolio')) {
+      if (!kitType || !['docs', 'portfolio', 'general'].includes(kitType)) {
         res.status(400).json({
           success: false,
           outputDir: '',
           filesCreated: [],
-          error: 'kitType must be "docs" or "portfolio"',
+          error: 'kitType must be "docs", "portfolio", or "general"',
         });
         return;
       }
 
       const absolutePath = path.resolve(projectPath);
 
-      // Validate path exists and is a directory
-      let stats;
+      // Create directory if it doesn't exist, validate if it does
       try {
-        stats = await fs.stat(absolutePath);
-      } catch (_error) {
-        res.status(400).json({
-          success: false,
-          outputDir: absolutePath,
-          filesCreated: [],
-          error: `Path does not exist or is not accessible: ${absolutePath}`,
-        });
-        return;
-      }
-
-      if (!stats.isDirectory()) {
-        res.status(400).json({
-          success: false,
-          outputDir: absolutePath,
-          filesCreated: [],
-          error: `Path is not a directory: ${absolutePath}`,
-        });
-        return;
+        const stats = await fs.stat(absolutePath);
+        if (!stats.isDirectory()) {
+          res.status(400).json({
+            success: false,
+            outputDir: absolutePath,
+            filesCreated: [],
+            error: `Path is not a directory: ${absolutePath}`,
+          });
+          return;
+        }
+      } catch {
+        // Directory doesn't exist — create it
+        await fs.mkdir(absolutePath, { recursive: true });
       }
 
       // Resolve symlinks and validate against base directory if configured
@@ -105,10 +102,12 @@ export function createScaffoldStarterHandler(): RequestHandler<
 
       logger.info('Scaffolding starter kit', { kitType, projectPath: realPath });
 
-      const result =
-        kitType === 'docs'
-          ? await scaffoldDocsStarter(options)
-          : await scaffoldPortfolioStarter(options);
+      const scaffolders = {
+        docs: scaffoldDocsStarter,
+        portfolio: scaffoldPortfolioStarter,
+        general: scaffoldGeneralStarter,
+      };
+      const result = await scaffolders[kitType](options);
 
       if (!result.success) {
         logger.error('Scaffold failed', { error: result.error });
