@@ -1081,5 +1081,7 @@ export type {
   AchievementWithStatus,
   XpEvent,
   Quest,
+  QuestCategory,
+  QuestStatus,
   XpAwardResult,
 } from './gamification.js';

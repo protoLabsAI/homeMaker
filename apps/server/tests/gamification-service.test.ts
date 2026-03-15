@@ -44,7 +44,9 @@ function createTestDb(): BetterSqlite3.Database {
       progress INTEGER NOT NULL DEFAULT 0,
       target INTEGER NOT NULL,
       category TEXT NOT NULL,
+      status TEXT NOT NULL DEFAULT 'active',
       expiresAt TEXT,
+      completedAt TEXT,
       generatedBy TEXT NOT NULL DEFAULT 'system',
       createdAt TEXT NOT NULL
     );

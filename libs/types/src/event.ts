@@ -364,7 +364,12 @@ export type EventType =
   | 'gamification:level-up'
   | 'gamification:achievement-unlocked'
   | 'gamification:streak-updated'
-  | 'gamification:health-score-changed';
+  | 'gamification:health-score-changed'
+  // Quest lifecycle events (generated, completed, expired, progress)
+  | 'gamification:quest-generated'
+  | 'gamification:quest-completed'
+  | 'gamification:quest-expired'
+  | 'gamification:quest-progress';
 
 export type EventCallback = (type: EventType, payload: unknown) => void;
 

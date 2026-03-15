@@ -40,6 +40,8 @@ import type { CeremonyService } from '../../services/ceremony-service.js';
 import type { InventoryService } from '../../services/inventory-service.js';
 import type { VendorService } from '../../services/vendor-service.js';
 import type { MaintenanceService } from '../../services/maintenance-service.js';
+import type { GamificationService } from '../../services/gamification-service.js';
+import type { QuestGeneratorService } from '../../services/quest-generator-service.js';
 import type { ToolProgressEmitter } from './tool-progress.js';
 import { githubMergeService } from '../../services/github-merge-service.js';
 import { getPRWatcherService } from '../../services/pr-watcher-service.js';
@@ -119,6 +121,10 @@ export interface AvaToolsServices {
   vendorService?: VendorService;
   /** Maintenance service — optional, used for maintenance schedule tools */
   maintenanceService?: MaintenanceService;
+  /** Gamification service — optional, used for quest tools */
+  gamificationService?: GamificationService;
+  /** Quest generator service — optional, used for quest suggestion tool */
+  questGeneratorService?: QuestGeneratorService;
 }
 
 export interface AvaToolsConfig {
@@ -2072,6 +2078,46 @@ export function buildAvaTools(
             const message = err instanceof Error ? err.message : String(err);
             return { success: false, error: message };
           }
+        },
+      });
+    }
+
+    // ── Quest tools ──────────────────────────────────────────────────────
+    if (services.gamificationService) {
+      const gamificationSvc = services.gamificationService;
+
+      tools['get_active_quests'] = makeTool({
+        description:
+          'Return all active quests (short-term goals). ' +
+          'Use this when the user asks about their current quests, goals, or challenges, ' +
+          'e.g. "What quests do I have?", "Show my goals", "What should I work on?"',
+        inputSchema: z.object({}),
+        execute: async () => {
+          const quests = gamificationSvc.getQuests();
+          return { count: quests.length, quests };
+        },
+      });
+    }
+
+    if (services.questGeneratorService) {
+      const questGenSvc = services.questGeneratorService;
+
+      tools['suggest_quest'] = makeTool({
+        description:
+          'Generate new quests based on the current home state (overdue maintenance, missing inventory data, etc.). ' +
+          'Use this when the user asks for new challenges, e.g. "Give me a quest", "Suggest something to do", ' +
+          '"Generate new goals for me."',
+        inputSchema: z.object({}),
+        execute: async () => {
+          const generated = questGenSvc.generateQuests();
+          if (generated.length === 0) {
+            return {
+              message:
+                'No new quests available. You may already have 3 active quests or all quest conditions are already met.',
+              generated: [],
+            };
+          }
+          return { generated };
         },
       });
     }

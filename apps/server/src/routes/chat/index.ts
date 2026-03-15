@@ -470,6 +470,8 @@ export function createChatRoutes(services: ServiceContainer): Router {
               inventoryService: services.inventoryService,
               vendorService: services.vendorService,
               maintenanceService: services.maintenanceService,
+              gamificationService: services.gamificationService,
+              questGeneratorService: services.questGeneratorService,
             },
             {
               ...avaConfig.toolGroups,
