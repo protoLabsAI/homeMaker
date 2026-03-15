@@ -213,6 +213,17 @@ export interface FeatureFlags {
    * are auto-approved or escalated to Ava instead. Off by default.
    */
   hitlForms: boolean;
+  /**
+   * Gamification Celebrations — enables dopamine-inducing micro-interactions
+   * (confetti, toasts, overlays) that fire on XP gains, achievements, level-ups,
+   * streak milestones, and home health score improvements. On by default.
+   */
+  gamificationCelebrations: boolean;
+  /**
+   * Gamification Sounds — enables optional completion chime sounds alongside
+   * gamification celebrations. Off by default.
+   */
+  gamificationSounds: boolean;
 }
 
 /** Default feature flags — all off by default, opt-in per environment */
@@ -223,6 +234,8 @@ export const DEFAULT_FEATURE_FLAGS: FeatureFlags = {
   userPresenceDetection: false,
   reactorEnabled: false,
   hitlForms: false,
+  gamificationCelebrations: true,
+  gamificationSounds: false,
 };
 
 // ============================================================================

@@ -44,6 +44,15 @@ const FEATURE_FLAG_LABELS: Record<keyof FeatureFlags, { label: string; descripti
     description:
       'Enable human-in-the-loop interrupt forms from PM Agent, Signal Intake, and Lead Engineer. When off, gated actions are auto-approved or escalated to Ava.',
   },
+  gamificationCelebrations: {
+    label: 'Gamification Celebrations',
+    description:
+      'Enable confetti bursts, toast notifications, and overlays for XP gains, achievements, level-ups, and streak milestones.',
+  },
+  gamificationSounds: {
+    label: 'Gamification Sounds',
+    description: 'Enable optional completion chime sounds alongside gamification celebrations.',
+  },
 };
 
 // Role badge colour mapping
