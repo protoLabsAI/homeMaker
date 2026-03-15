@@ -159,6 +159,7 @@ function createRateLimiter(options: {
     keyGenerator: options.keyGenerator,
     skip: options.skip,
     message: RATE_LIMIT_RESPONSE,
+    validate: { ipKeyGenerator: false },
   });
 }
 
@@ -202,6 +203,7 @@ export const sensorReportRateLimiter = createRateLimiter({
     if (typeof sensorIdFromHeader === 'string' && sensorIdFromHeader.length > 0) {
       return `sensor:${sensorIdFromHeader}`;
     }
-    return req.ip ?? 'unknown';
+    // Use the built-in IP key generator for proper IPv6 handling
+    return req.ip ?? '127.0.0.1';
   },
 });
