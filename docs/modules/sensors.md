@@ -56,7 +56,36 @@ GET /api/sensors/:id/history?from=2026-03-01&to=2026-03-15
 
 ## Home Assistant integration
 
-homeMaker subscribes to the Home Assistant WebSocket API to receive state changes from HA entities. Configure the HA URL and token in the app settings. HA entity state changes are mapped to sensor readings automatically.
+homeMaker can connect directly to your Home Assistant instance over its WebSocket API. When connected, entity state changes are mapped to sensor readings automatically — no HA automations required.
+
+### Configure the connection
+
+1. Open homeMaker and go to **Settings → Integrations → Home Assistant**.
+2. Enter your HA URL (e.g. `http://homeassistant.local:8123`) and a long-lived access token.
+3. Click **Test connection** — homeMaker sends a server-side probe to verify credentials (browser-to-HA calls are blocked by CORS on most local HA installs).
+4. Enable the toggle to start the live connection.
+
+### Entity ID namespace
+
+All HA-sourced sensors use the `ha:` prefix to avoid collisions with directly-registered IoT devices:
+
+```
+ha:sensor.living_room_temperature
+ha:binary_sensor.front_door
+ha:light.kitchen_overhead
+```
+
+### Initial state
+
+On connect, homeMaker fetches the current state of all synced entities via `get_states` before subscribing to `state_changed` events. This ensures sensors show accurate readings immediately rather than waiting for the first change.
+
+### Auth failure behaviour
+
+If the token is rejected, the connection stops permanently and will not auto-retry. Correct the token in Settings and re-enable the integration to reconnect.
+
+### Alternative: push model
+
+If you prefer HA to push data to homeMaker (rather than homeMaker pulling from HA), use the REST API approach instead. See the [Home Assistant integration guide](../integrations/home-assistant.md).
 
 ## WebSocket events
 
