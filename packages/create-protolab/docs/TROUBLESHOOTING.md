@@ -293,7 +293,7 @@ gh --version
 
 ### Error: "Automaker server is not running"
 
-**Symptoms:** E006 - Connection refused on localhost:3008
+**Symptoms:** E006 - Connection refused on localhost:8579
 
 **Causes:**
 
@@ -312,7 +312,7 @@ npm run dev
 npm run start
 
 # Test connection
-curl -s http://localhost:3008/api/health | jq '.'
+curl -s http://localhost:8579/api/health | jq '.'
 
 # If custom port/URL, set environment variable
 AUTOMAKER_URL=http://localhost:3009 ./scripts/setup-protolab.sh /path/to/project
@@ -332,12 +332,12 @@ AUTOMAKER_URL=http://localhost:3009 ./scripts/setup-protolab.sh /path/to/project
 
 ```bash
 # Check if server is actually running
-curl -v http://localhost:3008/api/health
+curl -v http://localhost:8579/api/health
 
 # Check if port is in use
-lsof -i :3008
+lsof -i :8579
 # or
-netstat -tuln | grep 3008
+netstat -tuln | grep 8579
 
 # If port in use by different process, kill it
 kill -9 <PID>
@@ -363,7 +363,7 @@ npm run dev
 AUTOMAKER_INSECURE=true ./scripts/setup-protolab.sh /path/to/project
 
 # Or disable SSL verification
-curl -k http://localhost:3008/api/health
+curl -k http://localhost:8579/api/health
 
 # For production, ensure valid certificates are installed
 ```
@@ -387,10 +387,10 @@ curl -k http://localhost:3008/api/health
 
 ```bash
 # Check server logs
-curl -s http://localhost:3008/api/health | jq '.'
+curl -s http://localhost:8579/api/health | jq '.'
 
 # Check response for details
-curl -X POST http://localhost:3008/api/setup/project \
+curl -X POST http://localhost:8579/api/setup/project \
   -H "Content-Type: application/json" \
   -H "X-API-Key: dev-key" \
   -d '{"projectPath": "/path/to/project"}' | jq '.'
@@ -813,7 +813,7 @@ cp -r .automaker .automaker.backup
 rm -rf .automaker
 
 # Call setup again
-AUTOMAKER_URL=http://localhost:3008 curl -X POST http://localhost:3008/api/setup/project \
+AUTOMAKER_URL=http://localhost:8579 curl -X POST http://localhost:8579/api/setup/project \
   -H "Content-Type: application/json" \
   -d '{"projectPath": "'$(pwd)'"}'
 ```
@@ -861,7 +861,7 @@ If you still can't resolve the issue:
    which claude jq gh
 
    # Service status
-   curl -v http://localhost:3008/api/health
+   curl -v http://localhost:8579/api/health
 
    # File status
    ls -la ~/.claude

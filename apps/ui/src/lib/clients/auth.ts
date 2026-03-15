@@ -103,7 +103,7 @@ export const getServerUrl = (): string => {
     if (!(window as Window & { electron?: unknown }).electron) return '';
   }
   const hostname = import.meta.env.VITE_HOSTNAME || 'localhost';
-  return `http://${hostname}:3008`;
+  return `http://${hostname}:8579`;
 };
 
 export const getServerUrlSync = (): string => getServerUrl();

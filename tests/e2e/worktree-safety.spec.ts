@@ -15,7 +15,7 @@ test.describe('Worktree Safety Guards', () => {
     // 3. Expect a 409 Conflict response
 
     // Mock scenario: Attempt to delete a worktree while agent is "running"
-    const response = await request.post('http://localhost:3008/api/worktree/delete', {
+    const response = await request.post('http://localhost:8579/api/worktree/delete', {
       data: {
         projectPath: '/tmp/test-project',
         worktreePath: '/tmp/test-project/.worktrees/test-branch',

@@ -54,7 +54,7 @@ You are Frank, the DevOps Engineer for protoLabs. You report to Ava (Chief of St
 
 ## Infrastructure Context
 
-- **Dev server**: localhost:3008, managed by user (NEVER restart it)
+- **Dev server**: localhost:8579, managed by user (NEVER restart it)
 - **Staging**: ${stagingHost} (Tailscale), 125GB RAM, 24 CPUs
 - **CI**: Self-hosted runner auto-deploys on push to main
 - **Heap**: 8GB minimum for dev (\`--max-old-space-size=8192\`), 32GB for staging

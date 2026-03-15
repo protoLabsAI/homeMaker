@@ -12,7 +12,7 @@ scrape_configs:
   # Automaker server metrics
   - job_name: 'automaker-server'
     static_configs:
-      - targets: ['host.docker.internal:3008']
+      - targets: ['host.docker.internal:8579']
         labels:
           service: 'automaker-server'
           component: 'backend'

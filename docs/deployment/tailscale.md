@@ -21,7 +21,7 @@ ANTHROPIC_API_KEY=sk-ant-...
 HOMEMAKER_VAULT_KEY=your-64-char-hex-key
 
 # Ports
-PORT=3008
+PORT=8579
 HOST=0.0.0.0
 
 # Data directory (persisted across container restarts)
@@ -48,7 +48,7 @@ openssl rand -hex 32
 docker compose up -d
 ```
 
-The UI is available at `http://localhost:3007` and the API at `http://localhost:3008`.
+The UI is available at `http://localhost:8578` and the API at `http://localhost:8579`.
 
 ## Access via Tailscale
 
@@ -68,13 +68,13 @@ tailscale status
 3. Access homeMaker from any Tailscale device:
 
 ```
-http://my-home-server:3007
+http://my-home-server:8578
 ```
 
 For a cleaner URL, set a [Tailscale MagicDNS](https://tailscale.com/kb/1081/magicdns) name and use:
 
 ```
-http://homemaker:3007
+http://homemaker:8578
 ```
 
 ## Backup strategy

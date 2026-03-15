@@ -143,7 +143,7 @@ jobs:
           CI: true
           VITE_SERVER_URL: http://localhost:3018
           VITE_SKIP_SETUP: 'true'
-          # Offset ports to avoid conflict with staging (3007/3008)
+          # Offset ports to avoid conflict with staging (8578/8579)
           TEST_PORT: 3017
           TEST_SERVER_PORT: 3018
           # Keep UI-side login/defaults consistent

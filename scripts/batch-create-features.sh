@@ -6,7 +6,7 @@ set -e
 
 PROJECT_PATH="$1"
 FEATURES_FILE="$2"
-API_URL="${AUTOMAKER_API_URL:-http://localhost:3008}"
+API_URL="${AUTOMAKER_API_URL:-http://localhost:8579}"
 API_KEY="${AUTOMAKER_API_KEY:-}"
 
 if [ -z "$PROJECT_PATH" ] || [ -z "$FEATURES_FILE" ]; then

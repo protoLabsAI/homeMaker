@@ -423,14 +423,14 @@ jq --version
 - Automaker server not started
 - Server running on different port
 - Server crashed or hung
-- Firewall blocking localhost:3008
-- Port 3008 in use by different process
+- Firewall blocking localhost:8579
+- Port 8579 in use by different process
 
 **Example Scenario:**
 
 ```bash
-$ curl -s http://localhost:3008/api/health
-curl: (7) Failed to connect to localhost port 3008: Connection refused
+$ curl -s http://localhost:8579/api/health
+curl: (7) Failed to connect to localhost port 8579: Connection refused
 
 $ ./scripts/setup-protolab.sh /path/to/project
 ⚠ Automaker server is not running
@@ -441,24 +441,24 @@ $ ./scripts/setup-protolab.sh /path/to/project
 1. **Check if server running on correct port:**
 
    ```bash
-   curl -s http://localhost:3008/api/health
+   curl -s http://localhost:8579/api/health
    # Should return: {"status":"ok","version":"..."}
    ```
 
-2. **Check what's using port 3008:**
+2. **Check what's using port 8579:**
 
    ```bash
    # macOS/Linux
-   lsof -i :3008
+   lsof -i :8579
    # or
-   netstat -tuln | grep 3008
+   netstat -tuln | grep 8579
    ```
 
 3. **If port in use by wrong process:**
 
    ```bash
    # Find PID of process using port
-   lsof -i :3008 | grep LISTEN
+   lsof -i :8579 | grep LISTEN
 
    # Kill process
    kill -9 <PID>
@@ -480,9 +480,9 @@ $ ./scripts/setup-protolab.sh /path/to/project
 5. **Wait for server to be ready:**
 
    ```bash
-   # Watch logs for "listening on 3008" or similar
+   # Watch logs for "listening on 8579" or similar
    sleep 5
-   curl -s http://localhost:3008/api/health | jq '.'
+   curl -s http://localhost:8579/api/health | jq '.'
    ```
 
 6. **If server on different port:**
@@ -511,7 +511,7 @@ cd ~/dev/automaker && npm run dev
 ./scripts/setup-protolab.sh /path/to/project
 
 # Or wait for health check
-while ! curl -s http://localhost:3008/api/health | jq -e '.status == "ok"'; do
+while ! curl -s http://localhost:8579/api/health | jq -e '.status == "ok"'; do
   echo "Waiting for server..."
   sleep 1
 done
@@ -541,7 +541,7 @@ done
 **Example Scenario:**
 
 ```bash
-$ curl --connect-timeout 2 http://localhost:3008/api/health
+$ curl --connect-timeout 2 http://localhost:8579/api/health
 curl: (28) Operation timed out
 
 $ ./scripts/setup-protolab.sh /path/to/project
@@ -560,7 +560,7 @@ $ ./scripts/setup-protolab.sh /path/to/project
    nslookup localhost
 
    # Can you connect to port?
-   nc -zv localhost 3008
+   nc -zv localhost 8579
    ```
 
 2. **Check if server is really running:**
@@ -589,7 +589,7 @@ $ ./scripts/setup-protolab.sh /path/to/project
 
    ```bash
    # macOS
-   sudo lsof -i :3008
+   sudo lsof -i :8579
 
    # Linux
    sudo ufw status
@@ -602,7 +602,7 @@ $ ./scripts/setup-protolab.sh /path/to/project
 6. **Try connecting with longer timeout:**
 
    ```bash
-   curl --connect-timeout 10 --max-time 30 http://localhost:3008/api/health
+   curl --connect-timeout 10 --max-time 30 http://localhost:8579/api/health
    ```
 
 7. **Re-run setup with increased timeout:**
@@ -719,7 +719,7 @@ $ AUTOMAKER_URL=https://automaker.example.com \
 
 ```bash
 # For development - use HTTP
-AUTOMAKER_URL=http://localhost:3008 ./scripts/setup-protolab.sh /path/to/project
+AUTOMAKER_URL=http://localhost:8579 ./scripts/setup-protolab.sh /path/to/project
 
 # For production - use proper HTTPS with valid cert
 AUTOMAKER_URL=https://automaker.example.com ./scripts/setup-protolab.sh /path/to/project
@@ -748,7 +748,7 @@ AUTOMAKER_URL=https://automaker.example.com ./scripts/setup-protolab.sh /path/to
 **Example Scenario:**
 
 ```bash
-$ curl -X POST http://localhost:3008/api/setup/project \
+$ curl -X POST http://localhost:8579/api/setup/project \
   -H "Content-Type: application/json" \
   -d '{"projectPath": "/path/to/project"}'
 {"error":"Internal server error","status":500}
@@ -762,7 +762,7 @@ $ ./scripts/setup-protolab.sh /path/to/project
 1. **Check if server is running:**
 
    ```bash
-   curl -s http://localhost:3008/api/health | jq '.'
+   curl -s http://localhost:8579/api/health | jq '.'
    # If fails, see E006 fix
    ```
 
@@ -775,7 +775,7 @@ $ ./scripts/setup-protolab.sh /path/to/project
 3. **Test API directly:**
 
    ```bash
-   curl -X POST http://localhost:3008/api/setup/project \
+   curl -X POST http://localhost:8579/api/setup/project \
      -H "Content-Type: application/json" \
      -H "X-API-Key: dev-key" \
      -d '{"projectPath": "/path/to/project"}' | jq '.'
@@ -826,7 +826,7 @@ $ ./scripts/setup-protolab.sh /path/to/project
 
 ```bash
 # Verify server health before setup
-curl -s http://localhost:3008/api/health | jq -e '.status == "ok"' || exit 1
+curl -s http://localhost:8579/api/health | jq -e '.status == "ok"' || exit 1
 
 # Then run setup
 ./scripts/setup-protolab.sh /path/to/project
@@ -1162,7 +1162,7 @@ $ ./scripts/setup-protolab.sh /path/to/project
 2. **Check Automaker server version:**
 
    ```bash
-   curl -s http://localhost:3008/api/health | jq '.version'
+   curl -s http://localhost:8579/api/health | jq '.version'
    # or check package.json
    grep '"version"' packages/mcp-server/package.json
    ```
@@ -1613,7 +1613,7 @@ Before running setup, verify:
 - [ ] Project directory exists: `ls -la /path/to/project`
 - [ ] Project is writable: `touch /path/to/project/test && rm /path/to/project/test`
 - [ ] Git repo initialized: `ls -la /path/to/project/.git`
-- [ ] Automaker server running: `curl http://localhost:3008/api/health`
+- [ ] Automaker server running: `curl http://localhost:8579/api/health`
 - [ ] Disk space available: `df -h /path/to/project` (>100MB)
 - [ ] No permission issues: `ls -la /path/to/project | head -1`
 

@@ -297,10 +297,10 @@ await expect(page.locator('[data-testid="my-element"]')).toBeVisible();
 
 ### Port conflicts
 
-If you see "Port 3008 is already in use", kill the process:
+If you see "Port 8579 is already in use", kill the process:
 
 ```bash
-lsof -ti:3008 | xargs kill -9
+lsof -ti:8579 | xargs kill -9
 ```
 
 ## Available Test Utilities

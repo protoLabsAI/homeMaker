@@ -5,9 +5,9 @@ relevantTo: []
 importance: 0.5
 relatedFiles: []
 usageStats:
-  loaded: 318
-  referenced: 81
-  successfulFeatures: 81
+  loaded: 322
+  referenced: 84
+  successfulFeatures: 84
 ---
 <!-- domain: GTM Signal Intelligence | Go-to-market signal processing and routing -->
 

@@ -5,9 +5,9 @@ relevantTo: [gotchas]
 importance: 0.7
 relatedFiles: []
 usageStats:
-  loaded: 1459
-  referenced: 351
-  successfulFeatures: 351
+  loaded: 1508
+  referenced: 391
+  successfulFeatures: 391
 ---
 <!-- domain: Gotchas & Pitfalls | Known traps, anti-patterns, and hard-won lessons across all domains -->
 
@@ -966,3 +966,113 @@ usageStats:
 - **Situation:** fs.watch({ recursive: true }) is a no-op on Linux pre-Node.js 22, and chokidar v3 (available in monorepo) has broken native bindings with Node.js 22 (the project's required version).
 - **Root cause:** Native watchers require compiled bindings that were not maintained in chokidar v3. Rather than force a major version upgrade and network installation, polling avoids transitive dependency issues.
 - **How to avoid:** Polling uses more CPU and has latency (2s interval), but eliminates dependency management risk and works on all platforms. Deterministic vs reactive trade-off accepted.
+
+#### [Gotcha] Build process in monorepo is fragile - multiple npm install attempts with tsup/tsc availability checks in the log (2026-03-15)
+- **Situation:** Build required: skip postinstall scripts, verify binaries exist, multiple attempts, tail output for debugging
+- **Root cause:** Root cause: Monorepo with separate node_modules per worktree vs shared root causes resolver confusion. Postinstall hooks may rebuild native bindings. Toolchain distributed across packages
+- **How to avoid:** Worktree isolation (good for parallel work) conflicts with shared dependency resolution (builds faster). Solution: complex install scripts
+
+#### [Gotcha] TypeScript + Express route handler params require explicit type assertion. Destructuring `const { id } = req.params` fails type checking; must use `const id = req.params.id as string` instead. (2026-03-15)
+- **Situation:** Building type-safe route handlers for vault CRUD operations
+- **Root cause:** Express type definitions for `req.params` don't infer individual param types from route definition. TypeScript treats `req.params` as `Record<string, string | string[]>`, making destructuring unsafe.
+- **How to avoid:** Requires explicit type assertion in every route handler. More verbose but preserves strict type checking.
+
+#### [Gotcha] Custom runner (namespace-profile-protolabs-linux) replaced with ubuntu-latest without verification that builds actually work on the new runner. (2026-03-15)
+- **Situation:** Migrating from protoLabs infrastructure to standard GitHub runners
+- **Root cause:** ubuntu-latest is the standard default for public CI, but the original custom runner may have had implicit dependencies (cached tools, specific hardware, protoLabs-specific build steps)
+- **How to avoid:** Easier CI maintenance vs. hidden risk of environment-dependent build failures. CI may show green (passes) while actual deployments fail due to incompatible artifacts.
+
+#### [Gotcha] Branch protection configuration documented in commit message rather than actually applied—gh CLI lacked authentication in worktree environment, leaving main branch unprotected when PR merges. (2026-03-15)
+- **Situation:** Attempting to enforce required reviews and status checks via GitHub API from CI worktree
+- **Root cause:** CI automation environments typically lack sensitive credentials (GitHub tokens) for security reasons, preventing privileged operations like branch protection
+- **How to avoid:** Idempotent command (PUT) documents exact intent but depends on manual execution post-merge, creating process gap. Acceptance criteria technically not met until someone runs the command manually.
+
+#### [Gotcha] e2e-tests.yml still references self-hosted runner while other workflows switched to ubuntu-latest. No audit was performed to verify self-hosted runner exists for homeMaker. (2026-03-15)
+- **Situation:** Partial workflow migration—some files updated, others left untouched
+- **Root cause:** Incomplete inventory of all runner references; e2e workflow wasn't explicitly reviewed for consistency
+- **How to avoid:** Keeps e2e tests flexible (can run on self-hosted if available) but creates silent failure risk if runner doesn't exist—e2e job will timeout indefinitely.
+
+#### [Gotcha] Worktree environment lacks GitHub authentication tokens; git push and gh CLI fail despite valid credentials existing on host machine (2026-03-15)
+- **Situation:** Working in isolated .worktrees/feature-* directory; attempting to push branch and create PR using gh CLI
+- **Root cause:** Worktrees are intentionally isolated filesystem trees; git/ssh config and environment variables (GITHUB_TOKEN, SSH keys) don't auto-inherit from parent environment
+- **How to avoid:** Isolation provides clean branching (no accidental file mutations) but requires explicit auth setup per worktree; prevents workflow automation across isolated workspaces
+
+#### [Gotcha] Native Node.js modules (better-sqlite3) cannot be shared across git worktrees via symlinks because .node bindings are compiled with path-dependent references. Worktree A's node_modules will have .node files that reference Worktree A's paths; symlinking to them from Worktree B fails at runtime. (2026-03-15)
+- **Situation:** Tests in the gamification feature worktree failed: 'better-sqlite3 can't be resolved'. Attempted workaround was symlinking node_modules from maintenance worktree, which initially had same issue because bindings didn't match paths.
+- **Root cause:** Native .node files contain hardcoded module search paths compiled during npm install. When different worktrees run npm install in different locations, the bindings reference different paths and are incompatible.
+- **How to avoid:** Symlinking from a worktree with pre-compiled bindings works but creates hidden, fragile dependency: if source worktree is deleted or rebuilt, everything breaks silently.
+
+#### [Gotcha] Schema divergence in parallel feature branches (vendorPhone vs vendorId, estimatedCostCents vs estimatedCostUsd) caused merge resolution complexity (2026-03-15)
+- **Situation:** Two branches (maintenance and gamification) developed in parallel, each with different vendor/cost representations in the same MaintenanceSchedule type
+- **Root cause:** Parallel development without schema coordination allowed different design decisions to diverge at the database layer
+- **How to avoid:** Independent parallel work velocity vs schema consistency; divergence discovered at merge time, not design time
+
+#### [Gotcha] Implementation marked 'complete' but feature delivery blocked by environment authentication constraints (GitHub CLI auth unavailable in worktree) (2026-03-15)
+- **Situation:** All code changes committed locally; push and PR creation require GitHub credentials not available in this environment
+- **Root cause:** Incomplete automation strategy: relied on environment having GitHub auth pre-configured. No fallback or manual handoff mechanism in place until blocker discovered
+- **How to avoid:** Gained: development work completed autonomously. Lost: complete feature delivery; requires human intervention to push/create PR
+
+#### [Gotcha] SQLite native bindings (better-sqlite3) fail in git worktree environment due to node_modules path mismatch between worktree and parent repo (2026-03-15)
+- **Situation:** Tests in worktree fail with binding error before/after implementation changes
+- **Root cause:** better-sqlite3 compiled against specific node_modules path; worktree creates different path structure, binary looks in wrong location. Environment-specific, not code-related
+- **How to avoid:** Tests cannot run in worktree but typecheck passes. Must run tests outside worktree or use Docker
+
+#### [Gotcha] Feature planned for missing budget view - budget streak indicator UI couldn't be implemented (2026-03-15)
+- **Situation:** Feature description specified adding budget streak to 'budget view', but no budget-view.tsx exists in codebase
+- **Root cause:** Root cause is feature planning assumed downstream UI components were complete. Gap between feature design and actual view layer implementation status
+- **How to avoid:** Conservative approach (skip unimplementable part) vs proactive (build the view). Conservative won but leaves feature incomplete
+
+#### [Gotcha] Vault service integration explicitly deferred (secret_stored hook not yet implemented because vault service doesn't exist), creating a known TODO that could be forgotten (2026-03-15)
+- **Situation:** Feature implements hooks for multiple services, but not all services are ready
+- **Root cause:** Pragmatically stages feature to avoid building against nonexistent dependencies
+- **How to avoid:** Faster delivery vs incomplete coverage; easier refactoring when vault arrives vs potential forgotten TODOs
+
+#### [Gotcha] canvas-confetti library lacks TypeScript declarations—requires separate @types/canvas-confetti dev dependency despite being modern library (2026-03-15)
+- **Situation:** npm install canvas-confetti succeeded but typecheck failed with 'Cannot find module canvas-confetti' in TS
+- **Root cause:** Library predates or deliberately omits tsconfig/index.d.ts bundling; many production libraries still lack built-in TS support even with TypeScript ecosystem adoption
+- **How to avoid:** Adding @types package slightly bloats dev dependencies but unblocks TS compilation; alternative would be disabling TS or switching libraries
+
+#### [Gotcha] Categories must be pre-created before transactions can be added; add-transaction dialog shows empty dropdown if no categories exist (2026-03-15)
+- **Situation:** Category dropdown in add-transaction dialog is populated from API categories. If none exist, user sees empty dropdown and cannot add a transaction.
+- **Root cause:** Backend design assumes categories exist first. This is common in accounting software but creates UX friction if not handled.
+- **How to avoid:** Simpler backend design but worse first-time UX - user may think app is broken when dropdown is empty
+
+#### [Gotcha] Cross-worktree TypeScript compilation environment inconsistency: `turbo` not available in feature worktree required using `tsc` binary from sibling worktree to verify types (2026-03-15)
+- **Situation:** Attempting to verify TypeScript compilation during feature development in an isolated git worktree
+- **Root cause:** Worktrees have independent node_modules. Parent repo's turbo/tsc not inherited. This exposed pre-existing npm dependency issues that aren't in the feature's code.
+- **How to avoid:** Cross-worktree tsc invocation verified code correctness but surfaced unrelated module declaration errors from different node_modules context. Added verification confidence at cost of environment confusion.
+
+#### [Gotcha] Empty database (0 assets) was triggering 'Home Census' inventory quests due to condition `totalAssets < 20` with no lower bound check. (2026-03-15)
+- **Situation:** Clean DB should generate only seasonal quest, but inventory evaluator was firing spuriously. Root cause: `< 20` was True when total was 0.
+- **Root cause:** Temporal thinking mismatch: '< 20' means 'user has few assets' but also true when 'user hasn't started cataloging yet'. These are different user states requiring different UX.
+- **How to avoid:** Fix (`totalAssets > 0 && totalAssets < 20`) eliminates false positives but delays suggesting inventory quests until user creates first asset. Tradeoff between not overwhelming new users vs. missing chance to encourage participation.
+
+#### [Gotcha] Selective file preservation (kept 7 /modules docs, deployment/tailscale.md; deleted everything else) creates implicit assumption that preserved files are homeMaker-specific and deletions are protoMaker-only (2026-03-15)
+- **Situation:** Grep verification confirmed no protoLabs references, but preservation decision was manual/heuristic-based
+- **Root cause:** Files in /modules directory and tailscale config were judged as homeMaker-specific; deletion of others assumed they were protoMaker/protoLabs copies. No systematic audit before deletion.
+- **How to avoid:** Faster execution; accepts risk of accidentally deleting homeMaker-specific docs if they were misfiled or had protoLabs naming; verification via grep only catches explicit 'protoLabs' references, not content
+
+#### [Gotcha] TypeScript verification failed (`tsc: not found` pre-existing) but commit proceeded; docs-only change was assumed safe without full build verification (2026-03-15)
+- **Situation:** VitePress config.mts was rewritten; typecheck failed due to environment issues; decision made to commit anyway
+- **Root cause:** Issue was identified as pre-existing and unrelated (no TypeScript source modified); docs changes are 'safe' by assumption
+- **How to avoid:** Unblocked workflow; but TypeScript config correctness was never verified; if VitePress config has type errors, they won't be caught at build time
+
+#### [Gotcha] GitHub Actions status check contexts require job names, not step names. Feature spec referenced 'build', 'lint', 'format' as contexts, but these are step names within the 'checks' job. GitHub only exposes job-level names as valid status check contexts. (2026-03-15)
+- **Situation:** Configuring branch protection with required status checks. Spec was unclear about what granularity GitHub enforces.
+- **Root cause:** GitHub Actions architecture only bubbles job-level statuses to the API; step names are internal job details. Using step names in branch protection config will silently fail to find the checks.
+- **How to avoid:** Single 'checks' job groups related validation logic but loses granular per-step enforcement. Alternative: split into separate jobs to enforce individual checks, but adds workflow complexity.
+
+#### [Gotcha] Infrastructure configuration (branch protection, merge settings) cannot be completed in environments where gh CLI lacks authentication, creating a gap between implementation and deployment. Manual steps must be documented and executed elsewhere. (2026-03-15)
+- **Situation:** Attempted to configure GitHub branch protection via gh API during feature implementation. Auth failed silently in environment.
+- **Root cause:** CI/dev environments often run with limited privileges or no GitHub credentials. Branch protection is a repository-level admin operation that requires authenticated context.
+- **How to avoid:** Documenting the exact gh commands in commit message ensures they're discoverable and executable when proper auth is available. Tradeoff: requires manual step outside automation.
+
+#### [Gotcha] Worktree environment lacks build tools (turbo/tsc) in node_modules; had to use tsc binary from different worktree to verify TypeScript types (2026-03-15)
+- **Situation:** Attempted to run 'npm run build:server' and 'tsc' in feature-weather-api-integration worktree; both commands failed with 'not found'
+- **Root cause:** Git worktrees share git objects but NOT node_modules; each worktree is isolated. Feature branch worktree had no build dependencies installed.
+- **How to avoid:** Harder: cross-worktree tool lookup, harder to debug build issues. Easier: Avoided shipping with unverified types by using adjacent worktree's tsc
+
+#### [Gotcha] Tauri development requires external Rust toolchain (rustup + cargo); cannot be installed or verified via npm (2026-03-15)
+- **Situation:** Unlike Electron which is pure JavaScript, Tauri compiles Rust to native binaries
+- **Root cause:** Tauri's architecture: frontend is webview, backend is compiled Rust; forces platform-specific toolchain requirement
+- **How to avoid:** Single binary delivery and native performance, but higher developer onboarding friction

@@ -5,11 +5,10 @@ relevantTo: [performance]
 importance: 0.7
 relatedFiles: []
 usageStats:
-  loaded: 44
-  referenced: 13
-  successfulFeatures: 13
+  loaded: 46
+  referenced: 14
+  successfulFeatures: 14
 ---
-
 <!-- domain: Performance Optimization | Rendering, caching, latency reduction patterns -->
 
 # performance
@@ -387,3 +386,47 @@ usageStats:
 - **Rejected:** React components for cards/navigation — would require hydration, increase JS bundle, add runtime overhead for no interactivity benefit
 - **Trade-offs:** Easier: faster site, smaller bundle, zero hydration delay. Harder: adding future interactive features requires migrating to Astro Islands architecture.
 - **Breaking if changed:** Switching to React components for interactivity requires setting up Island hydration; adds build complexity and bundle size
+
+#### [Gotcha] Completion history pagination handled implicitly via React Query stale time, not explicit lazy loading. Will degrade if single schedule accumulates >50 completions. (2026-03-15)
+- **Situation:** ScheduleDetailPanel displays reverse-chronological completion timeline
+- **Root cause:** Simpler initial implementation leveraging React Query cache invalidation for pagination
+- **How to avoid:** Simpler to build initially but creates scalability cliff at ~50 items; future versions need lazy loading per deviation rules
+
+#### [Pattern] Implemented 5-minute TTL cache with optional force-refresh parameter on health score calculation (2026-03-15)
+- **Problem solved:** calculateHomeHealthScore() called frequently but expensive (multi-table queries, complex algorithm)
+- **Why this works:** Health scores change slowly (maintenance completed daily at most, budget updates monthly). Cache prevents redundant recalculation. Force param allows immediate refresh after mutations
+- **Trade-offs:** Users see 5-min stale scores unless they force-refresh, but eliminates algorithmic overhead on hot paths. Callers must know to pass force=true after mutations
+
+#### [Gotcha] Pre-existing monorepo TypeScript build failures mask potential new errors in new code (2026-03-15)
+- **Situation:** Verified all new type errors were pre-existing module resolution issues (Cannot find module from unbuilt packages), but this required manual inspection
+- **Root cause:** Monorepo packages (@protolabsai/model-resolver, @protolabsai/types) require `npm run build:packages` before typecheck, but CI doesn't enforce this
+- **How to avoid:** Extra verification step adds confidence but doesn't scale - future features could hide real errors in noise
+
+#### [Gotcha] Every XP award triggers immediate full health score recalculation with force=true bypass of cache. No batching or debouncing of recalculations (2026-03-15)
+- **Situation:** Health score must reflect gamification changes immediately, but rapid event sequences could cause expensive repeated recalculations
+- **Root cause:** Ensures health score stays fresh after mutations; force=true prevents stale cached values from misleading users
+- **How to avoid:** Consistency and correctness vs potential performance cost at scale; simple implementation vs optimization complexity
+
+#### [Pattern] Granular Zustand selectors (state => state.featureFlags.gamificationCelebrations) prevent re-renders when sibling flags change (2026-03-15)
+- **Problem solved:** CelebrationProvider subscribes to feature flag—needs to avoid re-rendering when unrelated flags change
+- **Why this works:** Zustand triggers re-render whenever selector result changes; using specific path means only that flag's changes trigger update; destructuring full object causes re-render on ANY flag mutation
+- **Trade-offs:** More verbose selector syntax vs significant performance gain in flag-heavy applications
+
+#### [Pattern] Lazy reveal with client-side cache: eye-toggle fetches decrypted value on first click, caches in component state, subsequent toggles are instant show/hide (2026-03-15)
+- **Problem solved:** Users often don't reveal most secrets; fetching all on mount or on every toggle is wasteful
+- **Why this works:** First click pays cost of fetch + loading state. Subsequent toggles instant from cache. Reduces initial payload and prevents repeated identical API calls
+- **Trade-offs:** First reveal has latency (must show loading state). Toggle logic more complex (track fetched-state, in-flight, cached). Error handling must prevent toggle getting stuck
+
+### report() persists sensor readings to SQLite as fire-and-forget (non-blocking, no await) (2026-03-15)
+- **Context:** Every sensor reading must be saved to history without slowing down the main report() path
+- **Why:** Keeps sensor reporting latency unaffected by disk I/O. Database writes are async side effects, not blocking concerns.
+- **Rejected:** Awaiting writes would introduce latency proportional to disk speed; async queue would add complexity
+- **Trade-offs:** Faster sensor reporting vs. risk of losing writes if process crashes during persistence; no transactional guarantees on save order
+- **Breaking if changed:** If code expects report() to guarantee persistence before returning, it will break. Callers must not depend on immediate durability.
+
+### Polling interval set to 30 minutes via existing scheduler module (*/30 * * * *) rather than standalone polling loop or shorter/longer intervals (2026-03-15)
+- **Context:** OpenWeatherMap free tier has API call limits; balance between freshness and quota consumption
+- **Why:** 30 min = 48 calls/day, well within free tier limit (~1000/day); maintenance scheduling doesn't need sub-minute granularity; leverages existing scheduler infrastructure
+- **Rejected:** 5-min polling (exceeds quota quickly); 1-hour+ (stale data for rain planning); Event-driven refresh (no trigger exists); Standalone polling loop (duplicates scheduler)
+- **Trade-offs:** Easier: single scheduler module configuration, predictable quota. Harder: miss rapid weather changes; requires polling-based push to sensor registry, not event-driven
+- **Breaking if changed:** If interval changes to <5 min, API quota exhausted; if removed from scheduler, weather stops updating; if scheduler module removed, loses polling entirely

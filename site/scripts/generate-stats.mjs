@@ -82,7 +82,7 @@ function getGitStats() {
  * If server is not available, returns null (fields will remain null).
  */
 async function fetchMetrics() {
-  const baseUrl = process.env.AUTOMAKER_API_URL || `http://localhost:${process.env.PORT || 3008}`;
+  const baseUrl = process.env.AUTOMAKER_API_URL || `http://localhost:${process.env.PORT || 8579}`;
   const apiKey = process.env.AUTOMAKER_API_KEY || '';
 
   const headers = { 'Content-Type': 'application/json' };
@@ -152,7 +152,7 @@ async function fetchMetrics() {
 }
 
 async function getLedgerStats() {
-  const port = process.env.PORT || 3008;
+  const port = process.env.PORT || 8579;
   const apiKey = process.env.AUTOMAKER_API_KEY || '';
   const baseUrl = `http://localhost:${port}`;
 

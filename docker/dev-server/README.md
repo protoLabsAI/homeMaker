@@ -1,6 +1,6 @@
 # Automaker Dev Server — Dockerized
 
-Always-on, production-mode container running the **dev branch** on `localhost:3008`.
+Always-on, production-mode container running the **dev branch** on `localhost:8579`.
 
 - Starts automatically on machine boot (Docker Desktop auto-start + `restart: unless-stopped`)
 - Auto-rebuilds within 5 minutes of a new commit landing on `dev` (via CI + Watchtower)
@@ -23,7 +23,7 @@ Watchtower (running locally)
   • Gracefully restarts automaker-dev-server container
       │
       ▼
-automaker-dev-server (localhost:3008)
+automaker-dev-server (localhost:8579)
   • NODE_ENV=production
   • node apps/server/dist/index.js
   • Mounts ./data and ./.automaker from repo
@@ -82,7 +82,7 @@ docker logs automaker-dev-server --tail 50
 | View logs             | `docker logs automaker-dev-server -f`                                                                                          |
 | Force rebuild now     | `docker compose -f docker/dev-server/docker-compose.yml pull && docker compose -f docker/dev-server/docker-compose.yml up -d`  |
 | Build locally (no CI) | `docker compose -f docker/dev-server/docker-compose.yml build && docker compose -f docker/dev-server/docker-compose.yml up -d` |
-| Health check          | `curl http://localhost:3008/api/health`                                                                                        |
+| Health check          | `curl http://localhost:8579/api/health`                                                                                        |
 
 ## Environment Variables
 
@@ -135,7 +135,7 @@ Build time is typically **5–10 minutes** (layer caching keeps it fast after th
 - Verify all required env vars are set
 - Try a local build to reproduce: `docker compose -f docker/dev-server/docker-compose.yml build`
 
-**Port 3008 already in use:**
+**Port 8579 already in use:**
 
 - Stop the native dev server: kill any `npm run dev:headless` process
-- Or change the port mapping in `docker-compose.yml`: `- '3009:3008'`
+- Or change the port mapping in `docker-compose.yml`: `- '3009:8579'`

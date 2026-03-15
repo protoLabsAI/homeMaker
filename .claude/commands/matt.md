@@ -146,7 +146,7 @@ input-streaming -> input-available -> output-available | output-error
 
 1. Always read the current file before editing — agents may have modified it
 2. Rebuild after changes: `npx turbo run build --filter="@protolabsai/ui" --force`
-3. Test with the dev server running on `localhost:3007`
+3. Test with the dev server running on `localhost:8578`
 4. Use `agent-browser` to screenshot chat states for visual verification
 5. Keep `docs/dev/ava-chat-system.md` updated when adding components or changing patterns
 
@@ -219,8 +219,8 @@ You have access to `agent-browser`, a headless browser CLI built for AI agents. 
 ### Core Workflow
 
 ```bash
-# 1. Open the dev server (must be running on localhost:3007)
-agent-browser open http://localhost:3007
+# 1. Open the dev server (must be running on localhost:8578)
+agent-browser open http://localhost:8578
 
 # 2. Take a snapshot — get interactive element refs
 agent-browser snapshot -i --json
@@ -267,7 +267,7 @@ agent-browser close
 **Visual regression check:**
 
 ```bash
-agent-browser open http://localhost:3007/dashboard
+agent-browser open http://localhost:8578/dashboard
 agent-browser set viewport 1280 720
 agent-browser screenshot dashboard-desktop.png
 agent-browser set viewport 375 812
@@ -277,7 +277,7 @@ agent-browser screenshot dashboard-mobile.png
 **Theme validation:**
 
 ```bash
-agent-browser open http://localhost:3007
+agent-browser open http://localhost:8578
 # Check dark mode (default)
 agent-browser screenshot theme-dark.png
 # Navigate to settings, switch theme, re-screenshot
@@ -286,7 +286,7 @@ agent-browser screenshot theme-dark.png
 **Chart color verification:**
 
 ```bash
-agent-browser open http://localhost:3007/dashboard
+agent-browser open http://localhost:8578/dashboard
 agent-browser wait --load networkidle
 agent-browser snapshot -i --json  # Check chart elements render
 agent-browser screenshot charts.png
@@ -296,7 +296,7 @@ agent-browser errors  # Check for console errors
 **Form interaction test:**
 
 ```bash
-agent-browser open http://localhost:3007/settings
+agent-browser open http://localhost:8578/settings
 agent-browser snapshot -i --json
 agent-browser fill @e3 "new-value"
 agent-browser click @e5  # Save button
@@ -308,11 +308,11 @@ agent-browser screenshot settings-saved.png
 
 - Always use `--json` flag when parsing snapshot output programmatically
 - Refs (`@e1`, `@e2`) are deterministic within a page state — re-snapshot after navigation
-- Dev server must be running on `localhost:3007` before using agent-browser
+- Dev server must be running on `localhost:8578` before using agent-browser
 - Screenshots go to the current working directory — use descriptive filenames
 - Clean up screenshots after PR is created (don't commit them)
 - Use `agent-browser close` when done to free resources
-- For Electron testing, connect via CDP: `agent-browser --cdp 9222 open http://localhost:3007`
+- For Electron testing, connect via CDP: `agent-browser --cdp 9222 open http://localhost:8578`
 
 ## Team & Delegation
 

@@ -97,7 +97,7 @@ grep "tool_name" packages/mcp-server/dist/index.js
 
 - `AUTOMAKER_ROOT` — absolute path to the automaker repo clone (required, used by start-mcp.sh to locate the MCP server binary)
 - `AUTOMAKER_API_KEY` — server auth key (must match the server's key)
-- `AUTOMAKER_API_URL` — API base URL (default: `http://localhost:3008`)
+- `AUTOMAKER_API_URL` — API base URL (default: `http://localhost:8579`)
 - `GH_TOKEN` — GitHub token for PR operations
 - `DISCORD_BOT_TOKEN` — Discord bot token (used by MCP)
 - `CONTEXT7_API_KEY` — Context7 API key for documentation lookup

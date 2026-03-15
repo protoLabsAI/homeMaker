@@ -106,15 +106,15 @@ RUN git config --system --add safe.directory '*' && \
 COPY docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh
 RUN chmod +x /usr/local/bin/docker-entrypoint.sh
 
-ENV PORT=3008
+ENV PORT=8579
 ENV DATA_DIR=/data
 ENV NODE_ENV=production
 ENV HOME=/home/automaker
 
-EXPOSE 3008
+EXPOSE 8579
 
 HEALTHCHECK --interval=30s --timeout=5s --start-period=60s --retries=5 \
-    CMD curl -f http://localhost:3008/api/health || exit 1
+    CMD curl -f http://localhost:8579/api/health || exit 1
 
 ENTRYPOINT ["/usr/bin/dumb-init", "--", "/usr/local/bin/docker-entrypoint.sh"]
 CMD ["node", "apps/server/dist/index.js"]

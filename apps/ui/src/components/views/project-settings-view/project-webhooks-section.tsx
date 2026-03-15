@@ -100,7 +100,7 @@ export function ProjectWebhooksSection({ project }: ProjectWebhooksSectionProps)
   };
 
   const copyWebhookUrl = async () => {
-    const webhookUrl = `${window.location.protocol}//${window.location.hostname}:3008/api/github/webhook?project=${encodeURIComponent(project.path)}`;
+    const webhookUrl = `${window.location.protocol}//${window.location.hostname}:8579/api/github/webhook?project=${encodeURIComponent(project.path)}`;
 
     try {
       await navigator.clipboard.writeText(webhookUrl);
@@ -191,7 +191,7 @@ export function ProjectWebhooksSection({ project }: ProjectWebhooksSectionProps)
               <Label>Webhook URL</Label>
               <div className="flex gap-2">
                 <Input
-                  value={`${window.location.protocol}//${window.location.hostname}:3008/api/github/webhook?project=${encodeURIComponent(project.path)}`}
+                  value={`${window.location.protocol}//${window.location.hostname}:8579/api/github/webhook?project=${encodeURIComponent(project.path)}`}
                   readOnly
                   className="flex-1 font-mono text-xs"
                 />

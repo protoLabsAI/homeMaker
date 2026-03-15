@@ -23,7 +23,7 @@ How to add, structure, and test MCP tools in the Automaker MCP server (`packages
 
 ```bash
 # ❌ WRONG — bypasses auth, error handling, and path resolution
-curl -X POST http://localhost:3008/features/list \
+curl -X POST http://localhost:8579/features/list \
   -H "Authorization: Bearer $AUTOMAKER_API_KEY" \
   -d '{"projectPath": "/path/to/project"}'
 
@@ -163,7 +163,7 @@ npm run build:packages
 
 The new tool will appear as `mcp__plugin_protolabs_studio__my_new_tool` in Claude Code after the MCP server restarts.
 
-The `apiCall()` helper (defined in `index.ts`) calls the Automaker REST API. Base URL: `AUTOMAKER_API_URL` env var (default: `http://localhost:3008`). Auth: `Authorization: Bearer ${AUTOMAKER_API_KEY}`.
+The `apiCall()` helper (defined in `index.ts`) calls the Automaker REST API. Base URL: `AUTOMAKER_API_URL` env var (default: `http://localhost:8579`). Auth: `Authorization: Bearer ${AUTOMAKER_API_KEY}`.
 
 > **Two .env files:** `automaker/.env` has dev server vars; `packages/mcp-server/plugins/automaker/.env` has MCP plugin vars (`AUTOMAKER_API_KEY`, `AUTOMAKER_API_URL`). Never reference `~/.secrets/`.
 
@@ -178,7 +178,7 @@ mcp__plugin_protolabs_studio__my_new_tool({ projectPath: "/path/to/project" })
 
 # Debug underlying API directly (dev only):
 source packages/mcp-server/plugins/automaker/.env
-curl -s -X POST http://localhost:3008/my-endpoint/action \
+curl -s -X POST http://localhost:8579/my-endpoint/action \
   -H "Authorization: Bearer $AUTOMAKER_API_KEY" -H "Content-Type: application/json" \
   -d '{"projectPath": "/Users/kj/dev/automaker"}' | jq
 ```
@@ -206,7 +206,7 @@ Keep both files in sync. Never commit either `.env` file — both are gitignored
 | ------------------------------------------------- | --------------------------------------------- | ------------------------------------------------------- |
 | Direct `curl`/`fetch` to Automaker API            | Auth fails after key rotation; no retry       | Use `mcp__plugin_protolabs_studio__*` tools             |
 | No error response shape                           | Callers can't detect failure programmatically | Return `{ success: false, error: string }`              |
-| Hardcoding `http://localhost:3008` in tools       | Breaks in staging/production                  | Use `apiCall()` — it reads `AUTOMAKER_API_URL`          |
+| Hardcoding `http://localhost:8579` in tools       | Breaks in staging/production                  | Use `apiCall()` — it reads `AUTOMAKER_API_URL`          |
 | Adding tool definition but not the handler case   | Tool is listed but throws "Unknown tool"      | Always add both definition + case in handleTool         |
 | Forgetting `npm run build:packages` after changes | MCP client still sees old tool list           | Rebuild + restart MCP server                            |
 | Accessing `~/.secrets/` for credentials           | Path doesn't exist                            | Use `.env` files at project/plugin level                |

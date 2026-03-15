@@ -71,10 +71,10 @@ Test API health:
 
 ```bash
 # Health endpoint
-curl -s -w "\nHTTP Status: %{http_code}\n" http://localhost:3008/api/health
+curl -s -w "\nHTTP Status: %{http_code}\n" http://localhost:8579/api/health
 
 # Response time
-curl -s -o /dev/null -w "Response time: %{time_total}s\n" http://localhost:3008/api/health
+curl -s -o /dev/null -w "Response time: %{time_total}s\n" http://localhost:8579/api/health
 ```
 
 ### Step 5: Network Connectivity
@@ -83,7 +83,7 @@ Test internal and external connectivity:
 
 ```bash
 # UI to Server (internal Docker network)
-docker exec automaker-ui curl -s http://server:3008/api/health > /dev/null && echo "UI→Server: OK" || echo "UI→Server: FAILED"
+docker exec automaker-ui curl -s http://server:8579/api/health > /dev/null && echo "UI→Server: OK" || echo "UI→Server: FAILED"
 
 # External API (if container is running)
 docker exec automaker-server curl -s -o /dev/null -w "%{http_code}" https://api.anthropic.com 2>/dev/null && echo "External API access: OK" || echo "External API access: LIMITED"

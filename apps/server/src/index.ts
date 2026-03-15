@@ -53,7 +53,7 @@ const logger = createLogger('Server');
 // Width for log box content (excluding borders)
 const BOX_CONTENT_WIDTH = 67;
 
-const PORT = parseInt(process.env.PORT || '3008', 10);
+const PORT = parseInt(process.env.PORT || '8579', 10);
 const HOST = process.env.HOST || '0.0.0.0';
 const HOSTNAME = process.env.HOSTNAME || 'localhost';
 const DATA_DIR = process.env.DATA_DIR || './data';

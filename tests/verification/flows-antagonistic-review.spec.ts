@@ -11,7 +11,7 @@ import * as path from 'path';
 import * as fs from 'fs';
 import * as os from 'os';
 
-const API_BASE_URL = process.env.AUTOMAKER_API_URL || 'http://localhost:3008';
+const API_BASE_URL = process.env.AUTOMAKER_API_URL || 'http://localhost:8579';
 const API_KEY = process.env.AUTOMAKER_API_KEY || 'test-key';
 
 // Helper function to make API calls

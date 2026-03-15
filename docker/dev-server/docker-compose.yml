@@ -1,6 +1,6 @@
 # Automaker Dev Server - Local Docker Compose
 #
-# Runs the dev-branch server in production mode on localhost:3008.
+# Runs the dev-branch server in production mode on localhost:8579.
 # Auto-updates via Watchtower when CI pushes a new image to GHCR on dev pushes.
 #
 # Quick start:
@@ -27,11 +27,11 @@ services:
     container_name: automaker-dev-server
     restart: unless-stopped
     ports:
-      - '3008:3008'
+      - '8579:8579'
 
     environment:
       - NODE_ENV=production
-      - PORT=3008
+      - PORT=8579
       - IS_CONTAINERIZED=true
       - DATA_DIR=/data
 
@@ -43,7 +43,7 @@ services:
       - DISCORD_TOKEN=${DISCORD_TOKEN:-}
       - LANGFUSE_PUBLIC_KEY=${LANGFUSE_PUBLIC_KEY:-}
       - LANGFUSE_SECRET_KEY=${LANGFUSE_SECRET_KEY:-}
-      - CORS_ORIGIN=${CORS_ORIGIN:-http://localhost:3007}
+      - CORS_ORIGIN=${CORS_ORIGIN:-http://localhost:8578}
 
     volumes:
       # Persistent data (features, projects, state) — survives rebuilds
@@ -56,7 +56,7 @@ services:
       - automaker-dev-claude-config:/home/automaker/.claude
 
     healthcheck:
-      test: ['CMD', 'curl', '-f', 'http://localhost:3008/api/health']
+      test: ['CMD', 'curl', '-f', 'http://localhost:8579/api/health']
       interval: 30s
       timeout: 5s
       retries: 5

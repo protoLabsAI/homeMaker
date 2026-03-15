@@ -35,7 +35,7 @@ Feature branches PR to `main`. Keep it simple — no staging/promotion pipeline 
 
 ```bash
 # Development
-npm run dev:full            # Web mode — UI (:3007) + server (:3008) together
+npm run dev:full            # Web mode — UI (:8578) + server (:8579) together
 npm run dev:web             # UI only
 npm run dev:server          # Backend server only
 
@@ -64,8 +64,8 @@ npm run format:check        # Prettier check
 ```
 homeMaker/
 ├── apps/
-│   ├── ui/           # React + Vite frontend (port 3007)
-│   └── server/       # Express + WebSocket backend (port 3008)
+│   ├── ui/           # React + Vite frontend (port 8578)
+│   └── server/       # Express + WebSocket backend (port 8579)
 └── libs/             # Shared packages (@protolabsai/*)
     ├── types/        # Core TypeScript definitions
     ├── utils/        # Logging, errors, context loading
@@ -247,7 +247,7 @@ Single source of truth: `DEFAULT_FEATURE_FLAGS` in `libs/types/src/global-settin
 | `HOMEMAKER_VAULT_KEY`           | For vault | 64-char hex key for AES-256-GCM secrets encryption |
 | `AUTOMAKER_API_KEY`             | Optional  | API key for server authentication                  |
 | `HOST`                          | No        | Host to bind to (default: 0.0.0.0)                 |
-| `PORT`                          | No        | Server port (default: 3008)                        |
+| `PORT`                          | No        | Server port (default: 8579)                        |
 | `DATA_DIR`                      | No        | Data storage directory (default: ./data)           |
 | `AUTOMAKER_MOCK_AGENT`          | No        | Enable mock agent mode for CI testing              |
 | `GITHUB_TOKEN`                  | Optional  | For GitHub operations                              |

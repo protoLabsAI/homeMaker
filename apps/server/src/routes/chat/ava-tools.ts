@@ -1106,7 +1106,7 @@ export function buildAvaTools(
       }),
       execute: async ({ prNumber, minSeverity }) => {
         try {
-          const port = parseInt(process.env.PORT || '3008', 10);
+          const port = parseInt(process.env.PORT || '8579', 10);
           const response = await fetch(`http://localhost:${port}/api/github/resolve-pr-threads`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },

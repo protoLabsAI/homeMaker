@@ -11,14 +11,14 @@
  * Base URL for the API server.
  * In CI, TEST_SERVER_PORT offsets the port to avoid conflicts with Docker staging.
  */
-const API_PORT = process.env.TEST_SERVER_PORT || '3008';
+const API_PORT = process.env.TEST_SERVER_PORT || '8579';
 export const API_BASE_URL = `http://localhost:${API_PORT}`;
 
 /**
  * Base URL for the frontend (Vite dev server).
  * In CI, TEST_PORT offsets the port to avoid conflicts with Docker staging.
  */
-const UI_PORT = process.env.TEST_PORT || '3007';
+const UI_PORT = process.env.TEST_PORT || '8578';
 export const UI_BASE_URL = `http://localhost:${UI_PORT}`;
 
 /**

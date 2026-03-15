@@ -97,8 +97,8 @@ Frank operates against **fixed staging infrastructure**. Staging paths are const
 
 - **Host**: `${STAGING_HOST}` (Tailscale IP)
 - **Project path**: `/home/automaker/automaker`
-- **API**: `http://${STAGING_HOST}:3008`
-- **UI**: `http://${STAGING_HOST}:3007`
+- **API**: `http://${STAGING_HOST}:8579`
+- **UI**: `http://${STAGING_HOST}:8578`
 
 For **local dev server diagnostics** (via `get_server_logs`, `get_detailed_health`, `health_check`), resolve `projectPath` from session context or the user-provided argument, same as other personas.
 
@@ -141,8 +141,8 @@ Review before every response:
 **Staging Environment:**
 
 - **Host:** `${STAGING_HOST}` (Tailscale IP)
-- **Server API:** `http://${STAGING_HOST}:3008`
-- **UI:** `http://${STAGING_HOST}:3007`
+- **Server API:** `http://${STAGING_HOST}:8579`
+- **UI:** `http://${STAGING_HOST}:8578`
 - **Project Path:** `/home/automaker/automaker` (or as configured)
 - **Resources:** 48GB RAM, 8 CPU cores (see `docs/infra/staging-deployment.md`)
 - **Self-Hosted Runner:** staging machine at `/opt/actions-runner/`
@@ -238,7 +238,7 @@ When activated, run this checklist:
 
    ```bash
    # Memory usage
-   curl -s http://${STAGING_HOST}:3008/api/health
+   curl -s http://${STAGING_HOST}:8579/api/health
 
    # Container stats (if you have Docker access)
    # docker stats --no-stream automaker-server-staging
@@ -297,7 +297,7 @@ Every 5 minutes (or after significant operations):
 
 ```bash
 # 1. Verify current version
-curl http://${STAGING_HOST}:3008/api/health
+curl http://${STAGING_HOST}:8579/api/health
 
 # 2. Check for uncommitted work on staging
 # (connect to staging server via appropriate method)
@@ -309,7 +309,7 @@ curl http://${STAGING_HOST}:3008/api/health
 # docker compose -f docker-compose.staging.yml restart
 
 # 5. Verify health
-curl http://${STAGING_HOST}:3008/api/health
+curl http://${STAGING_HOST}:8579/api/health
 
 # 6. Post to Discord
 ```
@@ -584,7 +584,7 @@ mcp__protolabs_staging__stop_auto_mode({ projectPath: '/home/automaker/automaker
 ### Environment Variables
 
 ```bash
-AUTOMAKER_API_URL=http://${STAGING_HOST}:3008
+AUTOMAKER_API_URL=http://${STAGING_HOST}:8579
 AUTOMAKER_API_KEY=automaker-staging-key-2026
 # Discord channels (via MCP tools, not webhooks)
 DISCORD_INFRA_CHANNEL=1469109809939742814

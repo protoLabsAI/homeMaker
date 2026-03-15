@@ -5,7 +5,7 @@
 
 set -euo pipefail
 
-BASE_URL="${1:-http://localhost:3008}"
+BASE_URL="${1:-http://localhost:8579}"
 API_KEY="${2:-${AUTOMAKER_API_KEY:-}}"
 DISCORD_WEBHOOK="${DISCORD_ALERTS_WEBHOOK:-}"
 
@@ -105,8 +105,8 @@ fi
 
 # Phase 4: UI serving check
 echo ""
-echo "UI (port 3007):"
-UI_URL="${UI_URL:-${BASE_URL/3008/3007}}"
+echo "UI (port 8578):"
+UI_URL="${UI_URL:-${BASE_URL/8579/8578}}"
 if UI_RESPONSE=$(curl -sf --max-time 10 "$UI_URL/" 2>/dev/null); then
   if echo "$UI_RESPONSE" | grep -q '<div id="app"'; then
     echo "  PASS: UI serves HTML with #app"
@@ -125,7 +125,7 @@ fi
 # Phase 5: Docs site check (non-fatal)
 echo ""
 echo "Docs (port 3009):"
-DOCS_URL="${DOCS_URL:-${BASE_URL/3008/3009}}"
+DOCS_URL="${DOCS_URL:-${BASE_URL/8579/3009}}"
 if DOCS_RESPONSE=$(curl -sf --max-time 10 "$DOCS_URL/" 2>/dev/null); then
   if echo "$DOCS_RESPONSE" | grep -qi 'vitepress\|protolabs\|automaker'; then
     echo "  PASS: Docs site serving content"

@@ -277,7 +277,7 @@ export function checkEnvironment(): EnvironmentCheck[] {
  */
 export async function isAutomakerServerRunning(
   host: string = 'localhost',
-  port: number = 3008
+  port: number = 8579
 ): Promise<boolean> {
   try {
     const response = await fetch(`http://${host}:${port}/api/health`, {

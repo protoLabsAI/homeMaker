@@ -57,7 +57,7 @@ cp .env.example .env
 | `HOMEMAKER_VAULT_KEY` | For vault | 64-char hex key for AES-256-GCM secrets encryption |
 | `AUTOMAKER_API_KEY` | Optional | API key for server authentication |
 | `HOST` | No | Host to bind to (default: `0.0.0.0`) |
-| `PORT` | No | Server port (default: `3008`) |
+| `PORT` | No | Server port (default: `8579`) |
 | `DATA_DIR` | No | Data storage directory (default: `./data`) |
 | `AUTOMAKER_MOCK_AGENT` | No | Set to `true` to enable mock agent mode for CI testing |
 | `GITHUB_TOKEN` | Optional | For GitHub operations |
@@ -80,7 +80,7 @@ openssl rand -hex 32
 npm run dev:full
 ```
 
-UI is at `http://localhost:3007`, API at `http://localhost:3008`.
+UI is at `http://localhost:8578`, API at `http://localhost:8579`.
 
 ### UI only
 
@@ -96,8 +96,8 @@ npm run dev:server
 
 ## Verify the installation
 
-1. Open `http://localhost:3007` — the dashboard should load.
-2. Open `http://localhost:3008/api/health` — should return `{ "status": "ok" }`.
+1. Open `http://localhost:8578` — the dashboard should load.
+2. Open `http://localhost:8579/api/health` — should return `{ "status": "ok" }`.
 3. Navigate to the Board tab and create a task — it should persist after a page reload.
 
 ## Common issues
@@ -107,7 +107,7 @@ npm run dev:server
 Change `PORT` in `.env` or kill the process using the port:
 
 ```bash
-lsof -ti:3008 | xargs kill
+lsof -ti:8579 | xargs kill
 ```
 
 **Build fails with missing packages**
