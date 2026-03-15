@@ -103,6 +103,7 @@ import { createInventoryRoutes } from '../routes/inventory/index.js';
 import { createMaintenanceRoutes } from '../routes/maintenance/index.js';
 import { createVendorRoutes } from '../routes/vendors/index.js';
 import { createGamificationRoutes } from '../routes/gamification/index.js';
+import { createChatChannelRoutes } from '../routes/chat-channel/index.js';
 
 const logger = createLogger('Server:Routes');
 
@@ -466,8 +467,15 @@ export function registerRoutes(app: Express, services: ServiceContainer): void {
   logger.info('Vendor routes mounted at /api/vendors');
 
   // Gamification routes (XP, levels, achievements, streaks, home health score, quests)
-  app.use('/api/gamification', createGamificationRoutes(services.gamificationService));
+  app.use(
+    '/api/gamification',
+    createGamificationRoutes(services.gamificationService, services.questGeneratorService)
+  );
   logger.info('Gamification routes mounted at /api/gamification');
+
+  // Household chat channel routes (family chat with Ava AI)
+  app.use('/api/chat-channel', createChatChannelRoutes(services.chatChannelService));
+  logger.info('Chat channel routes mounted at /api/chat-channel');
 
   // Note: Sentry v8 automatically captures Express errors - no manual error handler needed
 }

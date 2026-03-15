@@ -38,26 +38,15 @@ function recalculateHealthScore(gamificationService: GamificationService): void 
 
 /**
  * Increment progress on any active quests whose category matches.
- * Quests are stored in the active_quests table with a `category` column;
- * we bump `progress` by 1 toward the quest's `target`. When progress
- * reaches the target, the quest XP reward is awarded and the quest is
- * removed.
+ * Delegates to GamificationService.incrementQuestProgress which bumps
+ * `progress` by 1 toward the quest's `target`. When progress reaches
+ * the target, the quest XP reward is awarded and the quest is completed.
  */
 function updateQuestProgress(gamificationService: GamificationService, category: string): void {
   try {
-    const quests = gamificationService.getQuests();
-    for (const quest of quests) {
-      if (quest.category === category && quest.progress < quest.target) {
-        // Quest progress is tracked in the service's DB; we call awardXp
-        // when the quest completes. For now, the GamificationService does
-        // not expose a dedicated incrementQuestProgress method, so we
-        // log the match for observability. A future PR can add a dedicated
-        // method to GamificationService.
-        logger.debug(
-          `Quest "${quest.title}" matches category "${category}" (${quest.progress + 1}/${quest.target})`
-        );
-      }
-    }
+    gamificationService.incrementQuestProgress(
+      category as import('@protolabsai/types').QuestCategory
+    );
   } catch (err) {
     logger.error(`Failed to update quest progress for category "${category}":`, err);
   }

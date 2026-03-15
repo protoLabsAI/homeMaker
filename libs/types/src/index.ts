@@ -937,6 +937,12 @@ export type {
   UserPresenceState,
   SensorConfig,
   SensorReading,
+  SensorHistoryOptions,
+  SensorAggregationInterval,
+  SensorHistoryAggregatedOptions,
+  AggregatedSensorReading,
+  SensorCommandAction,
+  SensorCommand,
 } from './sensor.js';
 
 // ProtoConfig types and schema (proto.config.yaml structure)
@@ -1065,6 +1071,14 @@ export type {
   PenDocument,
 } from './pen.js';
 
+// Chat channel types (household family chat with Ava AI participant)
+export type {
+  ChatMessage,
+  SendChatMessageInput,
+  ChatMessageQuery,
+  AvaClassification,
+} from './chat-channel.js';
+
 // Gamification types (XP, levels, achievements, streaks, quests, home health scoring)
 export type {
   EarnedAchievement,
@@ -1077,5 +1091,7 @@ export type {
   AchievementWithStatus,
   XpEvent,
   Quest,
+  QuestCategory,
+  QuestStatus,
   XpAwardResult,
 } from './gamification.js';

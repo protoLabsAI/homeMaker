@@ -7,16 +7,22 @@
  *   GET  /achievements                    — achievement catalog with earned status
  *   POST /mark-achievement-seen/:id       — dismiss "new" indicator for an achievement
  *   GET  /health-score                    — recalculate and return home health score
- *   GET  /quests                          — active quest list
+ *   GET  /quests                          — active quest list (legacy, delegates to quest router)
+ *   /quests/*                             — quest lifecycle routes (see quests.ts)
  */
 
 import { Router } from 'express';
 import { createLogger } from '@protolabsai/utils';
 import type { GamificationService } from '../../services/gamification-service.js';
+import type { QuestGeneratorService } from '../../services/quest-generator-service.js';
+import { createQuestRoutes } from './quests.js';
 
 const logger = createLogger('GamificationRoutes');
 
-export function createGamificationRoutes(gamificationService: GamificationService): Router {
+export function createGamificationRoutes(
+  gamificationService: GamificationService,
+  questGeneratorService: QuestGeneratorService
+): Router {
   const router = Router();
 
   /** GET /gamification/profile */
@@ -74,16 +80,8 @@ export function createGamificationRoutes(gamificationService: GamificationServic
     }
   });
 
-  /** GET /gamification/quests */
-  router.get('/quests', (_req, res) => {
-    try {
-      const quests = gamificationService.getQuests();
-      res.json({ success: true, data: quests });
-    } catch (error) {
-      logger.error('Failed to get quests:', error);
-      res.status(500).json({ success: false, error: 'Failed to get quests' });
-    }
-  });
+  // Mount quest lifecycle routes under /gamification/quests
+  router.use('/quests', createQuestRoutes(gamificationService, questGeneratorService));
 
   return router;
 }

@@ -30,25 +30,11 @@ function generateSidebar(dir: string, basePath: string): { text: string; link: s
 }
 
 export default defineConfig({
-  title: 'protoLabs',
-  description: 'AI-Native Development Agency',
+  title: 'homeMaker',
+  description: 'Home management hub for projects, budgets, sensors, and secrets',
 
-  head: [
-    ['link', { rel: 'icon', type: 'image/svg+xml', href: '/logo.svg' }],
-    [
-      'script',
-      {
-        defer: '',
-        src: 'https://umami.proto-labs.ai/script.js',
-        'data-website-id': process.env.UMAMI_WEBSITE_ID || '64973d40-7eb6-4044-816e-b2302d1025e8',
-      },
-    ],
-  ],
+  head: [['link', { rel: 'icon', type: 'image/svg+xml', href: '/logo.svg' }]],
 
-  // Exclude internal and archived docs from the public build
-  srcExclude: ['internal/**', 'archived/**'],
-
-  // Dead links are now fixed — keep false to catch future link rot.
   ignoreDeadLinks: false,
 
   themeConfig: {
@@ -60,17 +46,14 @@ export default defineConfig({
 
     nav: [
       { text: 'Home', link: '/' },
-      { text: 'Get Started', link: '/getting-started/' },
-      { text: 'Guides', link: '/guides/' },
-      { text: 'Concepts', link: '/concepts/' },
-      { text: 'Reference', link: '/reference/' },
-      { text: 'Starter Kits', link: '/templates/' },
+      { text: 'Get started', link: '/getting-started/' },
+      { text: 'Modules', link: '/modules/inventory' },
       {
         text: 'More',
         items: [
-          { text: 'Integrations', link: '/integrations/' },
-          { text: 'Self-Hosting', link: '/self-hosting/' },
-          { text: 'Consulting', link: 'https://protolabs.consulting' },
+          { text: 'Deployment', link: '/deployment/docker' },
+          { text: 'Platform', link: '/platform/how-it-works' },
+          { text: 'Integrations', link: '/integrations/weather' },
         ],
       },
     ],
@@ -78,26 +61,26 @@ export default defineConfig({
     sidebar: {
       '/getting-started/': [
         {
-          text: 'Getting Started',
+          text: 'Getting started',
           items: generateSidebar('getting-started', '/getting-started'),
         },
       ],
-      '/guides/': [
+      '/modules/': [
         {
-          text: 'How-To Guides',
-          items: generateSidebar('guides', '/guides'),
+          text: 'Modules',
+          items: generateSidebar('modules', '/modules'),
         },
       ],
-      '/concepts/': [
+      '/deployment/': [
         {
-          text: 'Concepts',
-          items: generateSidebar('concepts', '/concepts'),
+          text: 'Deployment',
+          items: generateSidebar('deployment', '/deployment'),
         },
       ],
-      '/reference/': [
+      '/platform/': [
         {
-          text: 'Reference',
-          items: generateSidebar('reference', '/reference'),
+          text: 'Platform',
+          items: generateSidebar('platform', '/platform'),
         },
       ],
       '/integrations/': [
@@ -106,30 +89,12 @@ export default defineConfig({
           items: generateSidebar('integrations', '/integrations'),
         },
       ],
-      '/self-hosting/': [
-        {
-          text: 'Self-Hosting',
-          items: generateSidebar('self-hosting', '/self-hosting'),
-        },
-      ],
-      '/templates/': [
-        {
-          text: 'Starter Kits',
-          items: generateSidebar('templates', '/templates'),
-        },
-      ],
     },
 
-    socialLinks: [{ icon: 'github', link: 'https://github.com/protoLabsAI/protomaker' }],
-
-    editLink: {
-      pattern: 'https://github.com/protoLabsAI/protomaker/edit/main/docs/:path',
-      text: 'Edit this page on GitHub',
-    },
+    socialLinks: [{ icon: 'github', link: 'https://github.com/your-org/homeMaker' }],
 
     footer: {
-      message: 'Built by <a href="https://protolabs.studio">protoLabs</a> — Open source on GitHub',
-      copyright: '© 2024-2026 protoLabs AI',
+      message: 'homeMaker — open source home management',
     },
   },
 });
