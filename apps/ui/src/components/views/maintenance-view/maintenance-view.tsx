@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { CalendarClock, Plus, Wrench } from 'lucide-react';
+import { CalendarClock, Plus, Wrench, Flame } from 'lucide-react';
 import { toast } from 'sonner';
 import { PanelHeader } from '@/components/shared/panel-header';
 import {
@@ -19,6 +19,7 @@ import {
   isDueThisMonth,
   isUpToDate,
 } from './hooks/use-maintenance';
+import { useGamificationProfile } from '@/components/views/profile-view/hooks/use-gamification';
 import type {
   MaintenanceSchedule,
   CreateScheduleInput,
@@ -54,6 +55,7 @@ export function MaintenanceView() {
   const [detailTarget, setDetailTarget] = useState<MaintenanceSchedule | null>(null);
 
   const { data: schedules = [], isLoading, error } = useMaintenanceSchedules();
+  const { data: gamificationProfile } = useGamificationProfile();
 
   const createSchedule = useCreateSchedule();
   const completeSchedule = useCompleteSchedule();
@@ -112,6 +114,25 @@ export function MaintenanceView() {
             activeFilter={activeTab}
             onFilterChange={setActiveTab}
           />
+        )}
+
+        {/* Maintenance streak indicator */}
+        {gamificationProfile && (
+          <div className="flex items-center gap-2 px-1">
+            <Flame
+              className={`w-4 h-4 ${gamificationProfile.streaks.maintenance.current > 0 ? 'text-status-warning' : 'text-muted-foreground'}`}
+            />
+            <span
+              className={`text-sm font-medium ${gamificationProfile.streaks.maintenance.current > 0 ? 'text-status-warning' : 'text-muted-foreground'}`}
+            >
+              {gamificationProfile.streaks.maintenance.current} day streak
+            </span>
+            {gamificationProfile.streaks.maintenance.best > 0 && (
+              <span className="text-xs text-muted-foreground">
+                (best: {gamificationProfile.streaks.maintenance.best})
+              </span>
+            )}
+          </div>
         )}
 
         {/* Status filter tabs */}

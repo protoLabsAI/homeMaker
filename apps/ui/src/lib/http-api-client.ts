@@ -84,20 +84,23 @@ import { withSystemClient } from './clients/system-client';
 import { withEngineClient } from './clients/engine-client';
 import { withHitlClient } from './clients/hitl-client';
 import { withAvaClient } from './clients/ava-client';
+import { withGamificationClient } from './clients/gamification-client';
 import { initApiKey } from './clients/auth';
 
 const logger = createLogger('HttpClient');
 
 // Compose all domain mixins into the final client class
-const ComposedHttpClient = withAvaClient(
-  withEngineClient(
-    withSystemClient(
-      withHitlClient(
-        withContentClient(
-          withSettingsClient(
-            withSetupClient(
-              withGitClient(
-                withAgentClient(withFeaturesClient(withFilesystemClient(BaseHttpClient)))
+const ComposedHttpClient = withGamificationClient(
+  withAvaClient(
+    withEngineClient(
+      withSystemClient(
+        withHitlClient(
+          withContentClient(
+            withSettingsClient(
+              withSetupClient(
+                withGitClient(
+                  withAgentClient(withFeaturesClient(withFilesystemClient(BaseHttpClient)))
+                )
               )
             )
           )

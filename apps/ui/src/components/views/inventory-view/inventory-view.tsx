@@ -7,7 +7,7 @@
  */
 
 import { useState, useMemo, useCallback } from 'react';
-import { Package, Plus, Search, X } from 'lucide-react';
+import { Package, Plus, Search, X, BarChart3 } from 'lucide-react';
 import { Button, Input } from '@protolabsai/ui/atoms';
 import { SkeletonPulse } from '@protolabsai/ui/atoms';
 import { ErrorState, LoadingState } from '@protolabsai/ui/molecules';
@@ -213,6 +213,29 @@ export function InventoryView() {
           },
         ]}
       />
+
+      {/* Asset progress bar */}
+      {!isLoading && assets.length > 0 && (
+        <div className="flex items-center gap-3 px-4 py-2 border-b border-border/40 bg-muted/30">
+          <BarChart3 className="w-3.5 h-3.5 text-muted-foreground flex-shrink-0" />
+          <div className="flex-1 flex items-center gap-2 min-w-0">
+            <div className="w-full bg-muted rounded-full h-1.5 overflow-hidden">
+              <div
+                className="h-1.5 rounded-full bg-status-info transition-all duration-500"
+                style={{
+                  width: `${Math.min((assets.length / Math.max(assets.length * 1.5, 10)) * 100, 100)}%`,
+                }}
+                role="progressbar"
+                aria-label="Asset catalog progress"
+              />
+            </div>
+            <span className="text-xs text-muted-foreground whitespace-nowrap">
+              {assets.length} of ~{Math.ceil(assets.length * 1.5)} assets (
+              {Math.round((assets.length / Math.max(assets.length * 1.5, 1)) * 100)}%)
+            </span>
+          </div>
+        </div>
+      )}
 
       <div className="flex flex-1 overflow-hidden">
         {/* Main content area */}

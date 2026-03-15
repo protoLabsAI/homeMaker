@@ -25,6 +25,7 @@ import {
   SidebarNavigation,
   MobileSidebarToggle,
 } from './sidebar/components';
+import { XpBar } from './sidebar/xp-bar';
 import { useIsCompact } from '@/hooks/use-media-query';
 import { TrashDialog, OnboardingDialog } from './sidebar/dialogs';
 import { SIDEBAR_FEATURE_FLAGS } from './sidebar/constants';
@@ -365,6 +366,18 @@ export function Sidebar() {
               }
             }}
           />
+
+          {/* XP progress bar — visible on all pages */}
+          <div
+            className={cn(
+              'shrink-0 border-t border-border/30',
+              sidebarOpen
+                ? `transition-opacity duration-200 ${contentReady ? 'opacity-100' : 'opacity-0'}`
+                : 'opacity-100'
+            )}
+          >
+            <XpBar expanded={sidebarOpen} />
+          </div>
         </div>
 
         <div
