@@ -48,6 +48,7 @@ import {
 import { EventFeed } from './dashboard-view/event-feed';
 import { ProjectHealthCard } from './dashboard-view/project-health-card';
 import { MetricsSection } from './dashboard-view/metrics/metrics-section';
+import { HealthScoreWidget } from './dashboard-view/health-score-widget';
 
 const logger = createLogger('DashboardView');
 
@@ -938,6 +939,9 @@ export function DashboardView() {
 
                   {showProjectActivity && (
                     <div className="space-y-4 animate-in fade-in slide-in-from-top-4 duration-300">
+                      {/* Home Health Score Widget */}
+                      <HealthScoreWidget />
+
                       {/* Project Health Card */}
                       <ProjectHealthCard />
 

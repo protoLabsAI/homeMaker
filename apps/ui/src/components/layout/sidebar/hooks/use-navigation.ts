@@ -11,6 +11,7 @@ import {
   MessageSquare,
   Home,
   Package,
+  Trophy,
 } from 'lucide-react';
 import type { NavSection, NavItem } from '../types';
 import type { KeyboardShortcut } from '@/hooks/use-keyboard-shortcuts';
@@ -126,6 +127,11 @@ export function useNavigation({
         id: 'inventory',
         label: 'Inventory',
         icon: Package,
+      },
+      {
+        id: 'profile',
+        label: 'Profile',
+        icon: Trophy,
       },
     ];
 
