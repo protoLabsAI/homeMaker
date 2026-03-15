@@ -13,6 +13,7 @@ import {
   Package,
   Trophy,
   Cpu,
+  DollarSign,
 } from 'lucide-react';
 import type { NavSection, NavItem } from '../types';
 import type { KeyboardShortcut } from '@/hooks/use-keyboard-shortcuts';
@@ -133,6 +134,11 @@ export function useNavigation({
         id: 'inventory',
         label: 'Inventory',
         icon: Package,
+      },
+      {
+        id: 'budget',
+        label: 'Budget',
+        icon: DollarSign,
       },
       {
         id: 'profile',
