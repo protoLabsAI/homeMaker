@@ -14,6 +14,7 @@ import {
   Trophy,
   Cpu,
   DollarSign,
+  KeyRound,
 } from 'lucide-react';
 import type { NavSection, NavItem } from '../types';
 import type { KeyboardShortcut } from '@/hooks/use-keyboard-shortcuts';
@@ -139,6 +140,11 @@ export function useNavigation({
         id: 'budget',
         label: 'Budget',
         icon: DollarSign,
+      },
+      {
+        id: 'vault',
+        label: 'Vault',
+        icon: KeyRound,
       },
       {
         id: 'profile',
