@@ -78,6 +78,8 @@ export type EventType =
   | 'scheduler:task_completed'
   | 'scheduler:task-failed'
   | 'maintenance'
+  | 'maintenance:tick'
+  | 'maintenance:overdue'
   | 'recovery_analysis'
   | 'recovery_started'
   | 'recovery_completed'
@@ -312,6 +314,15 @@ export type EventType =
   // Sensor registry events (core sensor framework)
   | 'sensor:registered'
   | 'sensor:data-received'
+  | 'sensor:history-cleanup'
+  | 'sensor:command-queued'
+  // Inventory mutation events (trigger gamification checks)
+  | 'inventory:asset-created'
+  | 'inventory:asset-updated'
+  // Budget mutation events (trigger gamification checks)
+  | 'budget:category-created'
+  | 'budget:transaction-created'
+  | 'budget:month-closed'
   // Calendar CRUD events (emitted by calendar routes after successful create/update/delete)
   | 'calendar:event:created'
   | 'calendar:event:updated'
@@ -348,7 +359,20 @@ export type EventType =
   // Categories sync events (lightweight LWW config sync via CRDT bridge)
   | 'categories:updated'
   // Research agent events (deep research pipeline)
-  | 'project:research:completed';
+  | 'project:research:completed'
+  // Gamification events (XP, levels, achievements, streaks, home health score)
+  | 'gamification:xp-gained'
+  | 'gamification:level-up'
+  | 'gamification:achievement-unlocked'
+  | 'gamification:streak-updated'
+  | 'gamification:health-score-changed'
+  // Quest lifecycle events (generated, completed, expired, progress)
+  | 'gamification:quest-generated'
+  | 'gamification:quest-completed'
+  | 'gamification:quest-expired'
+  | 'gamification:quest-progress'
+  // Household chat channel events (family chat with Ava AI)
+  | 'chat:message-received';
 
 export type EventCallback = (type: EventType, payload: unknown) => void;
 
@@ -834,6 +858,13 @@ export interface EventPayloadMap {
     data: Record<string, unknown>;
     receivedAt: string;
   };
+  'sensor:history-cleanup': { deleted: number; timestamp: string };
+  'sensor:command-queued': {
+    commandId: string;
+    sensorId: string;
+    action: string;
+    queuedAt: string;
+  };
 
   // Subagent tool approval events (gated trust model)
   'subagent:tool-approval-request': {
@@ -851,6 +882,11 @@ export interface EventPayloadMap {
   // Ava Channel events (private multi-instance coordination channel)
   'ava-channel:message': {
     message: import('./ava-channel.js').AvaChatMessage;
+  };
+
+  // Household chat channel events (family chat with Ava AI)
+  'chat:message-received': {
+    message: import('./chat-channel.js').ChatMessage;
   };
 }
 

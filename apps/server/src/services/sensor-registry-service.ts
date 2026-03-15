@@ -15,7 +15,17 @@
  */
 
 import { createLogger } from '@protolabsai/utils';
-import type { SensorConfig, SensorReading, SensorState } from '@protolabsai/types';
+import crypto from 'node:crypto';
+import type {
+  SensorConfig,
+  SensorReading,
+  SensorState,
+  SensorHistoryOptions,
+  SensorHistoryAggregatedOptions,
+  AggregatedSensorReading,
+  SensorCommand,
+  SensorCommandAction,
+} from '@protolabsai/types';
 import type { EventEmitter } from '../lib/events.js';
 
 const logger = createLogger('SensorRegistry');
@@ -32,6 +42,7 @@ const OFFLINE_TTL_MS = 15 * 60 * 1000;
 export class SensorRegistryService {
   private sensors = new Map<string, SensorConfig>();
   private readings = new Map<string, SensorReading>();
+  private commandQueue = new Map<string, SensorCommand[]>();
   private events?: EventEmitter;
 
   /** Current tracked WebSocket client count for the builtin:websocket-clients sensor */
@@ -263,5 +274,198 @@ export class SensorRegistryService {
    */
   get size(): number {
     return this.sensors.size;
+  }
+
+  /**
+   * Query historical sensor readings from the SQLite sensor_readings table.
+   * Returns readings sorted by receivedAt descending (most recent first).
+   */
+  getHistory(sensorId: string, options?: SensorHistoryOptions): SensorReading[] {
+    if (!this.db) {
+      return [];
+    }
+
+    const limit = options?.limit ?? 100;
+    const conditions: string[] = ['sensorId = ?'];
+    const params: (string | number)[] = [sensorId];
+
+    if (options?.startDate) {
+      conditions.push('receivedAt >= ?');
+      params.push(options.startDate);
+    }
+    if (options?.endDate) {
+      conditions.push('receivedAt <= ?');
+      params.push(options.endDate);
+    }
+
+    const sql = `SELECT sensorId, data, receivedAt FROM sensor_readings WHERE ${conditions.join(' AND ')} ORDER BY receivedAt DESC LIMIT ?`;
+    params.push(limit);
+
+    const rows = this.db.prepare(sql).all(...params) as SensorReadingRow[];
+    return rows.map((row) => ({
+      sensorId: row.sensorId,
+      data: JSON.parse(row.data) as Record<string, unknown>,
+      receivedAt: row.receivedAt,
+    }));
+  }
+
+  /**
+   * Query aggregated sensor history for a specific numeric field.
+   * Groups readings by the specified interval and computes avg/min/max/count.
+   */
+  getHistoryAggregated(
+    sensorId: string,
+    options: SensorHistoryAggregatedOptions
+  ): AggregatedSensorReading[] {
+    if (!this.db) {
+      return [];
+    }
+
+    const { interval, field, startDate, endDate } = options;
+
+    // Build the strftime format for grouping by interval
+    let strftimeFmt: string;
+    switch (interval) {
+      case 'hour':
+        strftimeFmt = '%Y-%m-%dT%H:00:00';
+        break;
+      case 'day':
+        strftimeFmt = '%Y-%m-%d';
+        break;
+      case 'week':
+        // ISO week: group by year + week number (Monday-based)
+        strftimeFmt = '%Y-W%W';
+        break;
+      default:
+        return [];
+    }
+
+    const conditions: string[] = ['sensorId = ?'];
+    const params: (string | number)[] = [sensorId];
+
+    if (startDate) {
+      conditions.push('receivedAt >= ?');
+      params.push(startDate);
+    }
+    if (endDate) {
+      conditions.push('receivedAt <= ?');
+      params.push(endDate);
+    }
+
+    // Use json_extract to pull the numeric field from the data column.
+    // Rows where the field is missing or non-numeric are excluded by the HAVING count > 0 check.
+    const jsonPath = `$.${field}`;
+    const sql = `
+      SELECT
+        strftime('${strftimeFmt}', receivedAt) AS period,
+        AVG(CAST(json_extract(data, ?) AS REAL)) AS avg,
+        MIN(CAST(json_extract(data, ?) AS REAL)) AS min,
+        MAX(CAST(json_extract(data, ?) AS REAL)) AS max,
+        COUNT(*) AS count
+      FROM sensor_readings
+      WHERE ${conditions.join(' AND ')}
+        AND json_extract(data, ?) IS NOT NULL
+        AND typeof(json_extract(data, ?)) IN ('integer', 'real')
+      GROUP BY period
+      ORDER BY period DESC
+    `;
+
+    const rows = this.db
+      .prepare(sql)
+      .all(jsonPath, jsonPath, jsonPath, ...params, jsonPath, jsonPath) as AggregatedRow[];
+
+    return rows.map((row) => ({
+      period: row.period,
+      avg: row.avg,
+      min: row.min,
+      max: row.max,
+      count: row.count,
+    }));
+  }
+
+  /**
+   * Delete sensor readings older than the configured retention period.
+   * Called by the scheduler as a periodic cleanup job.
+   */
+  cleanupOldReadings(): { deleted: number } {
+    if (!this.db) {
+      return { deleted: 0 };
+    }
+
+    const retentionDays = parseInt(
+      process.env.SENSOR_HISTORY_RETENTION_DAYS ?? String(DEFAULT_RETENTION_DAYS),
+      10
+    );
+    const cutoff = new Date(Date.now() - retentionDays * 24 * 60 * 60 * 1000).toISOString();
+
+    const result = this.db.prepare('DELETE FROM sensor_readings WHERE receivedAt < ?').run(cutoff);
+
+    const deleted = result.changes;
+    if (deleted > 0) {
+      logger.info(`Cleaned up ${deleted} sensor readings older than ${retentionDays} days`);
+    }
+
+    return { deleted };
+  }
+
+  /**
+   * Queue a command for delivery to an IoT device.
+   * The sensor must already be registered.
+   */
+  queueCommand(
+    sensorId: string,
+    commandData: { action: SensorCommandAction; payload?: Record<string, unknown> }
+  ): { success: boolean; command?: SensorCommand; error?: string } {
+    const sensor = this.sensors.get(sensorId);
+    if (!sensor) {
+      return {
+        success: false,
+        error: `Sensor "${sensorId}" is not registered`,
+      };
+    }
+
+    const command: SensorCommand = {
+      id: crypto.randomUUID(),
+      sensorId,
+      action: commandData.action,
+      payload: commandData.payload,
+      queuedAt: new Date().toISOString(),
+    };
+
+    const queue = this.commandQueue.get(sensorId) ?? [];
+    queue.push(command);
+    this.commandQueue.set(sensorId, queue);
+
+    logger.info(`Command queued for sensor "${sensorId}": ${command.action} (${command.id})`);
+
+    this.events?.emit('sensor:command-queued', {
+      commandId: command.id,
+      sensorId,
+      action: command.action,
+      queuedAt: command.queuedAt,
+    });
+
+    return { success: true, command };
+  }
+
+  /**
+   * Retrieve and clear all pending commands for a sensor.
+   * IoT devices call this endpoint to poll for work.
+   */
+  pollCommands(sensorId: string): { success: boolean; commands?: SensorCommand[]; error?: string } {
+    const sensor = this.sensors.get(sensorId);
+    if (!sensor) {
+      return {
+        success: false,
+        error: `Sensor "${sensorId}" is not registered`,
+      };
+    }
+
+    const commands = this.commandQueue.get(sensorId) ?? [];
+    this.commandQueue.set(sensorId, []);
+
+    logger.debug(`Polled ${commands.length} command(s) for sensor "${sensorId}"`);
+
+    return { success: true, commands };
   }
 }

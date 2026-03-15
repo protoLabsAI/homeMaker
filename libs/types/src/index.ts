@@ -937,6 +937,12 @@ export type {
   UserPresenceState,
   SensorConfig,
   SensorReading,
+  SensorHistoryOptions,
+  SensorAggregationInterval,
+  SensorHistoryAggregatedOptions,
+  AggregatedSensorReading,
+  SensorCommandAction,
+  SensorCommand,
 } from './sensor.js';
 
 // ProtoConfig types and schema (proto.config.yaml structure)
@@ -988,6 +994,47 @@ export type {
 // Chat stream part types (SubagentProgress, SubagentStatus)
 export type { SubagentProgress, SubagentStatus } from './chat.js';
 
+// Vault types (encrypted local secrets storage)
+export type { SecretCategory, VaultEntry, VaultEntryWithValue } from './vault.js';
+
+// Budget tracking types (household budget categories and transactions)
+export type {
+  BudgetCategory,
+  TransactionRecurrence,
+  Transaction,
+  BudgetSummary,
+  BudgetCategorySummary,
+} from './budget.js';
+
+// Inventory tracking types (household asset management)
+export type {
+  AssetCategory,
+  Asset,
+  CreateAssetInput,
+  UpdateAssetInput,
+  WarrantyReport,
+  CategoryValue,
+  TotalValueReport,
+} from './inventory.js';
+
+// Maintenance scheduling types (recurring home maintenance tasks and completion history)
+export type {
+  MaintenanceCategory,
+  MaintenanceSchedule,
+  MaintenanceCompletion,
+  MaintenanceDueSummary,
+  MaintenanceListFilters,
+} from './maintenance.js';
+
+// Vendor/contractor directory types (service providers, trade categories, ratings)
+export type {
+  VendorCategory,
+  Vendor,
+  CreateVendorInput,
+  UpdateVendorInput,
+  VendorFilters,
+} from './vendor.js';
+
 // PenFile types (vector graphics format v2.8)
 export type {
   PenColor,
@@ -1023,3 +1070,28 @@ export type {
   PenNode,
   PenDocument,
 } from './pen.js';
+
+// Chat channel types (household family chat with Ava AI participant)
+export type {
+  ChatMessage,
+  SendChatMessageInput,
+  ChatMessageQuery,
+  AvaClassification,
+} from './chat-channel.js';
+
+// Gamification types (XP, levels, achievements, streaks, quests, home health scoring)
+export type {
+  EarnedAchievement,
+  StreakState,
+  MonthlyStreakState,
+  HomeHealthScore,
+  GamificationProfile,
+  AchievementCategory,
+  AchievementDefinition,
+  AchievementWithStatus,
+  XpEvent,
+  Quest,
+  QuestCategory,
+  QuestStatus,
+  XpAwardResult,
+} from './gamification.js';

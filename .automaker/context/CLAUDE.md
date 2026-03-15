@@ -1,57 +1,61 @@
-# homeMaker — Agent Context
+# homeMaker Agent Context
 
-## What This Is
+## What Exists
 
-A domestic home management hub built on the protoMaker platform. The AI agent pipeline, board, and auto-mode are CORE FEATURES — they help manage home projects, research purchases, plan renovations, and track maintenance schedules.
+All modules currently implemented in homeMaker:
 
-## What Agents Do Here
+- **Board** — Kanban task tracking for house projects (backlog -> done)
+- **Calendar** — CRUD event management for household schedules
+- **Sensors** — IoT device registry, real-time readings, history persistence, HA integration
+- **Budget** — Income/expense tracking, categories, monthly summaries
+- **Vault** — AES-256-GCM encrypted secrets storage
+- **Inventory** — Home asset tracking, warranties, valuations, sensor linking
+- **Maintenance** — Recurring obligation scheduling, completion history, vendor linking
+- **Vendors** — Service provider directory, trade categories, ratings
+- **Gamification** — Home Health Score (0-100), XP/levels, 30 achievements, AI quests, streaks
 
-Unlike protoMaker (where agents write code), homeMaker agents primarily:
-- **Research**: Compare products, find contractors, look up how-to guides, estimate costs
-- **Plan**: Break down renovations into phases with dependencies, create timelines
-- **Track**: Manage recurring maintenance (HVAC filters, gutter cleaning, lawn care)
-- **Organize**: Summarize findings into actionable recommendations
-- **Code** (when needed): Build new UI views, add backend services, fix bugs — same as protoMaker
+## Gamification Awareness
 
-Default to research-and-report mode. Only write code when the task explicitly requires implementation.
+Your implementation work earns XP for the homemaker and can trigger achievements. The gamification system tracks:
 
-## What Exists (reuse these)
+- **XP sources**: completing maintenance tasks, adding inventory items, logging budget entries, unlocking vault items, keeping sensors online
+- **Achievements**: first maintenance completed, inventory milestones, budget streaks, sensor uptime awards
+- **Home Health Score**: calculated across 4 pillars — Maintenance (30%), Sensors (25%), Budget (25%), Inventory (20%)
 
-- **Board/Kanban** — tracks house projects as tasks with status, priority, dependencies
-- **Auto-mode** — agents pick up tasks from the board and execute them autonomously
-- **Sensor Registry** (`apps/server/src/services/sensor-registry-service.ts`) — IoT device data collection
-- **Context Aggregator** (`apps/server/src/services/context-aggregator.ts`) — presence detection from sensors
-- **Calendar view** (`apps/ui/src/components/views/calendar-view/`) — home schedule events
-- **Todo** (`apps/ui/src/components/views/todo-view/`) — task lists
-- **Notes** (`apps/ui/src/components/views/notes-view/`) — household notes
-- **Chat (Ava)** — conversational AI assistant for the household
-- **Event system** (`apps/server/src/lib/events.ts`) — real-time WebSocket push
+When you add or modify features that interact with these modules, call `gamificationService.awardXp()` for relevant user actions. Do NOT write XP directly to the database.
 
-## Tech Stack
+## Shared Database Pattern
 
-- **Frontend**: React 19, Vite 7, TanStack Router, Zustand 5, Tailwind CSS 4, Radix UI
-- **Backend**: Express 5, SQLite, WebSocket, Claude Agent SDK
-- **Shared libs**: `@protolabsai/types`, `@protolabsai/utils`, `@protolabsai/ui`, `@protolabsai/prompts`
+All services share a single SQLite database (`homemaker.db`) with WAL mode and foreign keys enabled. Services receive the `Database` instance via constructor injection from `ServiceContainer`.
+
+```typescript
+// Pattern for service constructors
+constructor(private db: Database) {
+  this.db.exec(`CREATE TABLE IF NOT EXISTS my_table (...)`);
+}
+```
+
+Do NOT create standalone SQLite files per service. Always use the shared DB from `ServiceContainer`.
 
 ## Adding New Backend Modules
 
-Follow the sensor registry pattern:
+Follow the sensor registry pattern, using the shared DB:
+
 1. Define types in `libs/types/src/`
-2. Create service in `apps/server/src/services/`
+2. Create service in `apps/server/src/services/` — accept `Database` via constructor
 3. Create routes in `apps/server/src/routes/<module>/`
 4. Wire into `apps/server/src/server/routes.ts`
 5. Add to `ServiceContainer` in `apps/server/src/server/services.ts`
 
 ## Adding New UI Views
 
-1. Create view in `apps/ui/src/components/views/<module>-view/`
-2. Add route file `apps/ui/src/routes/<module>.tsx`
-3. Add nav item in `apps/ui/src/components/layout/sidebar/hooks/use-navigation.ts`
+After creating the view component and route file, add to sidebar navigation (`apps/ui/src/components/layout/sidebar/hooks/use-navigation.ts`). Current nav items include:
+board, calendar, sensors, inventory, vendors, maintenance, budget, vault, profile
 
-## Security Rules
+## Key Invariants
 
-- Secrets are encrypted AES-256-GCM at rest (never store plaintext)
-- Use the existing `apps/server/src/lib/auth.ts` for API key validation
-- Rate limit all write endpoints
-- Never log secret values, only IDs and metadata
-- Tailscale handles network-level auth — no login UI needed
+- Gamification: all XP awards go through `gamificationService.awardXp()` — never direct DB writes
+- Inventory: amounts in cents (integer), never floating point dollars
+- Maintenance: `intervalDays` is always a positive integer, `nextDueAt` auto-calculated
+- Vendors: phone numbers stored as strings (preserve formatting)
+- Home Health Score: always recalculate after data mutations, never cache stale scores

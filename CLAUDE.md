@@ -18,7 +18,7 @@ The AI agent pipeline (board, auto-mode, Claude Agent SDK, worktrees) is **core 
 ## Brand Identity
 
 - **homeMaker** = the product name (always camelCase)
-- **@protolabsai/*** = internal package names (preserved from protoLabs Studio lineage, do NOT rename)
+- **@protolabsai/\*** = internal package names (preserved from protoLabs Studio lineage, do NOT rename)
 - **.automaker/** = internal directory for board data, context files, features (preserved, do NOT rename)
 
 ## Git Workflow
@@ -26,6 +26,7 @@ The AI agent pipeline (board, auto-mode, Claude Agent SDK, worktrees) is **core 
 Feature branches PR to `main`. Keep it simple — no staging/promotion pipeline needed for a home app.
 
 **Rules:**
+
 - Never push directly to `main`. Always use a PR.
 - Before committing, run `git status` and verify only intended files are staged.
 - `.automaker/memory/` files are updated by agents. Include memory changes in commits alongside related code changes.
@@ -80,6 +81,10 @@ homeMaker/
     └── ...
 ```
 
+### Shared Database
+
+All server services share a single `homemaker.db` (SQLite, WAL mode, foreign keys enabled). Services receive the DB connection via constructor injection from `ServiceContainer`.
+
 ### Key Technologies
 
 - **Frontend**: React 19, Vite 7, TanStack Router, Zustand 5, Tailwind CSS 4
@@ -90,8 +95,8 @@ homeMaker/
 
 The server (`apps/server/src/`) follows a modular pattern:
 
-- `routes/` - Express route handlers organized by domain (sensors, budget, vault, calendar, etc.)
-- `services/` - Business logic (SensorRegistryService, BudgetService, VaultService, AgentService, AutoModeService, etc.)
+- `routes/` - Express route handlers organized by domain (sensors, budget, vault, calendar, inventory, maintenance, vendors, gamification, etc.)
+- `services/` - Business logic (SensorRegistryService, BudgetService, VaultService, InventoryService, MaintenanceService, VendorService, GamificationService, QuestGeneratorService, WeatherService, AgentService, AutoModeService, etc.)
 - `providers/` - AI provider abstraction (Claude via Agent SDK)
 - `lib/` - Utilities (events, auth, crypto)
 - `server/` - Bootstrap modules (middleware, services, wiring, routes, startup, shutdown)
@@ -101,7 +106,7 @@ The server (`apps/server/src/`) follows a modular pattern:
 The UI (`apps/ui/src/`) uses:
 
 - `routes/` - TanStack Router file-based routing
-- `components/views/` - Main view components (board, calendar, sensors, budget, vault, etc.)
+- `components/views/` - Main view components (board, calendar, sensors, budget, vault, inventory, maintenance, vendors, profile, etc.)
 - `store/` - Zustand stores with persistence
 - `hooks/` - Custom React hooks
 - `lib/` - Utilities and API client
@@ -128,12 +133,45 @@ The UI (`apps/ui/src/`) uses:
 
 The Kanban board from protoLabs Studio, repurposed for tracking house projects. Tasks flow through: backlog -> in_progress -> review -> done (with blocked as an escape state).
 
+### Inventory
+
+`apps/server/src/services/inventory-service.ts` — Tracks home assets, warranties, and valuations with sensor linking. Monetary amounts stored as integers in cents.
+
+- Types: `InventoryItem` in `libs/types/src/inventory.ts`
+- Routes: `apps/server/src/routes/inventory/`
+- Events: `inventory:item-created`, `inventory:item-updated`
+
+### Maintenance
+
+`apps/server/src/services/maintenance-service.ts` — Recurring obligations with auto-calculated due dates, completion history, and vendor linking. `nextDueAt` computed from `lastCompletedAt + intervalDays`.
+
+- Types: `MaintenanceTask` in `libs/types/src/maintenance.ts`
+- Routes: `apps/server/src/routes/maintenance/`
+- Events: `maintenance:task-completed`, `maintenance:task-overdue`
+
+### Vendors
+
+`apps/server/src/services/vendor-service.ts` — Service provider directory with trade categories, ratings, and linked assets. Phone numbers stored as strings to preserve formatting.
+
+- Types: `Vendor` in `libs/types/src/vendor.ts`
+- Routes: `apps/server/src/routes/vendors/`
+
+### Gamification
+
+`apps/server/src/services/gamification-service.ts` — Home Health Score (0--100), XP/levels (10 tiers), 30 achievements across 6 categories, AI quests, and streaks.
+
+- Types: `GamificationProfile`, `Achievement`, `Quest` in `libs/types/src/gamification.ts`
+- Routes: `apps/server/src/routes/gamification/`
+- Quest generation: `apps/server/src/services/quest-generator-service.ts`
+- Events: see "Gamification Events" below
+
 ## Import Conventions
 
 Always import from shared packages:
 
 ```typescript
 import type { Feature, SensorConfig } from '@protolabsai/types';
+import type { GamificationProfile, Achievement, Quest } from '@protolabsai/types';
 import { createLogger } from '@protolabsai/utils';
 import { getFeatureDir } from '@protolabsai/platform';
 ```
@@ -143,6 +181,7 @@ import { getFeatureDir } from '@protolabsai/platform';
 ### Adding a New Backend Module
 
 Follow the sensor registry pattern:
+
 1. Define types in `libs/types/src/`
 2. Create service in `apps/server/src/services/`
 3. Create routes in `apps/server/src/routes/<module>/`
@@ -158,6 +197,17 @@ Follow the sensor registry pattern:
 ### Event-Driven Architecture
 
 All server operations emit events that stream to the frontend via WebSocket. Events are created using `createEventEmitter()` from `lib/events.ts`.
+
+#### Gamification Events
+
+```
+gamification:xp-gained             — XP awarded (source, amount, total)
+gamification:achievement-unlocked  — Achievement unlocked (achievement definition)
+gamification:level-up              — Level milestone crossed (new level, tier)
+gamification:health-score-updated  — Home Health Score recalculated (score, pillars)
+gamification:quest-generated       — New AI quest available
+gamification:streak-updated        — Streak count changed
+```
 
 ### Feature Status System
 
@@ -175,31 +225,36 @@ Project-specific rules are stored in `.automaker/context/` and automatically loa
 
 ### Model Hierarchy for Auto-Mode
 
-| Model      | Use Case                        | Triggered By                        |
-| ---------- | ------------------------------- | ----------------------------------- |
-| **Opus**   | Complex research, architecture  | `complexity: 'architectural'`       |
-| **Sonnet** | Standard tasks (default)        | `complexity: 'medium'` or `'large'` |
-| **Haiku**  | Quick lookups, simple tasks     | `complexity: 'small'`               |
+| Model      | Use Case                       | Triggered By                        |
+| ---------- | ------------------------------ | ----------------------------------- |
+| **Opus**   | Complex research, architecture | `complexity: 'architectural'`       |
+| **Sonnet** | Standard tasks (default)       | `complexity: 'medium'` or `'large'` |
+| **Haiku**  | Quick lookups, simple tasks    | `complexity: 'small'`               |
 
 ### Feature Flags
 
 Single source of truth: `DEFAULT_FEATURE_FLAGS` in `libs/types/src/global-settings.ts`. When adding a new flag:
+
 1. Add to `FeatureFlags` interface and set default to `false` in `DEFAULT_FEATURE_FLAGS`
 2. Add label in `developer-section.tsx` `FEATURE_FLAG_LABELS`
 3. Add server-side guard: `featureFlags?.yourFlag ?? false`
 
 ## Environment Variables
 
-| Variable | Required | Description |
-|----------|----------|-------------|
-| `ANTHROPIC_API_KEY` | Yes | Anthropic API key for AI agents |
-| `HOMEMAKER_VAULT_KEY` | For vault | 64-char hex key for AES-256-GCM secrets encryption |
-| `AUTOMAKER_API_KEY` | Optional | API key for server authentication |
-| `HOST` | No | Host to bind to (default: 0.0.0.0) |
-| `PORT` | No | Server port (default: 3008) |
-| `DATA_DIR` | No | Data storage directory (default: ./data) |
-| `AUTOMAKER_MOCK_AGENT` | No | Enable mock agent mode for CI testing |
-| `GITHUB_TOKEN` | Optional | For GitHub operations |
+| Variable                        | Required  | Description                                        |
+| ------------------------------- | --------- | -------------------------------------------------- |
+| `ANTHROPIC_API_KEY`             | Yes       | Anthropic API key for AI agents                    |
+| `HOMEMAKER_VAULT_KEY`           | For vault | 64-char hex key for AES-256-GCM secrets encryption |
+| `AUTOMAKER_API_KEY`             | Optional  | API key for server authentication                  |
+| `HOST`                          | No        | Host to bind to (default: 0.0.0.0)                 |
+| `PORT`                          | No        | Server port (default: 3008)                        |
+| `DATA_DIR`                      | No        | Data storage directory (default: ./data)           |
+| `AUTOMAKER_MOCK_AGENT`          | No        | Enable mock agent mode for CI testing              |
+| `GITHUB_TOKEN`                  | Optional  | For GitHub operations                              |
+| `OPENWEATHERMAP_API_KEY`        | Optional  | Weather widget API key                             |
+| `OPENWEATHERMAP_LAT`            | No        | Home latitude for weather                          |
+| `OPENWEATHERMAP_LON`            | No        | Home longitude for weather                         |
+| `SENSOR_HISTORY_RETENTION_DAYS` | No        | Days of sensor history (default: 30)               |
 
 ## Important Guidelines
 

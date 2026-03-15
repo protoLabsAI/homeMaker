@@ -1,0 +1,53 @@
+{
+  "productName": "homeMaker",
+  "version": "0.1.0",
+  "identifier": "dev.homemaker.app",
+  "build": {
+    "beforeDevCommand": "npm run dev:web",
+    "devUrl": "http://localhost:3007",
+    "beforeBuildCommand": "npm run build",
+    "frontendDist": "../dist"
+  },
+  "app": {
+    "windows": [
+      {
+        "label": "main",
+        "title": "homeMaker",
+        "width": 1280,
+        "height": 800,
+        "minWidth": 800,
+        "minHeight": 600
+      }
+    ],
+    "security": {
+      "csp": "default-src 'self' 'unsafe-inline' 'unsafe-eval' blob: data: http://localhost:3008 ws://localhost:3008; connect-src 'self' http://localhost:3008 ws://localhost:3008 https: wss:; img-src 'self' blob: data: https:; media-src 'self' blob: data:"
+    }
+  },
+  "bundle": {
+    "active": true,
+    "targets": "all",
+    "icon": [
+      "icons/32x32.png",
+      "icons/128x128.png",
+      "icons/128x128@2x.png",
+      "icons/icon.icns",
+      "icons/icon.ico"
+    ]
+  },
+  "plugins": {
+    "deep-link": {
+      "protocols": [
+        {
+          "name": "homeMaker",
+          "schemes": ["homemaker"]
+        }
+      ]
+    },
+    "updater": {
+      "pubkey": "",
+      "endpoints": [
+        "https://github.com/AutoMaker-Org/automaker/releases/latest/download/latest.json"
+      ]
+    }
+  }
+}

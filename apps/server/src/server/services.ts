@@ -111,6 +111,20 @@ import { CheckpointService } from '../services/checkpoint-service.js';
 import { DailyStandupService } from '../services/daily-standup-service.js';
 import { ProjectSlugResolver } from '../services/project-slug-resolver.js';
 import { DeviationRuleService } from '../services/deviation-rule-service.js';
+import { VaultService } from '../services/vault-service.js';
+import { BudgetService } from '../services/budget-service.js';
+import { InventoryService } from '../services/inventory-service.js';
+import { MaintenanceService } from '../services/maintenance-service.js';
+import { VendorService } from '../services/vendor-service.js';
+import { GamificationService } from '../services/gamification-service.js';
+import { QuestGeneratorService } from '../services/quest-generator-service.js';
+import { registerXpEventListeners } from '../listeners/xp-event-listeners.js';
+import { getHomemakerDb } from '../lib/homemaker-db.js';
+import { ChatChannelService } from '../services/chat-channel-service.js';
+import { AvaClassifier } from '../services/ava-classifier.js';
+import { AvaResponder } from '../services/ava-responder.js';
+import { AvaProactiveService } from '../services/ava-proactive.js';
+import { WeatherService } from '../services/weather-service.js';
 
 const logger = createLogger('Server:Services');
 
@@ -288,6 +302,36 @@ export interface ServiceContainer {
 
   // Deviation rule evaluation (agent scope constraints)
   deviationRuleService: DeviationRuleService;
+
+  // Encrypted secrets vault (AES-256-GCM, SQLite-backed)
+  vaultService: VaultService;
+
+  // Budget tracking (household budget categories, transactions, summaries)
+  budgetService: BudgetService;
+
+  // Inventory tracking (household asset management, warranty reports, value aggregation)
+  inventoryService: InventoryService;
+
+  // Maintenance scheduling (recurring home maintenance tasks and completion history)
+  maintenanceService: MaintenanceService;
+
+  // Vendor/contractor directory (service providers, trade categories, ratings)
+  vendorService: VendorService;
+
+  // Gamification engine (XP, levels, achievements, streaks, home health scoring)
+  gamificationService: GamificationService;
+
+  // Quest generation engine (contextual quest generation based on home state)
+  questGeneratorService: QuestGeneratorService;
+
+  // Household chat channel (family chat with Ava AI participant)
+  chatChannelService: ChatChannelService;
+
+  // Ava proactive alerts (overdue maintenance, expiring warranties)
+  avaProactiveService: AvaProactiveService;
+
+  // Weather context (current conditions + 5-day forecast via OpenWeatherMap)
+  weatherService: WeatherService;
 
   // Drift detection interval (set by wireServices, cleared by shutdown)
   driftCheckInterval: ReturnType<typeof setInterval> | null;
@@ -707,6 +751,56 @@ export async function createServices(dataDir: string, repoRoot: string): Promise
   // Deviation Rule Service — evaluates agent scope against per-feature constraints
   const deviationRuleService = new DeviationRuleService();
 
+  // Vault Service — encrypted secrets storage (AES-256-GCM, SQLite-backed)
+  // Throws at startup if HOMEMAKER_VAULT_KEY is missing or malformed.
+  const vaultService = new VaultService(dataDir);
+
+  // Budget Service — household budget tracking (categories, transactions, summaries)
+  const budgetService = new BudgetService(dataDir);
+
+  // Inventory Service — household asset tracking (CRUD, search, warranty reports, value aggregation)
+  const homemakerDb = getHomemakerDb();
+  const inventoryService = new InventoryService(homemakerDb);
+
+  // Maintenance Service — recurring home maintenance scheduling and completion tracking
+  const maintenanceService = new MaintenanceService(homemakerDb);
+
+  // Vendor Service — vendor/contractor directory with trade categories, ratings, asset links
+  const vendorService = new VendorService(homemakerDb);
+
+  // Gamification Service — XP, levels, achievements, streaks, home health scoring
+  const gamificationService = new GamificationService(homemakerDb, events, sensorRegistryService);
+  registerXpEventListeners(events, gamificationService);
+
+  // Quest Generator Service — contextual quest generation based on home state data
+  const questGeneratorService = new QuestGeneratorService(
+    homemakerDb,
+    gamificationService,
+    sensorRegistryService
+  );
+
+  // Chat Channel Service — household family chat with Ava AI participant
+  const avaClassifier = new AvaClassifier();
+  const avaResponder = new AvaResponder({
+    maintenanceService,
+    inventoryService,
+    budgetService,
+    vendorService,
+  });
+  const chatChannelService = new ChatChannelService({
+    db: homemakerDb,
+    events,
+    classifier: avaClassifier,
+    responder: avaResponder,
+  });
+  const avaProactiveService = new AvaProactiveService({
+    maintenanceService,
+    inventoryService,
+  });
+
+  // Weather Service — fetches current conditions and 5-day forecast from OpenWeatherMap
+  const weatherService = new WeatherService(sensorRegistryService);
+
   // Register Ava cron tasks (daily board health, PR triage, staging ping)
   void registerAvaCronTasks({ schedulerService, reactiveSpawnerService, projectPath: repoRoot });
 
@@ -906,6 +1000,16 @@ export async function createServices(dataDir: string, repoRoot: string): Promise
     checkpointService,
     projectSlugResolver,
     deviationRuleService,
+    vaultService,
+    budgetService,
+    inventoryService,
+    maintenanceService,
+    vendorService,
+    gamificationService,
+    questGeneratorService,
+    chatChannelService,
+    avaProactiveService,
+    weatherService,
     driftCheckInterval: null,
   };
 }

@@ -74,19 +74,12 @@ export const handleServerOffline = (): void => {
   notifyServerOffline();
 };
 
-/** Initialize server URL from Electron IPC. Must be called early in Electron mode. */
+/** Initialize server URL from environment variable (Tauri/web mode). */
 export const initServerUrl = async (): Promise<void> => {
-  const electron =
-    typeof window !== 'undefined'
-      ? (window.electronAPI as unknown as { getServerUrl?: () => Promise<string> } | undefined)
-      : null;
-  if (electron?.getServerUrl) {
-    try {
-      cachedServerUrl = await electron.getServerUrl();
-      logger.info('Server URL from Electron:', cachedServerUrl);
-    } catch (error) {
-      logger.warn('Failed to get server URL from Electron:', error);
-    }
+  const envUrl = import.meta.env.VITE_SERVER_URL;
+  if (envUrl) {
+    cachedServerUrl = envUrl;
+    logger.info('Server URL from VITE_SERVER_URL:', cachedServerUrl);
   }
 };
 
@@ -170,11 +163,7 @@ export const clearSessionToken = (): void => {
 };
 
 export const isElectronMode = (): boolean => {
-  if (typeof window === 'undefined') return false;
-  const api = window.electronAPI as unknown as
-    | { isElectron?: boolean; getApiKey?: () => Promise<string | null> }
-    | undefined;
-  return api?.isElectron === true || !!api?.getApiKey;
+  return false;
 };
 
 let cachedExternalServerMode: boolean | null = null;

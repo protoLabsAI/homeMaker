@@ -1,8 +1,10 @@
-// Middleware setup: Morgan, CORS, Prometheus, cookie-parser, raw body
+// Middleware setup: Helmet, Morgan, CORS, Prometheus, cookie-parser, raw body, rate limiting
 
 import morgan from 'morgan';
 import cors from 'cors';
+import helmet from 'helmet';
 import cookieParser from 'cookie-parser';
+import rateLimit from 'express-rate-limit';
 import express, { type Request, type Response } from 'express';
 import type { Express } from 'express';
 import { prometheusMiddleware } from '../lib/prometheus.js';
@@ -31,10 +33,16 @@ export function isRequestLoggingEnabled(): boolean {
   return requestLoggingEnabled;
 }
 
+/** Standard 429 response body for all rate limiters */
+const RATE_LIMIT_RESPONSE = { success: false, error: 'Too many requests' } as const;
+
 /**
- * Register all Express middleware: logging, CORS, Prometheus, body parsing
+ * Register all Express middleware: helmet, logging, CORS, Prometheus, body parsing
  */
 export function setupMiddleware(app: Express, options?: { allowAllOrigins?: boolean }): void {
+  // Security headers via helmet (must be early in the chain)
+  app.use(helmet());
+
   // Custom colored logger showing only endpoint and status code (dynamically configurable)
   morgan.token('status-colored', (_req, res) => {
     const status = res.statusCode;
@@ -122,7 +130,7 @@ export function setupMiddleware(app: Express, options?: { allowAllOrigins?: bool
   // This middleware must be before express.json()
   app.use(
     express.json({
-      limit: '50mb',
+      limit: '1mb',
       verify: (req: RequestWithRawBody, _res: Response, buf: Buffer) => {
         // Store raw body for routes that need it (e.g., webhook signature verification)
         req.rawBody = buf;
@@ -131,3 +139,69 @@ export function setupMiddleware(app: Express, options?: { allowAllOrigins?: bool
   );
   app.use(cookieParser());
 }
+
+// ---------------------------------------------------------------------------
+// Rate limiters — exported for use in routes.ts
+// ---------------------------------------------------------------------------
+
+/** Helper to build a rate limiter with consistent 429 response format */
+function createRateLimiter(options: {
+  windowMs: number;
+  limit: number;
+  keyGenerator?: (req: Request) => string;
+  skip?: (req: Request) => boolean;
+}) {
+  return rateLimit({
+    windowMs: options.windowMs,
+    limit: options.limit,
+    standardHeaders: 'draft-7',
+    legacyHeaders: false,
+    keyGenerator: options.keyGenerator,
+    skip: options.skip,
+    message: RATE_LIMIT_RESPONSE,
+  });
+}
+
+/** General API rate limiter: 300 req/min per IP (skips health + setup endpoints) */
+export const apiRateLimiter = createRateLimiter({
+  windowMs: 60 * 1000,
+  limit: 300,
+  skip: (req) =>
+    req.path === '/health' ||
+    req.path.startsWith('/health/') ||
+    req.path.startsWith('/setup/') ||
+    req.path === '/settings/status',
+});
+
+/** Vault read limiter: 30 req/min per IP */
+export const vaultReadRateLimiter = createRateLimiter({
+  windowMs: 60 * 1000,
+  limit: 30,
+});
+
+/** Vault write limiter: 10 req/min per IP */
+export const vaultWriteRateLimiter = createRateLimiter({
+  windowMs: 60 * 1000,
+  limit: 10,
+});
+
+/**
+ * Sensor report limiter: 120 req/min keyed on sensor ID.
+ * Attempts to extract sensor ID from body or X-Sensor-Id header, falls back to IP.
+ */
+export const sensorReportRateLimiter = createRateLimiter({
+  windowMs: 60 * 1000,
+  limit: 120,
+  keyGenerator: (req: Request): string => {
+    const body = req.body as Record<string, unknown> | undefined;
+    const sensorIdFromBody = body?.sensorId;
+    if (typeof sensorIdFromBody === 'string' && sensorIdFromBody.length > 0) {
+      return `sensor:${sensorIdFromBody}`;
+    }
+    const sensorIdFromHeader = req.headers['x-sensor-id'];
+    if (typeof sensorIdFromHeader === 'string' && sensorIdFromHeader.length > 0) {
+      return `sensor:${sensorIdFromHeader}`;
+    }
+    return req.ip ?? 'unknown';
+  },
+});

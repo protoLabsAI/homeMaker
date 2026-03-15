@@ -1,0 +1,68 @@
+# Home Assistant Package: Register homeMaker sensors on startup
+#
+# SETUP:
+# 1. Copy this file to /config/packages/homeMaker-register.yaml
+# 2. Enable packages in configuration.yaml:
+#      homeassistant:
+#        packages: !include_dir_named packages
+# 3. Replace YOUR_HOMEMAKER_HOST with your homeMaker IP or hostname
+# 4. Add one action block per sensor you want to track
+# 5. Restart Home Assistant
+#
+# This automation fires once on HA startup and registers all listed
+# sensors in homeMaker. Registration is idempotent — safe to run multiple
+# times without creating duplicates.
+#
+# Sensor ID naming convention: ha:{entity_id}
+# Example: ha:sensor.living_room_temperature
+
+rest_command:
+  homeMaker_register_sensor:
+    url: 'http://YOUR_HOMEMAKER_HOST:3008/api/sensors/register'
+    method: POST
+    headers:
+      Content-Type: 'application/json'
+    # id, name, and description are passed as data when calling the service
+    payload: >-
+      {"id": "{{ id }}", "name": "{{ name }}", "description": "{{ description | default('') }}"}
+    verify_ssl: false
+
+automation:
+  - alias: 'homeMaker: Register sensors on startup'
+    description: 'Registers all configured HA sensors in homeMaker when HA starts'
+    trigger:
+      - platform: homeassistant
+        event: start
+    condition: []
+    action:
+      # --- Add one block below per sensor you want to register ---
+      # Required fields: id (ha:{entity_id}), name
+      # Optional: description
+
+      - service: rest_command.homeMaker_register_sensor
+        data:
+          id: 'ha:sensor.living_room_temperature'
+          name: 'Living Room Temperature'
+          description: 'Temperature sensor in the living room'
+
+      - service: rest_command.homeMaker_register_sensor
+        data:
+          id: 'ha:sensor.living_room_humidity'
+          name: 'Living Room Humidity'
+          description: 'Humidity sensor in the living room'
+
+      - service: rest_command.homeMaker_register_sensor
+        data:
+          id: 'ha:sensor.outdoor_temperature'
+          name: 'Outdoor Temperature'
+          description: 'Outdoor weather station temperature'
+
+      - service: rest_command.homeMaker_register_sensor
+        data:
+          id: 'ha:binary_sensor.front_door'
+          name: 'Front Door'
+          description: 'Front door open/close sensor'
+
+      # --- Add more sensors here following the same pattern ---
+
+    mode: single
