@@ -21,7 +21,7 @@ import {
   FeatureTextFilePath as DescriptionTextFilePath,
   ImagePreviewMap,
 } from '@/components/views/board-view/components/description-image-dropzone';
-import { Play, Cpu, FolderKanban, Settings2 } from 'lucide-react';
+import { Play, Cpu, FolderKanban, Settings2, Search, Code2 } from 'lucide-react';
 import { useNavigate } from '@tanstack/react-router';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
@@ -94,7 +94,7 @@ type FeatureData = {
   dependencies?: string[];
   childDependencies?: string[]; // Feature IDs that should depend on this feature
   workMode: WorkMode;
-  featureType: 'code';
+  featureType: 'code' | 'research';
 };
 
 interface AddFeatureDialogProps {
@@ -161,6 +161,7 @@ export function AddFeatureDialog({
   const [skipTests, setSkipTests] = useState(false);
   const [branchName, setBranchName] = useState('');
   const [priority, setPriority] = useState(2);
+  const [featureType, setFeatureType] = useState<'code' | 'research'>('research');
 
   // Model selection state
   const [modelEntry, setModelEntry] = useState<PhaseModelEntry>({ model: 'claude-opus' });
@@ -201,6 +202,7 @@ export function AddFeatureDialog({
 
     if (justOpened) {
       setSkipTests(defaultSkipTests);
+      setFeatureType('research');
       // When a non-main worktree is selected, use its branch name for custom mode
       // Otherwise, use the default branch
       setBranchName(selectedNonMainWorktreeBranch || defaultBranch || '');
@@ -322,7 +324,7 @@ export function AddFeatureDialog({
       dependencies: finalDependencies,
       childDependencies: childDependencies.length > 0 ? childDependencies : undefined,
       workMode,
-      featureType: 'code' as const,
+      featureType,
     };
   };
 
@@ -334,6 +336,7 @@ export function AddFeatureDialog({
     setImagePaths([]);
     setTextFilePaths([]);
     setSkipTests(defaultSkipTests);
+    setFeatureType('research');
     // When a non-main worktree is selected, use its branch name for custom mode
     setBranchName(selectedNonMainWorktreeBranch || '');
     setPriority(2);
@@ -418,6 +421,49 @@ export function AddFeatureDialog({
             />
           )}
 
+          {/* Task Type Section */}
+          <div className={cardClass}>
+            <div className={sectionHeaderClass}>
+              <span>Task Type</span>
+            </div>
+            <div className="grid grid-cols-2 gap-2">
+              <button
+                type="button"
+                onClick={() => setFeatureType('research')}
+                className={cn(
+                  'flex items-center gap-2 rounded-md border px-3 py-2 text-sm transition-colors',
+                  featureType === 'research'
+                    ? 'border-primary bg-primary/10 text-primary'
+                    : 'border-border bg-background text-muted-foreground hover:border-border hover:text-foreground'
+                )}
+                data-testid="feature-type-research"
+              >
+                <Search className="w-4 h-4 shrink-0" />
+                <div className="text-left">
+                  <div className="font-medium">Research</div>
+                  <div className="text-xs opacity-70">Report &amp; recommendations</div>
+                </div>
+              </button>
+              <button
+                type="button"
+                onClick={() => setFeatureType('code')}
+                className={cn(
+                  'flex items-center gap-2 rounded-md border px-3 py-2 text-sm transition-colors',
+                  featureType === 'code'
+                    ? 'border-primary bg-primary/10 text-primary'
+                    : 'border-border bg-background text-muted-foreground hover:border-border hover:text-foreground'
+                )}
+                data-testid="feature-type-code"
+              >
+                <Code2 className="w-4 h-4 shrink-0" />
+                <div className="text-left">
+                  <div className="font-medium">Code</div>
+                  <div className="text-xs opacity-70">Implementation task</div>
+                </div>
+              </button>
+            </div>
+          </div>
+
           {/* Task Details Section */}
           <div className={cardClass}>
             <div className="space-y-2">
@@ -443,7 +489,11 @@ export function AddFeatureDialog({
                 onImagesChange={setImagePaths}
                 textFiles={textFilePaths}
                 onTextFilesChange={setTextFilePaths}
-                placeholder="Describe the feature..."
+                placeholder={
+                  featureType === 'research'
+                    ? 'e.g., Research best smart thermostat for 2000 sq ft house'
+                    : 'Describe the feature...'
+                }
                 previewMap={previewMap}
                 onPreviewMapChange={setPreviewMap}
                 autoFocus
