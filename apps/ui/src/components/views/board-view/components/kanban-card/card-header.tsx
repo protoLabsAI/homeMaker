@@ -370,8 +370,8 @@ export const CardHeaderSection = memo(function CardHeaderSection({
         open={isDeleteDialogOpen}
         onOpenChange={setIsDeleteDialogOpen}
         onConfirm={handleConfirmDelete}
-        title="Delete Feature"
-        description="Are you sure you want to delete this feature? This action cannot be undone."
+        title="Delete Task"
+        description="Are you sure you want to delete this task? This action cannot be undone."
         testId="delete-confirmation-dialog"
         confirmTestId="confirm-delete-button"
       />
