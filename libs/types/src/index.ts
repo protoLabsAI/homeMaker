@@ -380,6 +380,8 @@ export type {
   SchedulerSettings,
   // Ceremony settings
   GlobalCeremoniesConfig,
+  // Home Assistant config
+  HomeAssistantConfig,
 } from './settings.js';
 export {
   DEFAULT_KEYBOARD_SHORTCUTS,
@@ -1095,3 +1097,11 @@ export type {
   QuestStatus,
   XpAwardResult,
 } from './gamification.js';
+
+// Home Assistant integration types
+export type {
+  HaClientConfig,
+  HaConnectionStatus,
+  HaEntityState,
+  HaClientStatus,
+} from './ha-client.js';
