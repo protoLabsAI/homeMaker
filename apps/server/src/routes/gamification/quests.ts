@@ -51,12 +51,10 @@ export function createQuestRoutes(
 
       const quest = gamificationService.completeQuestById(parsed.data.id);
       if (!quest) {
-        res
-          .status(404)
-          .json({
-            success: false,
-            error: `Quest "${parsed.data.id}" not found or already completed`,
-          });
+        res.status(404).json({
+          success: false,
+          error: `Quest "${parsed.data.id}" not found or already completed`,
+        });
         return;
       }
 

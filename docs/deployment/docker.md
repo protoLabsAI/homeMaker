@@ -18,8 +18,8 @@ services:
     image: ghcr.io/your-org/homemaker:latest
     restart: unless-stopped
     ports:
-      - "8578:8578"
-      - "8579:8579"
+      - '8578:8578'
+      - '8579:8579'
     environment:
       - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
       - HOMEMAKER_VAULT_KEY=${HOMEMAKER_VAULT_KEY}
@@ -30,7 +30,7 @@ services:
       - homemaker-data:/data
       - homemaker-db:/app/homemaker.db
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8579/api/health"]
+      test: ['CMD', 'curl', '-f', 'http://localhost:8579/api/health']
       interval: 30s
       timeout: 10s
       retries: 3

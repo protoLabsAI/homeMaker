@@ -501,7 +501,7 @@ export function DashboardView() {
               xmlns="http://www.w3.org/2000/svg"
               viewBox="0 0 256 256"
               role="img"
-              aria-label="protoLabs Logo"
+              aria-label="homeMaker"
               className="size-8 sm:size-10 group-hover:rotate-12 transition-transform duration-300 ease-out"
             >
               <rect x="16" y="16" width="224" height="224" rx="56" fill="#7c3aed" />
@@ -570,7 +570,7 @@ export function DashboardView() {
             <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
               <div className="text-center mb-8 sm:mb-12">
                 <h2 className="text-2xl sm:text-3xl font-bold text-foreground mb-3">
-                  Welcome to protoLabs.studio
+                  Welcome to homeMaker
                 </h2>
                 <p className="text-base sm:text-lg text-muted-foreground max-w-xl mx-auto px-2">
                   Your autonomous AI development studio. Get started by creating a new project or

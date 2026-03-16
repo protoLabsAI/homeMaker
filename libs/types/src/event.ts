@@ -372,7 +372,12 @@ export type EventType =
   | 'gamification:quest-expired'
   | 'gamification:quest-progress'
   // Household chat channel events (family chat with Ava AI)
-  | 'chat:message-received';
+  | 'chat:message-received'
+  // Home Assistant integration events
+  | 'ha:connected'
+  | 'ha:disconnected'
+  | 'ha:entity-registered'
+  | 'ha:state-changed';
 
 export type EventCallback = (type: EventType, payload: unknown) => void;
 

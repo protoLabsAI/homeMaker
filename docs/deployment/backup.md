@@ -6,10 +6,10 @@ This guide covers backing up the homeMaker database and data directory, restorin
 
 homeMaker stores all state in two locations:
 
-| Location | Contents |
-| --- | --- |
-| `homemaker.db` | SQLite database — all modules, events, schedules |
-| `DATA_DIR` (default `./data`) | Settings, credentials, session histories |
+| Location                      | Contents                                         |
+| ----------------------------- | ------------------------------------------------ |
+| `homemaker.db`                | SQLite database — all modules, events, schedules |
+| `DATA_DIR` (default `./data`) | Settings, credentials, session histories         |
 
 Both must be backed up together. A database backup without the data directory (or vice versa) may leave credentials or settings inconsistent.
 

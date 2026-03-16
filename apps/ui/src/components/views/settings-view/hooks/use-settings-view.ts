@@ -29,7 +29,8 @@ export type SettingsViewId =
   | 'danger'
   | 'workflow'
   | 'automations'
-  | 'sensors';
+  | 'sensors'
+  | 'home-assistant';
 
 interface UseSettingsViewOptions {
   initialView?: SettingsViewId;

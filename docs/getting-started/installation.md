@@ -51,20 +51,20 @@ Create a `.env` file in the project root:
 cp .env.example .env
 ```
 
-| Variable | Required | Description |
-| --- | --- | --- |
-| `ANTHROPIC_API_KEY` | Yes | Anthropic API key for AI agents |
-| `HOMEMAKER_VAULT_KEY` | For vault | 64-char hex key for AES-256-GCM secrets encryption |
-| `AUTOMAKER_API_KEY` | Optional | API key for server authentication |
-| `HOST` | No | Host to bind to (default: `0.0.0.0`) |
-| `PORT` | No | Server port (default: `8579`) |
-| `DATA_DIR` | No | Data storage directory (default: `./data`) |
-| `AUTOMAKER_MOCK_AGENT` | No | Set to `true` to enable mock agent mode for CI testing |
-| `GITHUB_TOKEN` | Optional | For GitHub operations |
-| `OPENWEATHERMAP_API_KEY` | Optional | Weather widget API key |
-| `OPENWEATHERMAP_LAT` | No | Home latitude for weather |
-| `OPENWEATHERMAP_LON` | No | Home longitude for weather |
-| `SENSOR_HISTORY_RETENTION_DAYS` | No | Days of sensor history (default: `30`) |
+| Variable                        | Required  | Description                                            |
+| ------------------------------- | --------- | ------------------------------------------------------ |
+| `ANTHROPIC_API_KEY`             | Yes       | Anthropic API key for AI agents                        |
+| `HOMEMAKER_VAULT_KEY`           | For vault | 64-char hex key for AES-256-GCM secrets encryption     |
+| `AUTOMAKER_API_KEY`             | Optional  | API key for server authentication                      |
+| `HOST`                          | No        | Host to bind to (default: `0.0.0.0`)                   |
+| `PORT`                          | No        | Server port (default: `8579`)                          |
+| `DATA_DIR`                      | No        | Data storage directory (default: `./data`)             |
+| `AUTOMAKER_MOCK_AGENT`          | No        | Set to `true` to enable mock agent mode for CI testing |
+| `GITHUB_TOKEN`                  | Optional  | For GitHub operations                                  |
+| `OPENWEATHERMAP_API_KEY`        | Optional  | Weather widget API key                                 |
+| `OPENWEATHERMAP_LAT`            | No        | Home latitude for weather                              |
+| `OPENWEATHERMAP_LON`            | No        | Home longitude for weather                             |
+| `SENSOR_HISTORY_RETENTION_DAYS` | No        | Days of sensor history (default: `30`)                 |
 
 Generate the vault key:
 

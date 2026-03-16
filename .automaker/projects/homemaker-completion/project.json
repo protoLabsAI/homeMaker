@@ -1,0 +1,181 @@
+{
+  "slug": "homemaker-completion",
+  "title": "homeMaker-completion",
+  "goal": "Ship the remaining 4 milestones to make homeMaker fully branded, all modules functional end-to-end, and Home Assistant integration bidirectional.",
+  "status": "active",
+  "milestones": [
+    {
+      "number": 1,
+      "slug": "01-m1-complete-rebrand",
+      "title": "M1: Complete Rebrand",
+      "description": "Update all UI strings referencing 'protoLabs Studio' to 'homeMaker'. Update bug report links from protoMaker to homeMaker repo.",
+      "phases": [
+        {
+          "number": 1,
+          "name": "update-all-protolabs-studio-ui-references-to-homemaker",
+          "title": "Update all protoLabs Studio UI references to homeMaker",
+          "description": "Replace all user-facing 'protoLabs Studio' and 'protoLabs Logo' strings with 'homeMaker' branding in setup-view, welcome-step, dashboard-view, welcome-view, sidebar, dialogs, and settings. Update bug report links to homeMaker repo.",
+          "filesToModify": [
+            "apps/ui/src/components/views/setup-view.tsx",
+            "apps/ui/src/components/views/welcome-step.tsx",
+            "apps/ui/src/components/views/dashboard-view.tsx",
+            "apps/ui/src/components/views/welcome-view.tsx",
+            "apps/ui/src/components/layout/sidebar/sidebar.tsx",
+            "apps/ui/src/components/views/sandbox-rejection-screen.tsx",
+            "apps/ui/src/components/views/sandbox-risk-dialog.tsx",
+            "apps/ui/src/components/views/profile-section.tsx"
+          ],
+          "acceptanceCriteria": [
+            "No UI string contains 'protoLabs Studio' or 'protoLabs Logo'",
+            "Bug report links point to homeMaker GitHub repo",
+            "App title and branding display 'homeMaker' everywhere"
+          ],
+          "complexity": "small",
+          "featureId": "feature-1773613295974-iq45l5rgd"
+        }
+      ],
+      "status": "pending",
+      "epicId": "feature-1773613295973-f13ai7xah"
+    },
+    {
+      "number": 2,
+      "slug": "02-m2-wire-sensor-history-db",
+      "title": "M2: Wire Sensor History DB",
+      "description": "Inject SQLite DB into SensorRegistryService so sensor readings persist to the sensor_readings table. Make getHistory() and getHistoryAggregated() return real data.",
+      "phases": [
+        {
+          "number": 1,
+          "name": "inject-db-into-sensorregistryservice-and-wire-persistence",
+          "title": "Inject DB into SensorRegistryService and wire persistence",
+          "description": "Add BetterSqlite3 DB parameter to SensorRegistryService constructor via ServiceContainer. Ensure sensor_readings table is created. Wire report() to persist readings. Verify getHistory() and getHistoryAggregated() query real data.",
+          "filesToModify": [
+            "apps/server/src/services/sensor-registry-service.ts",
+            "apps/server/src/server/services.ts"
+          ],
+          "acceptanceCriteria": [
+            "SensorRegistryService receives DB via constructor injection",
+            "sensor_readings table is created on service init",
+            "report() persists readings to SQLite",
+            "getHistory() returns real persisted data",
+            "getHistoryAggregated() returns real aggregated data"
+          ],
+          "complexity": "small",
+          "featureId": "feature-1773613295976-5lla4rh6c"
+        }
+      ],
+      "status": "pending",
+      "epicId": "feature-1773613295975-xmqzsddk8"
+    },
+    {
+      "number": 3,
+      "slug": "03-m3-restore-vendor-ui",
+      "title": "M3: Restore Vendor UI",
+      "description": "Rebuild the vendor management frontend that was deleted in PR #42. Backend routes and service are intact.",
+      "phases": [
+        {
+          "number": 1,
+          "name": "build-vendor-view-components",
+          "title": "Build vendor view components",
+          "description": "Rebuild vendor list, vendor card, add-vendor dialog, and vendor detail panel components. Create use-vendors hook for data fetching. Follow existing inventory-view patterns. Use surviving Storybook stories as design spec.",
+          "filesToModify": [
+            "apps/ui/src/components/views/vendors-view/index.tsx",
+            "apps/ui/src/components/views/vendors-view/vendor-list.tsx",
+            "apps/ui/src/components/views/vendors-view/vendor-card.tsx",
+            "apps/ui/src/components/views/vendors-view/add-vendor-dialog.tsx",
+            "apps/ui/src/components/views/vendors-view/vendor-detail-panel.tsx",
+            "apps/ui/src/hooks/use-vendors.ts"
+          ],
+          "acceptanceCriteria": [
+            "Vendor list displays all vendors from API",
+            "Vendor card shows name, trade, phone, rating",
+            "Add-vendor dialog creates new vendors via API",
+            "Vendor detail panel shows full info with linked assets",
+            "Storybook stories render correctly"
+          ],
+          "complexity": "medium",
+          "featureId": "feature-1773613295979-nly7p4xuc"
+        },
+        {
+          "number": 2,
+          "name": "wire-vendor-route-and-navigation",
+          "title": "Wire vendor route and navigation",
+          "description": "Add vendor route file, add nav item in sidebar, verify CRUD operations work end-to-end against existing backend.",
+          "filesToModify": [
+            "apps/ui/src/routes/vendors.tsx",
+            "apps/ui/src/components/layout/sidebar/hooks/use-navigation.ts"
+          ],
+          "acceptanceCriteria": [
+            "Vendor route is accessible at /vendors",
+            "Sidebar shows Vendors nav item",
+            "Create, read, update, delete vendors works end-to-end"
+          ],
+          "complexity": "small",
+          "featureId": "feature-1773613295980-lvj87jogg"
+        }
+      ],
+      "status": "pending",
+      "epicId": "feature-1773613295978-0b0eur39p"
+    },
+    {
+      "number": 4,
+      "slug": "04-m4-home-assistant-integration-client",
+      "title": "M4: Home Assistant Integration Client",
+      "description": "Build a dedicated HA WebSocket client that connects to Home Assistant, subscribes to entity state changes, and auto-registers entities as homeMaker sensors.",
+      "phases": [
+        {
+          "number": 1,
+          "name": "build-ha-websocket-client-service",
+          "title": "Build HA WebSocket client service",
+          "description": "Create HAClientService that connects to a Home Assistant instance via WebSocket API, authenticates with long-lived access token, subscribes to state_changed events, and auto-registers HA entities as homeMaker sensors via SensorRegistryService.",
+          "filesToModify": [
+            "apps/server/src/services/ha-client-service.ts",
+            "apps/server/src/routes/integrations/ha.ts",
+            "apps/server/src/server/services.ts",
+            "apps/server/src/server/routes.ts"
+          ],
+          "acceptanceCriteria": [
+            "HAClientService connects to HA WebSocket API",
+            "Authenticates with long-lived access token",
+            "Subscribes to state_changed events",
+            "Auto-registers HA entities as homeMaker sensors",
+            "Reconnects on disconnect with backoff",
+            "REST endpoints for connection status and entity list"
+          ],
+          "complexity": "medium",
+          "featureId": "feature-1773613295982-6wbdl8mmw"
+        },
+        {
+          "number": 2,
+          "name": "add-ha-configuration-ui",
+          "title": "Add HA configuration UI",
+          "description": "Add Home Assistant configuration section in settings with URL, access token, connection status indicator, and entity mapping management.",
+          "filesToModify": [
+            "apps/ui/src/components/views/settings-view/ha-section.tsx",
+            "apps/ui/src/components/views/settings-view/index.tsx"
+          ],
+          "acceptanceCriteria": [
+            "Settings UI has Home Assistant section",
+            "Can configure HA URL and access token",
+            "Shows connection status (connected/disconnected/error)",
+            "Lists discovered HA entities with sensor mapping",
+            "Can enable/disable individual entity sync"
+          ],
+          "complexity": "medium",
+          "featureId": "feature-1773613295983-6iu5syge3"
+        }
+      ],
+      "status": "pending",
+      "epicId": "feature-1773613295981-p2mmb3twd"
+    }
+  ],
+  "prd": {
+    "situation": "homeMaker has 6 of 8 milestones substantially shipped. Four gaps remain: stale branding, a broken DB wire, a deleted UI, and a missing integration client.",
+    "problem": "The app still presents as 'protoLabs Studio' in setup/dashboard/sidebar flows. Sensor history writes are dead code. Vendor management has no UI. Home Assistant integration is REST-push only with no proactive connection.",
+    "approach": "Four milestones, each independently shippable. Rebrand first (user-facing polish), then wire sensor history DB, rebuild vendor UI, and finally add HA client.",
+    "results": "homeMaker fully branded, all modules functional end-to-end, HA integration bidirectional.",
+    "constraints": "Single-household deployment only. Tailscale-only networking, no cloud sync. SQLite only, no external databases. No new dependencies unless necessary for HA WebSocket.",
+    "generatedAt": "2026-03-15T00:00:00.000Z"
+  },
+  "createdAt": "2026-03-15T22:21:25.905Z",
+  "updatedAt": "2026-03-15T22:21:41.562Z"
+}

@@ -127,7 +127,7 @@ export function ProfileSection() {
                 }))
               }
               onBlur={() => save()}
-              placeholder="e.g. protoLabs"
+              placeholder="e.g. homeMaker"
             />
           </FieldRow>
           <FieldRow label="Product Name">
@@ -140,7 +140,7 @@ export function ProfileSection() {
                 }))
               }
               onBlur={() => save()}
-              placeholder="e.g. protoLabs Studio"
+              placeholder="e.g. homeMaker"
             />
           </FieldRow>
           <FieldRow label="Internal Codename">
@@ -166,7 +166,7 @@ export function ProfileSection() {
                 }))
               }
               onBlur={() => save()}
-              placeholder="e.g. protoLabs.studio"
+              placeholder="e.g. homeMaker.studio"
             />
           </FieldRow>
           <FieldRow label="Voice">

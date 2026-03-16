@@ -10,13 +10,13 @@ backlog → in_progress → review → done
            blocked ←─────────┘
 ```
 
-| Status | Meaning |
-| --- | --- |
-| `backlog` | Not started. Ready to pick up if dependencies are met. |
-| `in_progress` | Being worked on. |
-| `review` | Work done, awaiting review or approval. |
-| `done` | Complete. |
-| `blocked` | Cannot proceed — waiting on something external. |
+| Status        | Meaning                                                |
+| ------------- | ------------------------------------------------------ |
+| `backlog`     | Not started. Ready to pick up if dependencies are met. |
+| `in_progress` | Being worked on.                                       |
+| `review`      | Work done, awaiting review or approval.                |
+| `done`        | Complete.                                              |
+| `blocked`     | Cannot proceed — waiting on something external.        |
 
 Move tasks forward by dragging cards or using the status dropdown. There is no restriction on which transitions are allowed — you can move a task directly from `backlog` to `done`.
 
