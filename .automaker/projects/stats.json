@@ -1,0 +1,17 @@
+[
+  {
+    "slug": "homemaker-alpha-launch-readiness",
+    "title": "homeMaker Alpha Launch Readiness",
+    "goal": "Prepare homeMaker for alpha release by addressing critical production readiness gaps, completing test coverage, implementing input validation, stabilizing database, and polishing user experience.",
+    "status": "active",
+    "milestoneCount": 4,
+    "phaseCount": 8,
+    "linkedPhaseCount": 8,
+    "featureCount": 12,
+    "updateCount": 0,
+    "linkCount": 0,
+    "documentCount": 0,
+    "createdAt": "2026-03-16T00:50:42.841Z",
+    "deletedAt": "2026-03-16T01:04:49.864Z"
+  }
+]

@@ -1,0 +1,121 @@
+{
+  "slug": "homemaker-vision-alignment",
+  "title": "homeMaker Vision Alignment",
+  "goal": "Strip dev platform UI noise, refine AI agents for home research/reporting, and establish homeMaker as a focused home management hub for two households.",
+  "status": "active",
+  "milestones": [
+    {
+      "number": 1,
+      "slug": "01-m1-strip-dev-platform-ui",
+      "title": "M1: Strip Dev Platform UI",
+      "description": "Remove all dev-only routes, view components, and sidebar nav items. Keep server-side services intact. The goal is a clean sidebar with only home management modules.",
+      "phases": [
+        {
+          "number": 1,
+          "name": "phase-1-remove-dev-routes-and-nav-items",
+          "title": "Phase 1: Remove Dev Routes and Nav Items",
+          "description": "Remove these routes from apps/ui/src/routes/: analytics, ceremonies, designs, docs, file-editor, github-issues, github-prs, project-management, project-management.$slug, project-settings, spec, system-view, stream-overlay, interview, chat-overlay, logged-out, login. Remove corresponding nav items from use-navigation.ts. Remove any sidebar sections that group dev tools (e.g. 'Developer', 'Platform'). Keep: dashboard, board, calendar, todo, notes, maintenance, chat, chat-channel, sensors, inventory, budget, vault, vendors, profile, inbox, notifications, settings, setup. After removal, verify the app builds cleanly (npm run build) and fix any broken imports.",
+          "filesToModify": [
+            "apps/ui/src/routes/analytics.tsx",
+            "apps/ui/src/routes/ceremonies.tsx",
+            "apps/ui/src/routes/designs.tsx",
+            "apps/ui/src/routes/docs.tsx",
+            "apps/ui/src/routes/file-editor.tsx",
+            "apps/ui/src/routes/github-issues.tsx",
+            "apps/ui/src/routes/github-prs.tsx",
+            "apps/ui/src/routes/project-management.tsx",
+            "apps/ui/src/routes/project-management.$slug.tsx",
+            "apps/ui/src/routes/project-settings.tsx",
+            "apps/ui/src/routes/spec.tsx",
+            "apps/ui/src/routes/system-view.tsx",
+            "apps/ui/src/routes/stream-overlay.tsx",
+            "apps/ui/src/routes/interview.tsx",
+            "apps/ui/src/routes/chat-overlay.tsx",
+            "apps/ui/src/routes/logged-out.tsx",
+            "apps/ui/src/routes/login.tsx",
+            "apps/ui/src/components/layout/sidebar/hooks/use-navigation.ts"
+          ],
+          "complexity": "medium",
+          "featureId": "feature-1773623146706-dgkjdx037",
+          "executionStatus": "completed"
+        },
+        {
+          "number": 2,
+          "name": "phase-2-clean-up-orphaned-view-components",
+          "title": "Phase 2: Clean Up Orphaned View Components",
+          "description": "After route removal, identify and remove orphaned view component directories that are no longer referenced by any route: analytics-view, designs-view, docs-view, file-editor-view, github-issues-view, project-settings-view. Check for any shared components imported by both home and dev views — keep those. Verify build still passes. Remove any unused imports in remaining components that referenced deleted views.",
+          "filesToModify": [
+            "apps/ui/src/components/views/analytics-view/",
+            "apps/ui/src/components/views/designs-view/",
+            "apps/ui/src/components/views/docs-view/",
+            "apps/ui/src/components/views/file-editor-view/",
+            "apps/ui/src/components/views/github-issues-view/",
+            "apps/ui/src/components/views/project-settings-view/"
+          ],
+          "complexity": "medium",
+          "featureId": "feature-1773623146707-sk34gzism",
+          "executionStatus": "in-progress"
+        }
+      ],
+      "status": "pending",
+      "epicId": "feature-1773623146704-w3qt5aswz"
+    },
+    {
+      "number": 2,
+      "slug": "02-m2-home-ai-agent-refinement",
+      "title": "M2: Home AI Agent Refinement",
+      "description": "Reconfigure the AI agent system to default to home research and reporting instead of code generation. Update prompts, agent definitions, and board UX to reflect home management context.",
+      "phases": [
+        {
+          "number": 1,
+          "name": "phase-1-home-research-agent-prompts",
+          "title": "Phase 1: Home Research Agent Prompts",
+          "description": "Update agent prompt templates in libs/prompts/ to add a home research mode. When a board task is NOT tagged as a code/dev task, the agent should: (1) Research the topic using web search and available context, (2) Produce a structured report with options, pros/cons, price ranges, recommendations, (3) NOT attempt to write code or modify files. Update agent-definitions.ts to include a 'home-research' agent type. The default agent behavior for new board tasks should be research-and-report. Update the board task creation dialog to default to 'research' type tasks with example placeholders like 'Research best smart thermostat for 2000 sq ft house'.",
+          "complexity": "medium",
+          "featureId": "feature-1773623146709-26yiwih63",
+          "executionStatus": "in-progress"
+        },
+        {
+          "number": 2,
+          "name": "phase-2-board-ux-for-home-projects",
+          "title": "Phase 2: Board UX for Home Projects",
+          "description": "Update the board view to feel like home project management, not software development. Change board column headers if they use dev terminology. Update task card display to show relevant home context (estimated cost, category, vendor, etc.) instead of dev context (branch name, PR status, agent model). Add task categories relevant to home: Maintenance, Renovation, Purchase, Research, DIY, Organization. Update the 'new task' dialog with home-friendly placeholders and category picker. Keep the underlying feature/status system identical — just change the presentation layer.",
+          "complexity": "medium",
+          "featureId": "feature-1773623146710-6ne5u4aew",
+          "executionStatus": "in-progress"
+        }
+      ],
+      "status": "pending",
+      "epicId": "feature-1773623146708-nxqdo1y4o"
+    },
+    {
+      "number": 3,
+      "slug": "03-m3-product-identity",
+      "title": "M3: Product Identity",
+      "description": "Establish homeMaker's product identity in code and documentation. Fill in the empty spec, rename dev-inherited labels, ensure all user-facing copy reflects home management.",
+      "phases": [
+        {
+          "number": 1,
+          "name": "phase-1-spec-and-user-facing-copy",
+          "title": "Phase 1: Spec and User-Facing Copy",
+          "description": "Fill in spec.md Product Goals, Target Users, Key Workflows, and Constraints sections with the real homeMaker vision: self-hosted home hub for small households, AI research agents for home decisions, 4 users across 2 households, Tailscale-only. Rename 'Family Chat' label to 'Household' in use-navigation.ts. Audit all user-facing strings for dev terminology that should be home terminology (e.g., 'feature' -> 'task' or 'project', 'agent' -> 'assistant' where appropriate, 'epic' -> 'project' in board context). Update the README tagline if needed. Ensure the setup flow and welcome screen reflect home management, not software development.",
+          "complexity": "small",
+          "featureId": "feature-1773623146713-sld5io4ea",
+          "executionStatus": "in-progress"
+        }
+      ],
+      "status": "pending",
+      "epicId": "feature-1773623146712-ou5liwoq8"
+    }
+  ],
+  "prd": {
+    "situation": "homeMaker is a fork of protoLabs Studio, repurposed as a self-hosted home management hub for two households (4 users total). The app has 11 working home management modules (dashboard, board, calendar, todo, notes, maintenance, sensors, inventory, budget, vault, vendors) plus gamification and integrations (Home Assistant, weather). However, the UI still exposes 13+ dev platform routes inherited from protoLabs Studio that create noise and confusion for non-technical users.",
+    "problem": "The sidebar and route structure exposes dev-only tools (file editor, GitHub issues/PRs, designs editor, ceremonies, analytics, system view, project management, spec editor, stream overlay) alongside home management modules. This creates a cluttered, confusing experience — especially for non-technical household members. Additionally, the AI agent system is configured for code generation tasks, not home research and reporting. The spec.md has empty TODO placeholders with no product definition.",
+    "approach": "Three milestones: (M1) Strip all dev-platform routes, views, and nav items from the UI — keep server-side agent infrastructure intact since protoLabs Studio uses it to build homeMaker. (M2) Refine AI agent behavior for home use — update prompts, task creation UX, and agent definitions to default to research-and-report mode for home topics (DIY, product comparisons, maintenance advice). (M3) Establish product identity — fill spec.md, rename Family Chat to Household Chat, ensure all user-facing strings reflect home management context.",
+    "results": "A clean, focused UI where every sidebar item serves home management. Non-technical household members see only relevant modules. AI agents default to researching home topics and delivering reports. Product identity is clearly defined and documented. The dev platform infrastructure remains intact under the hood for building homeMaker itself.",
+    "constraints": "Keep all server-side services intact — the agent pipeline powers both home AI and development. Keep the board as a dual-purpose tool (house projects use the same kanban as dev features). Budget and vault modules stay as-is (YNAB and Infisical integrations are future, low priority). Four users across two households, self-hosted behind Tailscale, no cloud sync.",
+    "generatedAt": "2026-03-16T01:00:00.000Z"
+  },
+  "createdAt": "2026-03-16T01:05:31.960Z",
+  "updatedAt": "2026-03-16T01:41:14.388Z"
+}

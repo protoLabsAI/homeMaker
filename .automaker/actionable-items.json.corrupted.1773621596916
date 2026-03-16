@@ -1,0 +1,55 @@
+{
+  "version": 1,
+  "items": [
+    {
+      "id": "b2ebddbf-6389-49c2-9bf3-2a5f973c0a44",
+      "actionType": "notification",
+      "priority": "low",
+      "title": "Feature Completed",
+      "message": "\"Update all protoLabs Studio UI references to homeMaker\" completed successfully.",
+      "createdAt": "2026-03-15T22:32:03.914Z",
+      "status": "pending",
+      "actionPayload": {
+        "featureId": "feature-1773613295974-iq45l5rgd",
+        "notificationId": "651ad0e4-3ca2-489d-acaa-2370fdd4301b"
+      },
+      "projectPath": "/Users/kj/dev/homeMaker",
+      "read": false,
+      "category": "notifications"
+    },
+    {
+      "id": "9eaf5d52-e056-45a8-94f2-2e5be4c1cbe8",
+      "actionType": "notification",
+      "priority": "low",
+      "title": "Feature Verified",
+      "message": "\"Build vendor view components\" has been verified and is complete.",
+      "createdAt": "2026-03-15T22:47:23.233Z",
+      "status": "pending",
+      "actionPayload": {
+        "featureId": "feature-1773613295979-nly7p4xuc",
+        "notificationId": "ad42cb18-0162-40b9-b519-b00f48694b32"
+      },
+      "projectPath": "/Users/kj/dev/homeMaker",
+      "read": false,
+      "category": "notifications"
+    },
+    {
+      "id": "fa923e3f-58d7-4600-89d1-83e4e7950740",
+      "actionType": "notification",
+      "priority": "low",
+      "title": "Feature Completed",
+      "message": "\"Build HA WebSocket client service\" completed successfully.",
+      "createdAt": "2026-03-15T23:06:20.991Z",
+      "status": "pending",
+      "actionPayload": {
+        "featureId": "feature-1773613295982-6wbdl8mmw",
+        "notificationId": "a94cb203-e0d9-4c1d-8fb6-0f560b5361c1"
+      },
+      "projectPath": "/Users/kj/dev/homeMaker",
+      "read": false,
+      "category": "notifications"
+    }
+  ]
+}   }
+  ]
+}
