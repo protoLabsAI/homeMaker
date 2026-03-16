@@ -21,10 +21,10 @@ This documentation covers installing and running homeMaker, using its modules, d
 
 ## Sections
 
-| Section | What it covers |
-| --- | --- |
-| [Getting started](/getting-started/) | Install homeMaker and add your first asset |
-| [Modules](/modules/inventory) | Reference for every built-in module |
-| [Deployment](/deployment/tailscale) | Production deployment guides |
-| [Platform](/platform/how-it-works) | How the AI pipeline and board work |
-| [Integrations](/integrations/weather) | Connect external services |
+| Section                               | What it covers                             |
+| ------------------------------------- | ------------------------------------------ |
+| [Getting started](/getting-started/)  | Install homeMaker and add your first asset |
+| [Modules](/modules/inventory)         | Reference for every built-in module        |
+| [Deployment](/deployment/tailscale)   | Production deployment guides               |
+| [Platform](/platform/how-it-works)    | How the AI pipeline and board work         |
+| [Integrations](/integrations/weather) | Connect external services                  |

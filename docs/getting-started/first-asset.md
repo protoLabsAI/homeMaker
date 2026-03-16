@@ -13,14 +13,14 @@ This tutorial walks you through adding a home asset to the inventory, creating a
 2. Click **Add item**.
 3. Fill in the form:
 
-   | Field | Value |
-   | --- | --- |
-   | Name | `Water heater` |
-   | Category | `Appliance` |
-   | Location | `Utility room` |
-   | Purchase date | Your installation date |
+   | Field          | Value                          |
+   | -------------- | ------------------------------ |
+   | Name           | `Water heater`                 |
+   | Category       | `Appliance`                    |
+   | Location       | `Utility room`                 |
+   | Purchase date  | Your installation date         |
    | Purchase price | Price in dollars (e.g. `1200`) |
-   | Serial number | From the label on the unit |
+   | Serial number  | From the label on the unit     |
 
 4. Click **Save**.
 
@@ -32,12 +32,12 @@ The water heater now appears in your inventory list with its current valuation.
 2. Click **Add task**.
 3. Fill in the form:
 
-   | Field | Value |
-   | --- | --- |
-   | Name | `Replace water heater anode rod` |
-   | Description | `Inspect and replace sacrificial anode rod to prevent tank corrosion` |
-   | Interval | `365` days |
-   | Linked asset | Select `Water heater` from the dropdown |
+   | Field        | Value                                                                 |
+   | ------------ | --------------------------------------------------------------------- |
+   | Name         | `Replace water heater anode rod`                                      |
+   | Description  | `Inspect and replace sacrificial anode rod to prevent tank corrosion` |
+   | Interval     | `365` days                                                            |
+   | Linked asset | Select `Water heater` from the dropdown                               |
 
 4. Click **Save**.
 
@@ -49,11 +49,11 @@ homeMaker calculates the next due date as today plus 365 days. You will see it a
 2. Click **Add vendor**.
 3. Fill in the form:
 
-   | Field | Value |
-   | --- | --- |
-   | Name | `ABC Plumbing & Heating` |
-   | Trade | `Plumbing` |
-   | Phone | `(555) 123-4567` |
+   | Field | Value                                       |
+   | ----- | ------------------------------------------- |
+   | Name  | `ABC Plumbing & Heating`                    |
+   | Trade | `Plumbing`                                  |
+   | Phone | `(555) 123-4567`                            |
    | Notes | `Handles water heaters, good response time` |
 
 4. Click **Save**.

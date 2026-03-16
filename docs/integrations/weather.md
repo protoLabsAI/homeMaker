@@ -46,12 +46,12 @@ If the widget shows an error, check:
 
 ## What the widget shows
 
-| Data | Source |
-| --- | --- |
-| Current temperature | OpenWeatherMap Current Weather API |
+| Data                                 | Source                             |
+| ------------------------------------ | ---------------------------------- |
+| Current temperature                  | OpenWeatherMap Current Weather API |
 | Conditions (clear, rain, snow, etc.) | OpenWeatherMap Current Weather API |
-| High/low for today | OpenWeatherMap One Call API |
-| 3-day forecast | OpenWeatherMap One Call API |
+| High/low for today                   | OpenWeatherMap One Call API        |
+| 3-day forecast                       | OpenWeatherMap One Call API        |
 
 The widget refreshes every 30 minutes.
 

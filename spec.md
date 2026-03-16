@@ -24,6 +24,7 @@
 **Type**: Monorepo (turbo)
 
 **Packages:**
+
 - `apps/server` — @protolabsai/server (app)
 - `apps/ui` — @protolabsai/app (app)
 - `libs/dependency-resolver` — @protolabsai/dependency-resolver (package)
@@ -82,10 +83,12 @@
 <!-- TODO: What are the core user journeys or workflows? -->
 
 ### Workflow 1: ...
+
 1. Step 1
 2. Step 2
 
 ### Workflow 2: ...
+
 1. Step 1
 2. Step 2
 

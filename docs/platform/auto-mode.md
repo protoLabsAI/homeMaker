@@ -36,11 +36,11 @@ Every task output is text in the agent output panel. You review it, then move th
 
 Auto-mode selects a model based on the task's declared complexity:
 
-| Complexity | Model | When to use |
-| --- | --- | --- |
-| `small` | Haiku | Quick lookups, simple questions |
+| Complexity          | Model  | When to use                          |
+| ------------------- | ------ | ------------------------------------ |
+| `small`             | Haiku  | Quick lookups, simple questions      |
 | `medium` or `large` | Sonnet | Standard research and planning tasks |
-| `architectural` | Opus | Complex multi-part analysis |
+| `architectural`     | Opus   | Complex multi-part analysis          |
 
 Set complexity in the task description or leave it unset — the agent defaults to Sonnet.
 
