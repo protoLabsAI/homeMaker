@@ -29,26 +29,15 @@ interface UseNavigationProps {
     projectPicker: string;
     cyclePrevProject: string;
     cycleNextProject: string;
-    spec: string;
     notes: string;
-    docs: string;
     board: string;
     settings: string;
-    projectSettings: string;
-    systemView: string;
     inbox: string;
-    fileEditor: string;
-    designs: string;
     calendar: string;
     todo: string;
     automations: string;
-    projects: string;
     chat: string;
   };
-  hideSpecEditor: boolean;
-  hideDesigns: boolean;
-  hideFileEditor: boolean;
-  hideSystemView: boolean;
   currentProject: Project | null;
   projects: Project[];
   projectHistory: string[];
@@ -59,18 +48,10 @@ interface UseNavigationProps {
   cycleNextProject: () => void;
   /** Count of unread notifications to show on Notifications nav item */
   unreadNotificationsCount?: number;
-  /** Count of unread ceremony events */
-  unreadCeremonyCount?: number;
-  /** Whether spec generation is currently running for the current project */
-  isSpecGenerating?: boolean;
 }
 
 export function useNavigation({
   shortcuts,
-  hideSpecEditor,
-  hideDesigns,
-  hideFileEditor,
-  hideSystemView,
   currentProject,
   projects,
   projectHistory,
@@ -80,8 +61,6 @@ export function useNavigation({
   cyclePrevProject,
   cycleNextProject,
   unreadNotificationsCount,
-  unreadCeremonyCount,
-  isSpecGenerating,
 }: UseNavigationProps) {
   // Build navigation sections
   const navSections: NavSection[] = useMemo(() => {
@@ -91,7 +70,6 @@ export function useNavigation({
         id: 'dashboard',
         label: 'Dashboard',
         icon: Home,
-        shortcut: shortcuts.systemView,
       },
       {
         id: 'board',
@@ -172,8 +150,8 @@ export function useNavigation({
       },
     ];
 
-    // Add Inbox and Project Settings as a standalone section (no label for visual separation)
-    const inboxCount = (unreadNotificationsCount ?? 0) + (unreadCeremonyCount ?? 0);
+    // Add Inbox and Settings as a standalone section (no label for visual separation)
+    const inboxCount = unreadNotificationsCount ?? 0;
     sections.push({
       label: '',
       items: [
@@ -185,16 +163,16 @@ export function useNavigation({
           count: inboxCount || undefined,
         },
         {
-          id: 'project-settings',
+          id: 'settings',
           label: 'Settings',
           icon: Settings,
-          shortcut: shortcuts.projectSettings,
+          shortcut: shortcuts.settings,
         },
       ],
     });
 
     return sections;
-  }, [shortcuts, unreadNotificationsCount, unreadCeremonyCount]);
+  }, [shortcuts, unreadNotificationsCount]);
 
   // Build keyboard shortcuts for navigation
   const navigationShortcuts: KeyboardShortcut[] = useMemo(() => {
