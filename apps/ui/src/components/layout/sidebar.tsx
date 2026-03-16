@@ -6,7 +6,6 @@ const logger = createLogger('Sidebar');
 import { cn, isMac } from '@/lib/utils';
 import { useAppStore } from '@/store/app-store';
 import { useActionableItemsStore } from '@/store/actionable-items-store';
-import { useCeremonyStore } from '@/store/ceremony-store';
 import { useLoadActionableItems, useActionableItemEvents } from '@/hooks/use-actionable-items';
 import { useLoadCeremonyEntries, useCeremonyEventStream } from '@/hooks/use-ceremony-events';
 import { useKeyboardShortcuts, useKeyboardShortcutsConfig } from '@/hooks/use-keyboard-shortcuts';
@@ -28,7 +27,6 @@ import {
 import { XpBar } from './sidebar/xp-bar';
 import { useIsCompact } from '@/hooks/use-media-query';
 import { TrashDialog, OnboardingDialog } from './sidebar/dialogs';
-import { SIDEBAR_FEATURE_FLAGS } from './sidebar/constants';
 import {
   useSidebarAutoCollapse,
   useSpecRegeneration,
@@ -59,7 +57,6 @@ export function Sidebar() {
     moveProjectToTrash,
     specCreatingForProject,
     setSpecCreatingForProject,
-    featureFlags,
   } = useAppStore();
 
   const isCompact = useIsCompact();
@@ -92,9 +89,6 @@ export function Sidebar() {
     }
   }, [sidebarOpen, toggleSidebar]);
 
-  // Environment variable flags for hiding sidebar items
-  const { hideSpecEditor } = SIDEBAR_FEATURE_FLAGS;
-
   // Get customizable keyboard shortcuts
   const shortcuts = useKeyboardShortcutsConfig();
 
@@ -107,9 +101,6 @@ export function Sidebar() {
 
   // Get unread actionable items count (drives the inbox badge)
   const unreadNotificationsCount = useActionableItemsStore((s) => s.unreadCount);
-
-  // Get unread ceremony event count
-  const unreadCeremonyCount = useCeremonyStore((s) => s.unreadCount);
 
   // State for delete project confirmation dialog
   const [showDeleteProjectDialog, setShowDeleteProjectDialog] = useState(false);
@@ -164,9 +155,6 @@ export function Sidebar() {
   // Derive isCreatingSpec from store state
   const isCreatingSpec = specCreatingForProject !== null;
   const creatingSpecProjectPath = specCreatingForProject;
-  // Check if the current project is specifically the one generating spec
-  const isCurrentProjectGeneratingSpec =
-    specCreatingForProject !== null && specCreatingForProject === currentProject?.path;
 
   // Auto-collapse sidebar on small screens and update Electron window minWidth
   useSidebarAutoCollapse({ sidebarOpen, toggleSidebar: handleToggleSidebar });
@@ -258,10 +246,6 @@ export function Sidebar() {
   // Navigation sections and keyboard shortcuts (defined after handlers)
   const { navSections, navigationShortcuts } = useNavigation({
     shortcuts,
-    hideSpecEditor: hideSpecEditor || !featureFlags.specEditor,
-    hideDesigns: !featureFlags.designs,
-    hideFileEditor: false,
-    hideSystemView: !featureFlags.systemView,
     currentProject,
     projects,
     projectHistory,
@@ -271,8 +255,6 @@ export function Sidebar() {
     cyclePrevProject,
     cycleNextProject,
     unreadNotificationsCount,
-    unreadCeremonyCount,
-    isSpecGenerating: isCurrentProjectGeneratingSpec,
   });
 
   // Register keyboard shortcuts
