@@ -106,6 +106,16 @@ const EMPTY_WORKTREES: ReturnType<ReturnType<typeof useWorktreeStore.getState>['
 
 const logger = createLogger('Board');
 
+/** Default home project categories shown as autocomplete suggestions */
+const HOME_CATEGORIES = [
+  'Maintenance',
+  'Renovation',
+  'Purchase',
+  'Research',
+  'DIY',
+  'Organization',
+];
+
 export function BoardView() {
   const {
     currentProject,
@@ -368,7 +378,9 @@ export function BoardView() {
     const featureCategories = hookFeatures.map((f) => f.category).filter(Boolean);
     // Merge feature categories with persisted categories
     const allCategories = [...featureCategories, ...persistedCategories];
-    return [...new Set(allCategories)].sort();
+    const uniqueCategories = [...new Set(allCategories)].sort();
+    // Include default home categories so users always see relevant suggestions
+    return [...new Set([...uniqueCategories, ...HOME_CATEGORIES])].sort();
   }, [hookFeatures, persistedCategories]);
 
   // Branch suggestions for the branch autocomplete

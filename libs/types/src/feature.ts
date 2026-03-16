@@ -513,10 +513,11 @@ export interface Feature {
 
   // GTM Content Track fields
   /**
-   * Type of feature: 'code' for engineering work, 'content' for GTM/marketing content.
+   * Type of feature: 'code' for engineering work, 'content' for GTM/marketing content,
+   * 'research' for home research and advisory tasks that produce structured reports.
    * Defaults to 'code' for all existing features.
    */
-  featureType?: 'code' | 'content';
+  featureType?: 'code' | 'content' | 'research';
   /**
    * Content configuration for GTM content features (only relevant when featureType === 'content').
    */

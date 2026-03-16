@@ -2,9 +2,9 @@
 
 Ship the remaining 4 milestones to make homeMaker fully branded, all modules functional end-to-end, and Home Assistant integration bidirectional.
 
-**Status:** active
+**Status:** completed
 **Created:** 2026-03-15T22:21:25.905Z
-**Updated:** 2026-03-15T22:21:41.562Z
+**Updated:** 2026-03-15T23:25:45.502Z
 
 ## PRD
 
@@ -34,7 +34,7 @@ Single-household deployment only. Tailscale-only networking, no cloud sync. SQLi
 
 Update all UI strings referencing 'protoLabs Studio' to 'homeMaker'. Update bug report links from protoMaker to homeMaker repo.
 
-**Status:** pending
+**Status:** completed
 
 #### Phases
 
@@ -44,7 +44,7 @@ Update all UI strings referencing 'protoLabs Studio' to 'homeMaker'. Update bug 
 
 Inject SQLite DB into SensorRegistryService so sensor readings persist to the sensor_readings table. Make getHistory() and getHistoryAggregated() return real data.
 
-**Status:** pending
+**Status:** completed
 
 #### Phases
 
@@ -54,7 +54,7 @@ Inject SQLite DB into SensorRegistryService so sensor readings persist to the se
 
 Rebuild the vendor management frontend that was deleted in PR #42. Backend routes and service are intact.
 
-**Status:** pending
+**Status:** completed
 
 #### Phases
 
@@ -65,7 +65,7 @@ Rebuild the vendor management frontend that was deleted in PR #42. Backend route
 
 Build a dedicated HA WebSocket client that connects to Home Assistant, subscribes to entity state changes, and auto-registers entities as homeMaker sensors.
 
-**Status:** pending
+**Status:** completed
 
 #### Phases
 

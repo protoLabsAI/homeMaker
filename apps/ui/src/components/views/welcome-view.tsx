@@ -519,7 +519,7 @@ export function WelcomeView() {
                 Welcome to homeMaker
               </h1>
               <p className="text-sm text-muted-foreground mt-0.5">
-                Your autonomous AI development studio
+                Your self-hosted home management hub
               </p>
             </div>
           </div>
@@ -545,7 +545,7 @@ export function WelcomeView() {
                   <div className="flex-1 min-w-0">
                     <h3 className="text-lg font-semibold text-foreground mb-1.5">New Project</h3>
                     <p className="text-sm text-muted-foreground leading-relaxed">
-                      Create a new project from scratch with AI-powered development
+                      Start a new home project with AI-powered research and planning
                     </p>
                   </div>
                 </div>

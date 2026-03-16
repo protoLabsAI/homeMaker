@@ -164,7 +164,7 @@ export function useMaintenanceSchedules() {
   return useQuery({
     queryKey: QUERY_KEYS.schedules,
     queryFn: async (): Promise<MaintenanceSchedule[]> => {
-      const result = await apiGet<SchedulesResponse>('/api/maintenance/schedules');
+      const result = await apiGet<SchedulesResponse>('/api/maintenance');
       if (!result?.success) throw new Error('Failed to fetch maintenance schedules');
       return result.schedules ?? [];
     },
@@ -179,7 +179,7 @@ export function useMaintenanceCompletions(scheduleId: string | null) {
     queryFn: async (): Promise<MaintenanceCompletion[]> => {
       if (!scheduleId) throw new Error('No schedule ID');
       const result = await apiGet<CompletionsResponse>(
-        `/api/maintenance/schedules/${scheduleId}/completions`
+        `/api/maintenance/${scheduleId}/completions`
       );
       if (!result?.success) throw new Error('Failed to fetch completion history');
       return result.completions ?? [];
@@ -194,7 +194,7 @@ export function useCreateSchedule() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async (input: CreateScheduleInput): Promise<MaintenanceSchedule> => {
-      const result = await apiPost<ScheduleResponse>('/api/maintenance/schedules', input);
+      const result = await apiPost<ScheduleResponse>('/api/maintenance', input);
       if (!result?.success) throw new Error('Failed to create schedule');
       return result.schedule;
     },
@@ -215,7 +215,7 @@ export function useCompleteSchedule() {
       input: CompleteScheduleInput;
     }): Promise<{ completion: MaintenanceCompletion; schedule: MaintenanceSchedule }> => {
       const result = await apiPost<CompletionResponse>(
-        `/api/maintenance/schedules/${scheduleId}/complete`,
+        `/api/maintenance/${scheduleId}/complete`,
         input
       );
       if (!result?.success) throw new Error('Failed to complete schedule');
@@ -240,10 +240,7 @@ export function useUpdateSchedule() {
       scheduleId: string;
       input: UpdateScheduleInput;
     }): Promise<MaintenanceSchedule> => {
-      const result = await apiPut<ScheduleResponse>(
-        `/api/maintenance/schedules/${scheduleId}`,
-        input
-      );
+      const result = await apiPut<ScheduleResponse>(`/api/maintenance/${scheduleId}`, input);
       if (!result?.success) throw new Error('Failed to update schedule');
       return result.schedule;
     },

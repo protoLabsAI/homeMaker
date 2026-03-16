@@ -2,7 +2,7 @@
   "slug": "homemaker-completion",
   "title": "homeMaker-completion",
   "goal": "Ship the remaining 4 milestones to make homeMaker fully branded, all modules functional end-to-end, and Home Assistant integration bidirectional.",
-  "status": "active",
+  "status": "completed",
   "milestones": [
     {
       "number": 1,
@@ -31,10 +31,11 @@
             "App title and branding display 'homeMaker' everywhere"
           ],
           "complexity": "small",
-          "featureId": "feature-1773613295974-iq45l5rgd"
+          "featureId": "feature-1773613295974-iq45l5rgd",
+          "executionStatus": "completed"
         }
       ],
-      "status": "pending",
+      "status": "completed",
       "epicId": "feature-1773613295973-f13ai7xah"
     },
     {
@@ -60,10 +61,11 @@
             "getHistoryAggregated() returns real aggregated data"
           ],
           "complexity": "small",
-          "featureId": "feature-1773613295976-5lla4rh6c"
+          "featureId": "feature-1773613295976-5lla4rh6c",
+          "executionStatus": "in-progress"
         }
       ],
-      "status": "pending",
+      "status": "completed",
       "epicId": "feature-1773613295975-xmqzsddk8"
     },
     {
@@ -93,7 +95,8 @@
             "Storybook stories render correctly"
           ],
           "complexity": "medium",
-          "featureId": "feature-1773613295979-nly7p4xuc"
+          "featureId": "feature-1773613295979-nly7p4xuc",
+          "executionStatus": "completed"
         },
         {
           "number": 2,
@@ -110,10 +113,11 @@
             "Create, read, update, delete vendors works end-to-end"
           ],
           "complexity": "small",
-          "featureId": "feature-1773613295980-lvj87jogg"
+          "featureId": "feature-1773613295980-lvj87jogg",
+          "executionStatus": "completed"
         }
       ],
-      "status": "pending",
+      "status": "completed",
       "epicId": "feature-1773613295978-0b0eur39p"
     },
     {
@@ -142,7 +146,8 @@
             "REST endpoints for connection status and entity list"
           ],
           "complexity": "medium",
-          "featureId": "feature-1773613295982-6wbdl8mmw"
+          "featureId": "feature-1773613295982-6wbdl8mmw",
+          "executionStatus": "in-progress"
         },
         {
           "number": 2,
@@ -161,10 +166,11 @@
             "Can enable/disable individual entity sync"
           ],
           "complexity": "medium",
-          "featureId": "feature-1773613295983-6iu5syge3"
+          "featureId": "feature-1773613295983-6iu5syge3",
+          "executionStatus": "blocked"
         }
       ],
-      "status": "pending",
+      "status": "completed",
       "epicId": "feature-1773613295981-p2mmb3twd"
     }
   ],
@@ -177,5 +183,6 @@
     "generatedAt": "2026-03-15T00:00:00.000Z"
   },
   "createdAt": "2026-03-15T22:21:25.905Z",
-  "updatedAt": "2026-03-15T22:21:41.562Z"
+  "updatedAt": "2026-03-16T00:39:56.913Z",
+  "completedAt": "2026-03-15T23:25:45.502Z"
 }
