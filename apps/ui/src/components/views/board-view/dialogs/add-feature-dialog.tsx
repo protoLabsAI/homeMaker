@@ -393,11 +393,11 @@ export function AddFeatureDialog({
         }}
       >
         <DialogHeader>
-          <DialogTitle>{isSpawnMode ? 'Spawn Sub-Task' : 'Add New Feature'}</DialogTitle>
+          <DialogTitle>{isSpawnMode ? 'Spawn Sub-Task' : 'Add New Task'}</DialogTitle>
           <DialogDescription>
             {isSpawnMode
               ? `Create a sub-task that depends on "${parentFeature?.title || parentFeature?.description.slice(0, 50)}..."`
-              : 'Create a new feature card for the Kanban board.'}
+              : 'Create a new task card for your home project board.'}
           </DialogDescription>
         </DialogHeader>
 
@@ -443,7 +443,7 @@ export function AddFeatureDialog({
                 onImagesChange={setImagePaths}
                 textFiles={textFilePaths}
                 onTextFilesChange={setTextFilePaths}
-                placeholder="Describe the feature..."
+                placeholder="Describe the task or project..."
                 previewMap={previewMap}
                 onPreviewMapChange={setPreviewMap}
                 autoFocus
@@ -631,7 +631,7 @@ export function AddFeatureDialog({
                   value={category}
                   onChange={setCategory}
                   suggestions={categorySuggestions}
-                  placeholder="e.g., Core, UI, API"
+                  placeholder="e.g., Maintenance, Renovation, DIY"
                   data-testid="feature-category-input"
                 />
               </div>
@@ -715,7 +715,7 @@ export function AddFeatureDialog({
             data-testid="confirm-add-feature"
             disabled={workMode === 'custom' && !branchName.trim()}
           >
-            {isSpawnMode ? 'Spawn Task' : 'Add Feature'}
+            {isSpawnMode ? 'Spawn Task' : 'Add Task'}
           </HotkeyButton>
         </DialogFooter>
       </DialogContent>
