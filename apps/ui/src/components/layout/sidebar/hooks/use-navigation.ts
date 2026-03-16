@@ -108,7 +108,7 @@ export function useNavigation({
       },
       {
         id: 'chat-channel',
-        label: 'Family Chat',
+        label: 'Household',
         icon: MessageCircle,
       },
       {
